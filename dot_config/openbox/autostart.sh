@@ -23,19 +23,21 @@ joyd_tray_programs exec
 
 picom --experimental-backends -b
 if [ -x "$(command -v lxpolkit)" ]; then
-    lxpolkit &
+  lxpolkit &
 else
-    $(find ${LIBS_PATH} -type f -iname 'polkit-gnome-authentication-agent-*' | sed 1q) &
+  $(find ${LIBS_PATH} -type f -iname 'polkit-gnome-authentication-agent-*' | sed 1q) &
 fi
 
 { [ -x "$(command -v xss-lock)" ] && xss-lock -q -l "${JOYD_DIR}/xss-lock-tsl.sh"; } &
 Handy_0.9.4_amd64.AppImage &
 wezterm-gui &
 firefox &
+xset s off &
+xset -dpms &
+xset s noblank &
 joyd_mpd_notifier
 setxkbmap -layout "us,ru"
-xkbcomp /home/mne/.config/X11/xkb_custom $DISPLAY 
+xkbcomp /home/mne/.config/X11/xkb_custom $DISPLAY
 ~/.local/bin/kb_listener.sh &
-
 
 # Any additions should be added below.
