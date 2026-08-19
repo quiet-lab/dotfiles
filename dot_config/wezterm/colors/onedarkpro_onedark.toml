@@ -1,0 +1,67 @@
+[colors]
+ansi = [
+  "#000000",
+  "#E16765",
+  "#75BE78",
+  "#EAE852",
+  "#25ABE4",
+  "#c678dd",
+  "#46A3AF",
+  "#B4B7CF",
+]
+background = "#000000"
+brights = [
+  "#223344",
+  "#e99190",
+  "#98ce9a",
+  "#f0ee7f",
+  "#52bcea",
+  "#d7a1e7",
+  "#66b7c2",
+  "#d3d5e3",
+]
+cursor_bg = "#ffffff"
+cursor_fg = "#000000"
+foreground = "#abb2bf"
+selection_bg = "#330603"
+# selection_fg = "#000000"
+
+[colors.tab_bar]
+inactive_tab_edge = "#000000"
+background = "#112233"
+
+[colors.tab_bar.active_tab]
+fg_color = "#EAE852"
+bg_color = "#000000"
+intensity = "Bold"
+
+[colors.tab_bar.inactive_tab]
+fg_color = "#B4B7CF"
+bg_color = "#080f18"
+# intensity = "Bold"
+
+[colors.tab_bar.inactive_tab_hover]
+fg_color = "#89ca78"
+bg_color = "#080f18"
+intensity = "Bold"
+
+[colors.tab_bar.new_tab]
+fg_color = "#75BE78"
+bg_color = "#000000"
+intensity = "Bold"
+
+[colors.tab_bar.new_tab_hover]
+fg_color = "#ffffff"
+bg_color = "#000000"
+intensity = "Bold"
+
+[colors.indexed]
+59 = "#223344"
+100 = "#e2be7d"
+214 = "#EAA041"
+
+[metadata]
+name = "onedarkpro_onedark"
+origin_url = "https://github.com/olimorris/onedarkpro.nvim"
+
+

@@ -1,0 +1,36 @@
+#
+# ~/.bashrc
+#
+
+[[ $- == *i* ]] && source -- ~/.local/share/blesh/ble.sh --attach=none
+
+alias ls='ls --color=auto'
+alias grep='grep --color=auto'
+
+if [ -n "$CONTAINER_ID" ]; then
+  # Промпт внутри контейнера Distrobox (Фиолетовый с именем контейнера)
+  export PS1="\[\e[35m\][box:${CONTAINER_ID:-distrobox}]\[\e[m\] ✨ \u@\h:\w\$ "
+else
+  # Промпт на хостовой системе (Зеленый стандартный)
+  export PS1="\[\e[1;32m\]\u@\h\[\e[m\]:\w\$ "
+fi
+eval "$(dircolors -b ~/.config/dircolors)"
+
+# Включение Vi-режима в Bash
+set -o vi
+
+. "$HOME/.cargo/env"
+eval "$(mise activate bash)"
+eval "$(tv init bash)"
+
+function y() {
+  local tmp cwd
+  tmp="$(mktemp -t "yazi-cwd.XXXXXX")"
+  command yazi "$@" --cwd-file="$tmp"
+  IFS= read -r -d '' cwd <"$tmp"
+  [ "$cwd" != "$PWD" ] && [ -d "$cwd" ] && builtin cd -- "$cwd" || builtin true
+  command rm -f -- "$tmp"
+}
+export PULSE_SERVER=unix:/run/user/1000/pulse/native
+
+[[ ! ${BLE_VERSION-} ]] || ble-attach

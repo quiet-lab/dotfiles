@@ -1,0 +1,38 @@
+# deep dive
+[colors]
+
+foreground = "#cdcdcd"
+background = "#040816"
+cursor_bg = "#d0d0d0"
+cursor_border = "#d0d0d0"
+cursor_fg = "#151515"
+selection_bg = "#330302"
+# selection_fg = "#ececec"
+
+ansi = [
+  "#000000",
+  "#dd2f2f",
+  "#35a770",
+  "#fb9435",
+  "#5665ff",
+  "#b052da",
+  "#50d2da",
+  "#e0e0e0",
+]
+brights = [
+  "#222222",
+  "#fd3f2f",
+  "#49e998",
+  "#ffec9b",
+  "#2a8bc1",
+  "#e09aff",
+  "#8df9ff",
+  "#ffffff",
+]
+
+[colors.indexed]
+[metadata]
+aliases = []
+name = "deep dive"
+origin_url = "https://github.com/mbadolato/iTerm2-Color-Schemes"
+wezterm_version = "Always"

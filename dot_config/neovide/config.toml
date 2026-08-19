@@ -1,0 +1,31 @@
+wsl = false
+multigrid = true
+vsync = false
+srgb = false
+idle = true
+frame = "none"
+fork = true
+grid = "300x50"
+startup-message-capture = false
+
+[font]
+size = 13.00
+
+[[font.normal]]
+family = "IosevkaTermSlab NF"
+style = "W200"
+
+[[font.bold]]
+family = "IosevkaTermSlab NF"
+style = "W600"
+
+[[font.italic]]
+family = "IosevkaTermSlab NF"
+style = "W200 Italic"
+
+[[font.bold_italic]]
+family = "IosevkaTermSlab NF"
+style = "W600 Italic"
+
+[box-drawing.sizes]
+default = [1, 3]
