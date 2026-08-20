@@ -1,0 +1,21 @@
+#!/bin/sh
+# Иконка и имя сетевого подключения (wifi/ethernet/offline).
+status=$(nmcli -t -f TYPE,STATE,CONNECTION device status 2>/dev/null | grep ':connected:' | head -n1)
+
+icon() {
+    case "$status" in
+        wifi:*)
+            sig=$(nmcli -t -f IN-USE,SIGNAL dev wifi list 2>/dev/null | grep '^\*' | cut -d: -f2)
+            if [ "${sig:-0}" -ge 50 ]; then echo "󰤨"; else echo "󰤥"; fi ;;
+        ethernet:*) echo "󰈀" ;;
+        *) echo "󰤮" ;;
+    esac
+}
+
+name() {
+    n="${status##*:}"
+    echo "${n:-offline}"
+}
+
+[ "$1" = "icon" ] && icon && exit
+[ "$1" = "name" ] && name && exit

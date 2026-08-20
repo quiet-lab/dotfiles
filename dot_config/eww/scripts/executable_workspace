@@ -1,0 +1,41 @@
+#!/bin/sh
+# Рабочие столы Openbox → yuck-разметка для виджета workspaces (literal).
+# Классы кнопок: ws-un (пустой), ws-oc (есть окна), ws-fo (текущий).
+
+ICONS='       '
+
+workspaces() {
+    current=$(xdotool get_desktop 2>/dev/null || echo 0)
+    count=$(xdotool get_num_desktops 2>/dev/null || echo 8)
+
+    # десктопы, на которых есть окна
+    clients=$(xprop -root _NET_CLIENT_LIST 2>/dev/null | grep -o '0x[0-9a-fA-F]*')
+    desktops=""
+    for win in $clients; do
+        d=$(xprop -id "$win" _NET_WM_DESKTOP 2>/dev/null | awk '{print $3}')
+        [ -n "$d" ] && desktops="$desktops $d"
+    done
+
+    out='(box :class "works" :orientation "h" :halign "start" :valign "center" :space-evenly false'
+    i=0
+    for icon in $ICONS; do
+        [ "$i" -ge "$count" ] && break
+        if [ "$i" -eq "$current" ]; then
+            class="ws-fo"
+        else
+            case " $desktops " in
+                *" $i "*) class="ws-oc" ;;
+                *) class="ws-un" ;;
+            esac
+        fi
+        out="$out (button :onclick \"xdotool set_desktop $i\" :class \"$class\" :tooltip \"$((i + 1))\" \"$icon\")"
+        i=$((i + 1))
+    done
+    out="$out)"
+    echo "$out"
+}
+
+workspaces
+xprop -root -spy _NET_CURRENT_DESKTOP _NET_CLIENT_LIST 2>/dev/null | while read -r _; do
+    workspaces
+done

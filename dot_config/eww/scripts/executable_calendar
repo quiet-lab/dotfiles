@@ -1,0 +1,5 @@
+#!/bin/sh
+# Месяц для виджета calendar (eww ожидает 0-based номер).
+month=$(date +%m)
+month=$((month - 1))
+echo $month
