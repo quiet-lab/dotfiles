@@ -1,0 +1,3 @@
+#!/bin/sh
+# Температура GPU °C — nvidia-smi.
+nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits | tr -d ' '

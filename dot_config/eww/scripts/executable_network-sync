@@ -1,0 +1,5 @@
+#!/bin/sh
+# Страховка опроса: принудительное обновление переменной network в обход monitor.
+DIR=$(dirname "$0")
+NET="$DIR/network"; [ -x "$NET" ] || NET="$DIR/executable_network"
+eww update network="$("$NET" | tr '\n' ' ')"

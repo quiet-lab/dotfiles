@@ -1,8 +1,275 @@
 ;; ==============================
-;;  EWW bar — по мотиву github.com/raexera/tokyo
-;;  Адаптация: горизонтальная панель внизу, Openbox вместо bspwm.
-;;  (верх экрана занят tint2 с системным треем)
+;;  EWW DASHBOARD — вертикальная колонка плиток у левого края.
+;;  Сетка: ширина 320px, зазор 5px, хардкод под 3840×2160.
+;;  Спека: openspec/changes/add-eww-dashboard
 ;; ==============================
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;  Дашборд
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; --- Опросы (общие) ---
+(defpoll hour  :interval "1s" :initial "--" "date '+%H'")
+(defpoll min   :interval "1s" :initial "--" "date '+%M'")
+(defpoll dash-date :interval "1h" :initial "…" "LC_ALL=ru_RU.UTF-8 date '+%a, %d %b'")
+(defpoll current-volume :interval "1s" :initial "0" "scripts/volume")
+(defpoll cpu     :interval "3s" :initial "0" "scripts/cpu")
+(defpoll cputemp :interval "5s" :initial "0" "scripts/cputemp")
+(defpoll cputempc :interval "5s" :initial "t-mid" "scripts/cputemp | awk '{if($1<50)p=\"t-low\";else if($1<75)p=\"t-mid\";else if($1<90)p=\"t-high\";else p=\"t-crit\";print p}'")
+(defpoll ram     :interval "3s" :initial "0" "scripts/ram")
+(defpoll gpu     :interval "3s" :initial "0" "scripts/gpu")
+(defpoll cpuc :interval "3s" :initial "t-low" "scripts/cpu | awk '{if($1<50)p=\"t-low\";else if($1<75)p=\"t-mid\";else if($1<90)p=\"t-high\";else p=\"t-crit\";print p}'")
+(defpoll ramc :interval "3s" :initial "t-low" "scripts/ram | awk '{if($1<50)p=\"t-low\";else if($1<75)p=\"t-mid\";else if($1<90)p=\"t-high\";else p=\"t-crit\";print p}'")
+(defpoll gpuc :interval "3s" :initial "t-low" "scripts/gpu | awk '{if($1<50)p=\"t-low\";else if($1<75)p=\"t-mid\";else if($1<90)p=\"t-high\";else p=\"t-crit\";print p}'")
+(defpoll ramtotal :interval "1h" :initial "…" "awk '/MemTotal/{printf \"%d\", $2/1048576}' /proc/meminfo")
+(deflisten network :initial "(box)" "scripts/network-listen")
+(defpoll network-sync :interval "10s" :initial "" "scripts/network-sync")
+(defpoll netmenu-content :interval "60s" :initial "(box :class \"netmenu-box\")" "scripts/netmenu-items")
+(defpoll disks :interval "30s" :initial "(box)" "scripts/disks")
+(defpoll gputemp :interval "5s" :initial "0" "scripts/gputemp")
+(defpoll gputempc :interval "5s" :initial "t-mid" "scripts/gputemp | awk '{if($1<50)p=\"t-low\";else if($1<75)p=\"t-mid\";else if($1<90)p=\"t-high\";else p=\"t-crit\";print p}'")
+(defpoll dash-weather :interval "30m" :initial "(label :class \"w-wait\" :text \"…\")" "scripts/weather")
+(defpoll cal-day   :interval "10h" :initial "1" "date '+%-d'")
+(defpoll cal-month :interval "10h" :initial "1" "scripts/calendar")
+(defpoll cal-year  :interval "10h" :initial "2026" "date '+%Y'")
+
+;; --- Часы, дата и календарь ---
+(defwidget clock-tile []
+	(box	:class "tile clock-tile"
+			:orientation "v"
+			:space-evenly false
+	(box	:orientation "h"
+			:space-evenly false
+	(label	:class "time-hour" :text hour)
+	(label	:class "time-sep" :text ":")
+	(label	:class "time-min" :text min)
+	(box	:hexpand true)
+	(label	:class "date-label" :text dash-date :halign "end"))
+	(calendar	:class "cal"
+				:day cal-day
+				:month cal-month
+				:year cal-year)))
+
+;; --- CPU / RAM (круговые шкалы) ---
+(defwidget cpu-tile []
+	(box	:class "tile gauge-tile"
+			:orientation "v"
+			:space-evenly false
+			:width 103
+			:height 103
+			:halign "center"
+			:valign "center"
+	(box	:orientation "h" :halign "center" :space-evenly false :spacing 4
+	(label	:class "gauge-name gname-cpu" :text "CPU")
+	(label	:class "gauge-name ${cputempc}" :text "${cputemp}°"))
+	(box	:orientation "v" :vexpand true)
+	(box	:class "gauge-wrap"
+			:width 70
+			:height 70
+			:halign "center"
+	(circular-progress	:class "cpu-gauge ${cpuc}"
+						:value cpu
+						:thickness 10
+						:hexpand true
+						:vexpand true
+	(label				:class "gauge-label" :text "${cpu}%")))))
+
+(defwidget ram-tile []
+	(box	:class "tile gauge-tile"
+			:orientation "v"
+			:space-evenly false
+			:width 103
+			:height 103
+			:halign "center"
+			:valign "center"
+	(box	:orientation "h" :halign "center" :space-evenly false :spacing 4
+	(label	:class "gauge-name gname-ram" :text "RAM")
+	(label	:class "gauge-name gname-ram-total" :text "${ramtotal}G"))
+	(box	:orientation "v" :vexpand true)
+	(box	:class "gauge-wrap"
+			:width 70
+			:height 70
+			:halign "center"
+	(circular-progress	:class "ram-gauge ${ramc}"
+						:value ram
+						:thickness 10
+						:hexpand true
+						:vexpand true
+	(label				:class "gauge-label" :text "${ram}%")))))
+
+(defwidget gpu-tile []
+	(box	:class "tile gauge-tile"
+			:orientation "v"
+			:space-evenly false
+			:width 103
+			:height 103
+			:halign "center"
+			:valign "center"
+	(box	:orientation "h" :halign "center" :space-evenly false :spacing 4
+	(label	:class "gauge-name gname-gpu" :text "GPU")
+	(label	:class "gauge-name ${gputempc}" :text "${gputemp}°"))
+	(box	:orientation "v" :vexpand true)
+	(box	:class "gauge-wrap"
+			:width 70
+			:height 70
+			:halign "center"
+	(circular-progress	:class "gpu-gauge ${gpuc}"
+						:value gpu
+						:thickness 10
+						:hexpand true
+						:vexpand true
+	(label				:class "gauge-label" :text "${gpu}%")))))
+
+;; --- Погода ---
+(defwidget weather-tile []
+	(box	:class "tile weather-tile"
+			:orientation "v"
+			:space-evenly false
+	(literal :content dash-weather)))
+
+;; --- Громкость ---
+(defwidget volume-tile []
+	(box	:class "tile volume-tile"
+			:orientation "h"
+			:space-evenly false
+			:spacing 8
+	(button		:onclick "scripts/popup audio"
+				:class "volume-icon"
+				:tooltip "Микшер"
+	"󰕾")
+	(scale		:class "volbar"
+				:hexpand true
+				:value current-volume
+				:orientation "h"
+				:tooltip "Громкость: ${current-volume}%"
+				:max 101
+				:min 0
+				:onchange "pactl set-sink-volume @DEFAULT_SINK@ {}%")))
+
+;; --- Питание ---
+(defwidget power-tile []
+	(box	:class "tile power-tile"
+			:orientation "h"
+			:space-evenly true
+	(button		:class "pwr-lock"
+				:tooltip "Lock Screen"
+				:onclick "loginctl lock-session" "󰌾")
+	(button		:class "pwr-quit"
+				:tooltip "Logout"
+				:onclick "openbox --exit" "󰗽")
+	(button		:class "pwr-restart"
+				:tooltip "Openbox Restart"
+				:onclick "openbox --restart" "󰜉")
+	(button		:class "pwr-off"
+				:tooltip "Shutdown"
+				:onclick "systemctl poweroff" "󰐥")))
+
+;; --- Сеть ---
+(defwidget network-tile []
+	(eventbox	:class "tile network-tile"
+				:onclick "nm-connection-editor &"
+				:tooltip "ЛКМ — редактор соединений"
+	(box	:orientation "v" :space-evenly false
+	(box	:orientation "h" :space-evenly false
+	(label	:class "tile-title" :text "СЕТЬ")
+	(box	:hexpand true)
+	(button	:class "net-menu-btn"
+			:onclick "scripts/popup netmenu"
+			:tooltip "Действия сети" "⋮"))
+	(literal :content network)
+	;; Скрытая ссылка: без использования в открытом окне eww не запускает poll-страховку.
+	(label :visible false :text network-sync))))
+
+;; --- Диски ---
+(defwidget disks-tile []
+	(box	:class "tile disks-tile"
+			:orientation "v"
+			:space-evenly false
+	(label	:class "tile-title" :text "ДИСКИ")
+	(literal :content disks)))
+
+;; --- Избранное ---
+(defwidget favorites-tile []
+	(box	:class "tile favorites-tile"
+			:orientation "v"
+			:space-evenly false
+	(label	:class "tile-title" :text "ИЗБРАННОЕ")
+	(button	:class "fav-btn" :onclick "wezterm start --cwd ~ yazi &" "󰉋 ~")
+	(button	:class "fav-btn" :onclick "wezterm start --cwd ~/Загрузки yazi &" "󰉋 ~/Загрузки")
+	(button	:class "fav-btn" :onclick "wezterm start --cwd ~/.config yazi &" "󰉋 ~/.config")))
+
+;; --- Лаунчер приложений ---
+;; Все записи .desktop из ~/.local/share/applications и /usr/share/applications.
+;; Сетку генерирует scripts/apps-list literal'ом: ряды по 7 иконок; видно ровно
+;; три ряда (124px = 3×38 + 2×5), остальное — вертикальной прокруткой.
+(defvar apps-query "")
+(defpoll launcher-grid :interval "60s" :initial "(box)" "scripts/apps-list")
+
+(defwidget launcher-tile []
+	(box	:class "tile launcher-tile"
+			:orientation "v"
+			:space-evenly false
+	(box	:class "apps-header"
+			:orientation "h"
+			:space-evenly false
+			:spacing 5
+	(label	:class "tile-title" :text "ПРИЛОЖЕНИЯ")
+	(input	:class "apps-search"
+			:hexpand true
+			:tooltip "Фильтр по названию"
+			:onchange "scripts/apps-update '{}'"))
+	(scroll	:class "apps-scroll"
+			:hscroll false
+			:vscroll true
+			:height 124
+	(literal :content launcher-grid))))
+
+;; Заглушка каркаса (задача 1.1) — заменяется виджетами по мере реализации.
+(defwidget stub []
+	(box	:class "tile stub"
+			:orientation "v"
+			:halign "center"
+			:valign "center"
+	(label :text "…")))
+
+;; Колонка плиток: полный ряд 320px, три в ряд — 103px+5px+103px+5px+103px.
+(defwidget dash []
+	(box	:class "dash"
+			:orientation "v"
+			:space-evenly false
+			:spacing 5
+	(clock-tile)
+	(weather-tile)
+	(box	:orientation "h" :space-evenly false :spacing 5
+		(cpu-tile)
+		(ram-tile)
+		(gpu-tile))
+	(volume-tile)
+	(network-tile)
+	(disks-tile)
+	(favorites-tile)
+	(workspaces)
+	(launcher-tile)
+	(power-tile)))
+
+(defwindow dashboard
+	:geometry (geometry	:x "5px"
+						:y "0px"
+						:width "320px"
+						:anchor "left center")
+	:monitor 0
+	:reserve (struts :distance "330px" :side "left")
+	;; Не dock: такие окна Openbox лишает фокуса, и поле фильтра лаунчера
+	;; не получает клавиатуру. utility держит окно вне таскбара.
+	:windowtype "utility"
+	:stacking "fg"
+	:wm-ignore false
+(dash))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;  ЛЕГАСИ: нижний бар и календарь.
+;;  Удаляются в задаче 8.1 после сборки дашборда.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Launcher Widgets ;;
 (defwidget launcher []
@@ -11,13 +278,12 @@
 	(button	:class "launcher_icon"
 			:onclick "scripts/popup launcher"
 			:tooltip "Приложения"
-		"")))
+		"")))
 
 ;; Workspaces Widgets ;;
 (defwidget workspaces []
 	(literal :content workspace))
-(deflisten workspace :initial "(box :class \"works\" :orientation \"h\")"
-	"scripts/workspace")
+(deflisten workspace :initial "(box :class \"works\" :orientation \"v\")" "scripts/workspace")
 
 ;; Wifi Widgets ;;
 (defwidget wifi []
@@ -47,7 +313,6 @@
 				:max 101
 				:min 0
 				:onchange "pactl set-sink-volume @DEFAULT_SINK@ {}%" )))))
-(defpoll current-volume :interval "1s" :initial "0" "scripts/volume")
 (defvar volum false)
 
 ;; Control Panel Widgets ;;
@@ -68,8 +333,6 @@
 	(label	:class "time-sep" ":")
 	(button	:onclick "scripts/popup calendar"
 			:class "time-min" min)))
-(defpoll hour :interval "1s" "date '+%H'")
-(defpoll min  :interval "1s" "date '+%M'")
 
 ;; Calendar Widgets ;;
 (defwidget cal []
@@ -79,9 +342,9 @@
 				:day calendar_day
 				:month calendar_month
 				:year calendar_year))))
-(defpoll calendar_day   :interval "10h" "date '+%d'")
-(defpoll calendar_month :interval "10h" "scripts/calendar")
-(defpoll calendar_year  :interval "10h" "date '+%Y'")
+(defpoll calendar_day   :interval "10h" :initial "1" "date '+%d'")
+(defpoll calendar_month :interval "10h" :initial "1" "scripts/calendar")
+(defpoll calendar_year  :interval "10h" :initial "2026" "date '+%Y'")
 
 ;; Powermenu Widgets ;;
 (defwidget power []
@@ -99,23 +362,23 @@
 
 	(button		:class "button-wmres"
 				:tooltip "Openbox Restart"
-				:onclick "openbox --restart" "")
+				:onclick "openbox --restart" "")
 
 	(button		:class "button-reb"
 				:tooltip "Reboot"
-				:onclick "systemctl reboot" "")
+				:onclick "systemctl reboot" "")
 
 	(button		:class "button-quit"
 				:tooltip "Logout"
-				:onclick "openbox --exit" "")
+				:onclick "openbox --exit" "")
 
 	(button		:class "button-lock"
 				:tooltip "Lock Screen"
-				:onclick "loginctl lock-session" "")))
+				:onclick "loginctl lock-session" "")))
 
 	(button		:class "button-off"
 				:tooltip "Shutdown"
-				:onclick "systemctl poweroff" ""))))
+				:onclick "systemctl poweroff" ""))))
 (defvar power false)
 
 ;; Left Widgets ;;
@@ -147,7 +410,7 @@
 	(right)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;  Windows
+;;  Windows (легаси)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defwindow bar
 	:geometry (geometry	:x "0"
@@ -173,3 +436,13 @@
 	:stacking "fg"
 	:wm-ignore false
 (cal))
+
+(defwindow netmenu
+	:geometry (geometry	:x "330px"
+						:y "200px"
+						:width "240px"
+						:anchor "left top")
+	:monitor 0
+	:stacking "fg"
+	:wm-ignore false
+(literal :content netmenu-content))

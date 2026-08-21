@@ -1,0 +1,130 @@
+#!/bin/sh
+# Сетка лаунчера приложений → yuck-literal для переменной launcher-grid.
+#
+# Источники: ~/.local/share/applications и /usr/share/applications.
+#   - пропуск NoDisplay/Hidden и записей не типа Application;
+#   - имя: Name[ru_RU] → Name[ru] → Name (фолбэк — id);
+#   - дедуп по id: пользовательская директория приоритетна;
+#   - сортировка по имени в локали ru_RU без учёта регистра;
+#   - фильтр: подстрока имени без учёта регистра.
+# Сетка: ROWS иконок в ряду, ячейка 38px, иконка 32×32; прокрутку (ровно три
+# видимых ряда) обеспечивает scroll-виджет в yuck. Иконки резолвятся через
+# scripts/appicon (кэш /tmp/eww-icons), уникальные — параллельно.
+# Запуск: gtk-launch "<id>"; Terminal=true → wezterm start -- <Exec без %-кодов>.
+#
+# Использование: apps-list [ЗАПРОС]
+#   Без аргумента запрос берётся из `eww get apps-query`, поэтому defpoll
+#   обновляет список, не сбивая активный фильтр.
+
+ROWS=7
+APPS_USER=$HOME/.local/share/applications
+APPS_SYS=/usr/share/applications
+DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+query=${1:-}
+if [ $# -eq 0 ]; then
+	query=$(eww get apps-query 2>/dev/null || printf '')
+fi
+
+SEP=$(printf '\035')  # ASCII US — не пробельный, пустые поля не схлопываются
+
+# TSV: имя \t id \t terminal \t icon \t exec — по одной записи на строку.
+entries=$(
+	for d in "$APPS_USER" "$APPS_SYS"; do
+		[ -d "$d" ] || continue
+		for f in "$d"/*.desktop; do
+			[ -f "$f" ] || continue
+			id=${f##*/}
+			awk -v s="$SEP" '
+				/^\[/ { inentry = ($0 == "[Desktop Entry]"); next }
+				inentry {
+					sub(/\r$/, "")
+					i = index($0, "=")
+					if (i == 0) next
+					k = substr($0, 1, i - 1); v = substr($0, i + 1)
+					if (k == "Type") ty = v
+					else if (k == "NoDisplay") nd = v
+					else if (k == "Hidden") hd = v
+					else if (k == "Terminal") tm = v
+					else if (k == "Exec") ex = v
+					else if (k == "Icon") ic = v
+					else if (k == "Name") nm = v
+					else if (k == "Name[ru_RU]") n1 = v
+					else if (k == "Name[ru]") n2 = v
+					next
+				}
+				END {
+					if (nd == "true" || hd == "true") exit
+					if (ty != "" && ty != "Application") exit
+					name = (n1 != "") ? n1 : ((n2 != "") ? n2 : ((nm != "") ? nm : id))
+					gsub(/[\037\t\r\n]/, " ", name); gsub(/[\037\t\r\n]/, " ", ex)
+					printf "%s%s%s%s%s%s%s%s%s\n", name, s, id, s, (tm == "true") ? "true" : "", s, ic, s, ex
+				}
+			' id="${id%.desktop}" "$f"
+		done
+	done | awk -F"$SEP" '!seen[$2]++'
+)
+
+# Фильтр по подстроке имени (без учёта регистра).
+if [ -n "$query" ] && [ -n "$entries" ]; then
+	qf=$(mktemp)
+	printf '%s\n' "$query" >"$qf"
+	entries=$(printf '%s\n' "$entries" | LC_ALL=ru_RU.UTF-8 grep -F -i -f "$qf") || entries=
+	rm -f "$qf"
+fi
+
+[ -n "$entries" ] || { echo '(box :orientation "v" :space-evenly false)'; exit 0; }
+
+# Карта иконок: уникальные Icon= → путь к файлу; пустые → generic-иконка.
+APPICON=$DIR/appicon
+[ -x "$APPICON" ] || APPICON=$DIR/executable_appicon
+export APPICON
+icons_map=$(mktemp)
+{
+	printf 'application-x-executable\n'
+	printf '%s\n' "$entries" | cut -d"$SEP" -f4 | sed '/^$/d'
+} | sort -u | xargs -r -n1 -P8 sh -c '
+	p=$("$APPICON" "${1:-application-x-executable}" 2>/dev/null | head -n 1)
+	printf "%s\035%s\n" "${1:-application-x-executable}" "$p"
+' _ >"$icons_map"
+
+yesc() { printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'; }
+strip_codes() { printf '%s' "$1" | sed -e 's/%[a-zA-Z]//g' -e 's/[[:space:]]\{1,\}$//'; }
+icon_of() {
+	p=$(LC_ALL=C awk -F"$SEP" -v k="$1" '$1 == k { print $2; exit }' "$icons_map" 2>/dev/null)
+}
+
+grid='(box :orientation "v" :space-evenly false :spacing 5'
+row_open=0
+n=0
+while IFS="$SEP" read -r name id term icon ex; do
+	[ -n "$id" ] || continue
+	if [ "$((n % ROWS))" -eq 0 ]; then
+		grid="$grid (box :orientation \"h\" :space-evenly false :spacing 5"
+		row_open=1
+	fi
+	icon_of "${icon:-application-x-executable}"
+	if [ -n "$p" ]; then
+		child="(image :path \"$(yesc "$p")\" :image-width 32 :image-height 32)"
+	else
+		child='(label :class "app-btn-fallback" :text "?")'
+	fi
+	if [ "$term" = "true" ]; then
+		cmd="wezterm start -- $(strip_codes "$ex") &"
+	else
+		cmd="gtk-launch \"$(yesc "$id")\" &"
+	fi
+	grid="$grid (button :class \"app-btn\" :tooltip \"$(yesc "$name")\" :onclick \"$(yesc "$cmd")\"
+ $child)"
+	n=$((n + 1))
+	if [ "$((n % ROWS))" -eq 0 ]; then
+		grid="$grid)"
+		row_open=0
+	fi
+done <<EOF
+$(printf '%s\n' "$entries" | LC_ALL=ru_RU.UTF-8 sort -f -t "$SEP" -k 1,1)
+EOF
+rm -f "$icons_map"
+
+[ "$row_open" -eq 1 ] && grid="$grid)"
+echo "$grid)"

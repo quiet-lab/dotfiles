@@ -1,41 +1,138 @@
 #!/bin/sh
-# Рабочие столы Openbox → yuck-разметка для виджета workspaces (literal).
-# Классы кнопок: ws-un (пустой), ws-oc (есть окна), ws-fo (текущий).
+# Рабочие столы Openbox → вертикальная колонка плиток (literal для виджета workspaces).
+# Активный стол развёрнут: строка на каждое окно (полноцветная иконка приложения + название),
+# свёрнутые занятые столы — номер и иконки запущенных приложений, пустые — только номер.
+# Иконки разрешает scripts/appicon (корни ~/.local/share/icons → /usr/share/icons →
+# /usr/share/pixmaps, рекурсивно, предпочтение SVG); фолбэк — Nerd Font глиф.
+# Обновление: xprop -root -spy _NET_CURRENT_DESKTOP _NET_CLIENT_LIST.
 
-ICONS='       '
+APPICON="$(dirname "$0")/appicon"
 
-workspaces() {
-    current=$(xdotool get_desktop 2>/dev/null || echo 0)
-    count=$(xdotool get_num_desktops 2>/dev/null || echo 8)
-
-    # десктопы, на которых есть окна
-    clients=$(xprop -root _NET_CLIENT_LIST 2>/dev/null | grep -o '0x[0-9a-fA-F]*')
-    desktops=""
-    for win in $clients; do
-        d=$(xprop -id "$win" _NET_WM_DESKTOP 2>/dev/null | awk '{print $3}')
-        [ -n "$d" ] && desktops="$desktops $d"
-    done
-
-    out='(box :class "works" :orientation "h" :halign "start" :valign "center" :space-evenly false'
-    i=0
-    for icon in $ICONS; do
-        [ "$i" -ge "$count" ] && break
-        if [ "$i" -eq "$current" ]; then
-            class="ws-fo"
-        else
-            case " $desktops " in
-                *" $i "*) class="ws-oc" ;;
-                *) class="ws-un" ;;
-            esac
-        fi
-        out="$out (button :onclick \"xdotool set_desktop $i\" :class \"$class\" :tooltip \"$((i + 1))\" \"$icon\")"
-        i=$((i + 1))
-    done
-    out="$out)"
-    echo "$out"
+# WM_CLASS (второе поле) → кандидаты имён иконок по убыванию приоритета.
+class_icon_names() {
+	case "$1" in
+		firefox|Navigator)				echo 'firefox' ;;
+		Chromium|Google-chrome)			echo 'google-chrome chromium' ;;
+		Yandex-browser*)				echo 'yandex-browser' ;;
+		Wezterm|org.wezfurlong.wezterm)	echo 'wezterm org.wezfurlong.wezterm /home/mne/builds/wezterm/assets/icon/terminal.png' ;;
+		XTerm|Urxvt|st|kitty)			echo 'utilities-terminal' ;;
+		Neovide|neovide)				echo 'neovide nvim' ;;
+		nvim)							echo 'nvim neovide' ;;
+		TelegramDesktop)				echo 'telegram org.telegram.desktop' ;;
+		pavucontrol|Pavucontrol)		echo 'pavucontrol' ;;
+		nm-connection-editor)			echo 'preferences-system-network' ;;
+		Thunar)							echo 'thunar system-file-manager' ;;
+		PCManFM)						echo 'pcmanfm system-file-manager' ;;
+		Code|code-oss)					echo 'code' ;;
+		*)								c=$(printf '%s' "$1" | tr 'A-Z' 'a-z'); echo "$c ${c##*.}" ;;
+	esac
 }
 
-workspaces
+# Фолбэк-глиф, если иконка не найдена.
+class_glyph() {
+	case "$1" in
+		Neovide|nvim)					echo '' ;;
+		*)								echo '' ;;
+	esac
+}
+
+# WM_CLASS → название программы для подписи строки окна.
+class_name() {
+	case "$1" in
+		firefox|Navigator)				echo 'Firefox' ;;
+		Chromium|Google-chrome)			echo 'Chrome' ;;
+		Yandex-browser*)				echo 'Яндекс Браузер' ;;
+		Wezterm|org.wezfurlong.wezterm)	echo 'WezTerm' ;;
+		XTerm)							echo 'XTerm' ;;
+		Urxvt)							echo 'URxvt' ;;
+		st)								echo 'st' ;;
+		kitty)							echo 'kitty' ;;
+		Neovide)						echo 'Neovide' ;;
+		nvim)							echo 'Neovim' ;;
+		TelegramDesktop)				echo 'Telegram' ;;
+		pavucontrol|Pavucontrol)		echo 'PulseAudio' ;;
+		nm-connection-editor)			echo 'Сети' ;;
+		Thunar)							echo 'Thunar' ;;
+		PCManFM)						echo 'PCManFM' ;;
+		yazi)							echo 'Yazi' ;;
+		Code|code-oss)					echo 'VS Code' ;;
+		*)								echo "${1##*.}" ;;
+	esac
+}
+
+# Кандидаты имён → путь к файлу иконки через общий резолвер (с кэшем).
+find_icon() {
+	# shellcheck disable=SC2086
+	[ -n "$1" ] && "$APPICON" $1
+}
+
+# Экранирование строки для yuck-литерала.
+esc() {
+	printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/|/∕/g'
+}
+
+collect() {
+	clients=$(xprop -root _NET_CLIENT_LIST 2>/dev/null | grep -o '0x[0-9a-fA-F]*')
+	for win in $clients; do
+		desk=''; cls=''; hidden=0
+		info=$(xprop -id "$win" _NET_WM_DESKTOP WM_CLASS _NET_WM_STATE_HIDDEN 2>/dev/null)
+		# Порядок строк фиксирован порядком аргументов xprop.
+		desk=$(printf '%s\n' "$info" | sed -n 's/^_NET_WM_DESKTOP[^=]*= //p')
+		cls=$(printf '%s\n' "$info" | sed -n 's/^WM_CLASS[^=]*= "[^"]*", "\([^"]*\)".*/\1/p')
+		hidden=$(printf '%s\n' "$info" | sed -n 's/^_NET_WM_STATE_HIDDEN[^=]*= //p')
+		[ "$hidden" = "1" ] || hidden=0
+		[ -n "$desk" ] || continue
+		[ "$desk" = "4294967295" ] && continue   # sticky: панели, трей, сами окна eww
+		inames=$(class_icon_names "$cls")
+		ipath=$(find_icon "$inames")
+		glyph=''
+		[ -n "$ipath" ] || glyph=$(class_glyph "$cls")
+		printf '%s|%s|%s|%s|%s|%s\n' "$desk" "$hidden" "$((win))" "$glyph" "$ipath" "$(esc "$(class_name "$cls")")"
+	done
+}
+
+render() {
+	current=$(xdotool get_desktop 2>/dev/null || echo 0)
+	count=$(xdotool get_num_desktops 2>/dev/null || echo 8)
+	records=$(collect)
+
+	out='(box :class "works" :orientation "v" :space-evenly false :spacing 5'
+	i=0
+	while [ "$i" -lt "$count" ]; do
+		rows=''
+		icons=''
+		while IFS='|' read -r d hid wid glyph ipath name; do
+			[ "$d" = "$i" ] || continue
+			if [ -n "$ipath" ]; then
+				icons="$icons(image :path \"$ipath\" :image-width 20 :image-height 20)"
+				wicon="(image :path \"$ipath\" :image-width 22 :image-height 22 :class \"ws-win-img\")"
+			else
+				icons="$icons(label :class \"ws-icons-glyph\" :text \"$glyph\")"
+				wicon="(label :class \"ws-win-icon\" :text \"$glyph\")"
+			fi
+			wclass='ws-win'
+			[ "$hid" = "1" ] && wclass='ws-win ws-min'
+			rows="$rows(button :class \"$wclass\" :onclick \"xdotool set_desktop $i; xdotool windowactivate $wid\" (box :orientation \"h\" :space-evenly false $wicon (label :class \"ws-win-title\" :text \"$name\" :hexpand true :xalign 0)))"
+		done <<EOF
+$records
+EOF
+
+		num=$((i + 1))
+		if [ "$i" -eq "$current" ]; then
+			out="$out(box :class \"ws ws-fo\" :orientation \"v\" :space-evenly false"
+			out="$out(label :class \"ws-name\" :text \"СТОЛ $num\")$rows)"
+		elif [ -n "$icons" ]; then
+			out="$out(button :class \"ws ws-oc\" :onclick \"xdotool set_desktop $i\" (box :orientation \"h\" :class \"ws-icons\" :space-evenly false (label :class \"ws-num\" :text \"$num\")$icons))"
+		else
+			out="$out(button :class \"ws ws-un\" :onclick \"xdotool set_desktop $i\" (label :class \"ws-num\" :text \"$num\"))"
+		fi
+		i=$((i + 1))
+	done
+	out="$out)"
+	printf '%s\n' "$out"
+}
+
+render
 xprop -root -spy _NET_CURRENT_DESKTOP _NET_CLIENT_LIST 2>/dev/null | while read -r _; do
-    workspaces
+	render
 done

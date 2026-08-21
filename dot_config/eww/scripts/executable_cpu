@@ -1,0 +1,15 @@
+#!/bin/sh
+# Загрузка CPU в % — сэмпл 1с по /proc/stat.
+sample() {
+	read -r _ user nice system idle iowait irq softirq steal _ < /proc/stat
+	echo $((user + nice + system + idle + iowait + irq + softirq + steal)) $((idle + iowait))
+}
+set -- $(sample)
+t1=$1 i1=$2
+sleep 1
+set -- $(sample)
+t2=$1 i2=$2
+[ "${t2:-0}" -gt "${t1:-0}" ] 2>/dev/null || { echo 0; exit; }
+busy=$((t2 - t1 - (i2 - i1)))
+[ "$busy" -lt 0 ] && busy=0
+echo $((100 * busy / (t2 - t1)))

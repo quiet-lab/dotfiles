@@ -1,0 +1,114 @@
+#!/bin/sh
+# Разрешение имени/команды приложения в путь к файлу полноцветной иконки.
+#
+# Порядок источников:
+#   1. Кэш /tmp/eww-icons (сброс: rm -rf /tmp/eww-icons).
+#   2. Desktop-файлы: ~/.local/share/applications, /usr/share/applications —
+#      точное <имя>.desktop, затем <префикс>-<имя>.desktop (distrobox-экспорты),
+#      затем совпадение по первому слову Exec= (консольные команды из $PATH);
+#      из файла берётся Icon= (абсолютный путь или имя иконки).
+#   3. Папки с иконками в порядке: ~/.local/share/icons → /usr/share/icons →
+#      /usr/share/pixmaps; поиск рекурсивный, внутри корня сначала каталог
+#      активной GTK-темы; предпочтение SVG, затем PNG (крупнейший файл).
+#
+# Использование: appicon ИМЯ [ИМЯ...] — кандидаты по убыванию приоритета;
+# кандидат с абсолютным путём принимается как есть, если файл существует.
+# На stdout — один путь; при полном неуспехе — generic-иконка приложения.
+# Переопределение темы: APPICON_THEME=<имя>.
+
+CACHE=/tmp/eww-icons
+APPS_USER=$HOME/.local/share/applications
+APPS_SYS=/usr/share/applications
+
+mkdir -p "$CACHE"
+
+# Активная GTK-тема иконок — приоритетный подкаталог внутри каждого корня.
+THEME=${APPICON_THEME:-}
+[ -n "$THEME" ] || THEME=$(sed -n 's/^gtk-icon-theme-name=\(.*\)/\1/p' "$HOME/.config/gtk-3.0/settings.ini" 2>/dev/null | tr -d ' \r')
+
+# Поиск имени в одном каталоге (рекурсивно): сначала SVG, затем PNG.
+# find -L: Papirus активно использует симлинки.
+find_in_dir() {
+	[ -d "$1" ] || return 1
+	p=$(find -L "$1" -type f -iname "$2.svg" 2>/dev/null | head -n 1)
+	if [ -z "$p" ]; then
+		p=$(find -L "$1" -type f -iname "$2.png" -printf '%s %p\n' 2>/dev/null | sort -rn | head -n 1 | cut -d' ' -f2-)
+	fi
+	[ -n "$p" ] && { printf '%s\n' "$p"; return 0; }
+	return 1
+}
+
+# Поиск имени иконки по корням в заданном порядке; внутри корня — тема первой.
+resolve_icon_name() {
+	for root in "$HOME/.local/share/icons" /usr/share/icons /usr/share/pixmaps; do
+		if [ -n "$THEME" ] && [ -d "$root/$THEME" ]; then
+			find_in_dir "$root/$THEME" "$1" && return 0
+		fi
+		find_in_dir "$root" "$1" && return 0
+	done
+	return 1
+}
+
+# Desktop-файл для кандидата: точное имя, префиксный экспорт, совпадение по Exec.
+desktop_file_for() {
+	for d in "$APPS_USER" "$APPS_SYS"; do
+		[ -f "$d/$1.desktop" ] && { printf '%s\n' "$d/$1.desktop"; return 0; }
+	done
+	for d in "$APPS_USER" "$APPS_SYS"; do
+		for f in "$d"/*-"$1".desktop; do
+			[ -f "$f" ] && { printf '%s\n' "$f"; return 0; }
+		done
+	done
+	for d in "$APPS_USER" "$APPS_SYS"; do
+		for f in "$d"/*.desktop; do
+			[ -f "$f" ] || continue
+			exe=$(sed -n 's/^Exec=\([^ ;]*\).*/\1/p' "$f" | head -n 1)
+			[ "${exe##*/}" = "$1" ] && { printf '%s\n' "$f"; return 0; }
+		done
+	done
+	return 1
+}
+
+# Icon= из desktop-файла → путь к файлу иконки.
+icon_from_desktop() {
+	icon=$(sed -n 's/^Icon=\(.*\)/\1/p' "$1" | head -n 1 | tr -d '\r')
+	case "$icon" in
+		'') return 1 ;;
+		/*) [ -f "$icon" ] && { printf '%s\n' "$icon"; return 0; }; return 1 ;;
+		*.png|*.svg|*.xpm) resolve_icon_name "${icon%.*}" ;;
+		*) resolve_icon_name "$icon" ;;
+	esac
+}
+
+# Один кандидат: абсолютный путь → desktop-файл → папки с иконками.
+resolve_one() {
+	case "$1" in
+		/*) [ -f "$1" ] && { printf '%s\n' "$1"; return 0; }; return 1 ;;
+	esac
+	df=$(desktop_file_for "$1") && icon_from_desktop "$df" && return 0
+	resolve_icon_name "$1"
+}
+
+# 1. Кэш по полному набору кандидатов (в т.ч. пустой результат).
+key=$(printf '%s|' "$@" | tr -c 'a-zA-Z0-9' '_')
+cf="$CACHE/$key"
+[ -f "$cf" ] && { cat "$cf"; exit 0; }
+
+# 2–3. Кандидаты по порядку.
+for cand in "$@"; do
+	if p=$(resolve_one "$cand"); then
+		printf '%s\n' "$p" | tee "$cf"
+		exit 0
+	fi
+done
+
+# Фолбэк: generic-иконка приложения, чтобы image-виджет не оставался пустым.
+for g in application-x-executable applications-other unknown image-missing; do
+	if p=$(resolve_icon_name "$g"); then
+		printf '%s\n' "$p" | tee "$cf"
+		exit 0
+	fi
+done
+
+: > "$cf"
+exit 1

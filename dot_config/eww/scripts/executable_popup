@@ -15,4 +15,14 @@ case "$1" in
     wifi)     wezterm-gui start -- nmtui ;;
     audio)    pavucontrol ;;
     calendar) calendar ;;
+
+    # Сеть
+    net-editor)  nm-connection-editor & ;;
+    netmenu)     eww update netmenu-content="$(scripts/netmenu-items)"; eww open --toggle netmenu ;;
+    net-close)   eww close netmenu 2>/dev/null ;;
+    wifi-rescan) nmcli device wifi rescan; scripts/popup net-close ;;
+    wifi-toggle) if nmcli radio wifi | grep -q enabled; then nmcli radio wifi off; else nmcli radio wifi on; fi; scripts/popup net-close ;;
+    vpn-up)      nmcli con up id "$2" && scripts/popup net-close ;;
+    vpn-down)    nmcli con down id "$2"; scripts/popup net-close ;;
+    eth-down)    nmcli device disconnect "$2"; scripts/popup net-close ;;
 esac

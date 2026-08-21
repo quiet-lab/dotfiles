@@ -1,0 +1,28 @@
+#!/bin/sh
+# Пункты контекстного меню сети → yuck-фрагмент окна netmenu.
+item() {
+	printf '(button :class "netmenu-item" :onclick "scripts/popup %s %s"\n (label :class "netmenu-label" :text "%s"))\n' "$1" "$2" "$3"
+}
+
+echo '(box :class "netmenu-box" :orientation "v" :space-evenly false'
+
+if nmcli radio wifi | grep -q enabled; then
+	item wifi-rescan '' 'Поиск сетей Wi-Fi'
+	item wifi-toggle '' 'Выключить Wi-Fi'
+else
+	item wifi-toggle '' 'Включить Wi-Fi'
+fi
+
+nmcli -t -f NAME,TYPE con show 2>/dev/null | while IFS=: read -r n t; do
+	[ "$t" = "vpn" ] || continue
+	if nmcli -t -f NAME,TYPE con show --active 2>/dev/null | awk -F: '$2=="vpn"' | cut -d: -f1 | grep -Fqx "$n"; then
+		item vpn-down "'$n'" "Отключить $n"
+	else
+		item vpn-up "'$n'" "Подключить $n"
+	fi
+done
+
+e=$(nmcli -t -f DEVICE,TYPE,STATE device status 2>/dev/null | awk -F: '$2=="ethernet" && $3=="connected" {print $1; exit}')
+[ -n "$e" ] && item eth-down "$e" "Отключить $e"
+
+echo ')'

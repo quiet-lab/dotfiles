@@ -1,0 +1,107 @@
+#!/bin/sh
+# Погода wttr.in → yuck-фрагмент плитки дашборда.
+# Кэш: /tmp/eww-weather.yuck (показывается при обрыве сети).
+CACHE=/tmp/eww-weather.yuck
+CITY=""   # пусто — автоопределение по IP; пример: CITY="Minsk"
+
+# Глиф по WWO-коду погоды wttr.in.
+icon() {
+	case "$1" in
+		113) echo "󰖙" ;;
+		116) echo "󰖕" ;;
+		119|122) echo "󰖐" ;;
+		143|248|260) echo "󰖑" ;;
+		176|263|266|281|284|293|296|299|302|305|308|311|314|350|353|356|359|374|377) echo "󰖗" ;;
+		179|182|185|227|230|317|320|323|326|329|332|335|338|362|365|368|371) echo "󰖘" ;;
+		200|386|389|392|395) echo "󰙾" ;;
+		*) echo "󰼱" ;;
+	esac
+}
+
+# Класс подсветки по WWO-коду погоды wttr.in.
+iclass() {
+	case "$1" in
+		113) echo "w-clear" ;;
+		116) echo "w-partly" ;;
+		119|122) echo "w-overcast" ;;
+		143|248|260) echo "w-fog" ;;
+		176|263|266|281|284|293|296|299|302|305|308|311|314|350|353|356|359|374|377) echo "w-rain" ;;
+		179|182|185|227|230|317|320|323|326|329|332|335|338|362|365|368|371) echo "w-snow" ;;
+		200|386|389|392|395) echo "w-storm" ;;
+		*) echo "w-unknown" ;;
+	esac
+}
+
+fallback() {
+	if [ -f "$CACHE" ]; then
+		cat "$CACHE"
+	else
+		echo '(label :class "w-wait" :text "нет данных")'
+	fi
+}
+
+json=$(curl -sf --max-time 10 "https://wttr.in/${CITY:+$CITY}?format=j1") || { fallback; exit; }
+[ -n "$json" ] || { fallback; exit; }
+
+j() { printf '%s' "$json" | jq -r "$1 // empty"; }
+
+city=$(j '.nearest_area[0].areaName[0].value')
+temp=$(j '.current_condition[0].temp_C')
+code=$(j '.current_condition[0].weatherCode')
+[ -n "$temp" ] || { fallback; exit; }
+
+out='(box :class "weather-inner" :orientation "v" :space-evenly false'
+out="$out (box :orientation \"h\" :space-evenly false
+ (label :class \"w-icon $(iclass "$code")\" :text \"$(icon "$code")\")
+ (label :class \"w-temp\" :text \"${temp}°\")
+ (box :hexpand true)
+ (label :class \"w-city\" :text \"$city\"))"
+
+out="$out (box :orientation \"h\" :class \"w-frow w-fhead\" :space-evenly false :spacing 10
+ (label :class \"w-day-name\" :text \"\")
+ (box :orientation \"h\" :class \"w-part\" :space-evenly false :hexpand true :halign \"center\"
+  (label :class \"w-part-icon\" :text \"󰽥\"))
+ (box :orientation \"h\" :class \"w-part\" :space-evenly false :hexpand true :halign \"center\"
+  (label :class \"w-part-icon\" :text \"󰖜\"))
+ (box :orientation \"h\" :class \"w-part\" :space-evenly false :hexpand true :halign \"center\"
+  (label :class \"w-part-icon\" :text \"󰖙\"))
+ (box :orientation \"h\" :class \"w-part\" :space-evenly false :hexpand true :halign \"center\"
+  (label :class \"w-part-icon\" :text \"󰖛\")))"
+
+i=0
+TAB=$(printf '\t')
+while [ $i -lt 3 ]; do
+	day=$(j ".weather[$i].date")
+	[ -n "$day" ] || break
+
+	# Двухбуквенное обозначение дня недели.
+	wd=$(LC_ALL=ru_RU.UTF-8 date -d "$day" '+%a' 2>/dev/null || date -d "$day" '+%a')
+	wd=$(printf '%s' "$wd" | awk '{print toupper(substr($0,1,1)) substr($0,2,1)}')
+
+	# По частям суток (ночь 0-6, утро 6-12, день 12-18, вечер 18-24):
+	# средняя температура + код погоды первой записи периода.
+	lines=$(printf '%s' "$json" | jq -r ".weather[$i].hourly |
+		def p(a; b): ([.[] | select((.time | tonumber) >= a and (.time | tonumber) < b)]) as \$h |
+			if (\$h | length) > 0
+			then { t: (\$h | map(.tempC | tonumber) | add / length | round), c: \$h[0].weatherCode }
+			else { t: null, c: null } end;
+		[p(0; 600), p(600; 1200), p(1200; 1800), p(1800; 2400)] | map([.t, .c]) | .[] | @tsv")
+
+	out="$out (box :orientation \"h\" :class \"w-frow\" :space-evenly false :spacing 10
+ (label :class \"w-day-name\" :text \"$wd\")"
+
+	while IFS="$TAB" read -r t c; do
+		[ -n "$t" ] || continue
+		out="$out (box :orientation \"h\" :class \"w-part\" :space-evenly false :hexpand true :halign \"center\"
+   (label :class \"w-part-temp\" :text \"${t}°\")
+   (label :class \"w-cond $(iclass "$c")\" :text \"$(icon "$c")\"))"
+	done <<EOF
+$lines
+EOF
+	out="$out)"
+	i=$((i + 1))
+done
+out="$out)"
+
+printf '%s\n' "$out" > "$CACHE.new" && mv "$CACHE.new" "$CACHE"
+echo "$out"

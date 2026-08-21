@@ -1,0 +1,13 @@
+#!/bin/sh
+# Сеть → yuck одной строкой: стартовый замер и пересборка на каждое событие nmcli monitor.
+DIR=$(dirname "$0")
+NET="$DIR/network"; [ -x "$NET" ] || NET="$DIR/executable_network"
+emit() { "$NET" | tr '\n' ' '; echo; }
+
+emit
+nmcli monitor 2>/dev/null | while read -r _; do
+	sleep 2
+	emit
+	sleep 2
+	emit
+done

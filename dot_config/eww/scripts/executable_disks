@@ -1,0 +1,28 @@
+#!/bin/sh
+# Все диски системы: метка (или имя из /dev без префикса); для смонтированных —
+# полоса заполнения и свободное место, для несмонтированных — тип файловой системы.
+rows=""
+while IFS='	' read -r dev fst label mnt; do
+	[ -n "$dev" ] || continue
+	case $dev in loop*|zram*|ram*) continue ;; esac
+	name=${label:-$dev}
+	if [ -n "$mnt" ]; then
+		line=$(df -Ph "/dev/$dev" 2>/dev/null | tail -n1)
+		free=$(printf '%s' "$line" | awk '{print $4}')
+		p=$(printf '%s' "$line" | awk '{print $5}' | tr -d '%')
+		[ -n "$p" ] || { p=0; free='?'; }
+		rows="$rows (box :orientation \"h\" :class \"disk-row\" :space-evenly false
+ (label :class \"disk-name\" :text \"$name\")
+ (scale :class \"disk-bar\" :value $p :min 0 :max 100 :hexpand true)
+ (label :class \"disk-free\" :text \"$free\"))"
+	else
+		rows="$rows (box :orientation \"h\" :class \"disk-row\" :space-evenly false
+ (label :class \"disk-name\" :text \"$name\")
+ (box :hexpand true)
+ (label :class \"disk-fs\" :text \"$fst\"))"
+	fi
+done <<EOF
+$(lsblk -J -o NAME,FSTYPE,LABEL,MOUNTPOINT 2>/dev/null | jq -r '.. | objects | select(.fstype != null and .fstype != "" and .fstype != "swap") | [(.name // ""), .fstype, (.label // ""), (if (.mountpoint|type) == "array" then (.mountpoint[0] // "") else (.mountpoint // "") end)] | @tsv')
+EOF
+
+echo '(box :orientation "v" :space-evenly false'"$rows)"
