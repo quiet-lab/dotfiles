@@ -1,7 +1,7 @@
 ;; ==============================
-;;  EWW DASHBOARD — вертикальная колонка плиток у левого края.
+;;  EWW DASHBOARD — вертикальная колонка плиток у левого края
+;;  и окно контекстного меню сети (netmenu).
 ;;  Сетка: ширина 320px, зазор 5px, хардкод под 3840×2160.
-;;  Спека: openspec/changes/add-eww-dashboard
 ;; ==============================
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -224,14 +224,6 @@
 			:height 124
 	(literal :content launcher-grid))))
 
-;; Заглушка каркаса (задача 1.1) — заменяется виджетами по мере реализации.
-(defwidget stub []
-	(box	:class "tile stub"
-			:orientation "v"
-			:halign "center"
-			:valign "center"
-	(label :text "…")))
-
 ;; Колонка плиток: полный ряд 320px, три в ряд — 103px+5px+103px+5px+103px.
 (defwidget dash []
 	(box	:class "dash"
@@ -266,176 +258,10 @@
 	:wm-ignore false
 (dash))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;  ЛЕГАСИ: нижний бар и календарь.
-;;  Удаляются в задаче 8.1 после сборки дашборда.
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; Launcher Widgets ;;
-(defwidget launcher []
-	(box	:orientation "h"
-			:space-evenly false
-	(button	:class "launcher_icon"
-			:onclick "scripts/popup launcher"
-			:tooltip "Приложения"
-		"")))
-
 ;; Workspaces Widgets ;;
 (defwidget workspaces []
 	(literal :content workspace))
 (deflisten workspace :initial "(box :class \"works\" :orientation \"v\")" "scripts/workspace")
-
-;; Wifi Widgets ;;
-(defwidget wifi []
-	(box		:orientation "h"
-				:tooltip wifi-name
-	(button		:onclick "scripts/popup wifi"
-				:class "wifi-icon" wifi-icon)))
-(defpoll wifi-icon :interval "5s" :initial "󰤮" "scripts/wifi icon")
-(defpoll wifi-name :interval "5s" :initial "…" "scripts/wifi name")
-
-;; Volume Widgets ;;
-(defwidget volum []
-	(eventbox	:onhover "eww update volum=true"
-				:onhoverlost "eww update volum=false"
-	(box		:orientation "h"
-				:space-evenly false
-				:spacing 2
-	(button		:onclick "scripts/popup audio"
-				:class "volume-icon" "󰕾")
-	(revealer	:transition "slideright"
-				:reveal volum
-				:duration "550ms"
-	(scale		:class "volbar"
-				:value current-volume
-				:orientation "h"
-				:tooltip "Volume: ${current-volume}%"
-				:max 101
-				:min 0
-				:onchange "pactl set-sink-volume @DEFAULT_SINK@ {}%" )))))
-(defvar volum false)
-
-;; Control Panel Widgets ;;
-(defwidget control []
-	(box	:orientation "h"
-			:space-evenly false
-			:class "control"
-	(wifi)
-	(volum)))
-
-;; Clock Widgets ;;
-(defwidget time []
-	(box	:orientation "h"
-			:class "time"
-			:halign "end"
-	(button	:onclick "scripts/popup calendar"
-			:class "time-hour" hour)
-	(label	:class "time-sep" ":")
-	(button	:onclick "scripts/popup calendar"
-			:class "time-min" min)))
-
-;; Calendar Widgets ;;
-(defwidget cal []
-	(box :class "cal-box" :orientation "v"
-	(box :class "cal-inner-box"
-	(calendar	:class "cal"
-				:day calendar_day
-				:month calendar_month
-				:year calendar_year))))
-(defpoll calendar_day   :interval "10h" :initial "1" "date '+%d'")
-(defpoll calendar_month :interval "10h" :initial "1" "scripts/calendar")
-(defpoll calendar_year  :interval "10h" :initial "2026" "date '+%Y'")
-
-;; Powermenu Widgets ;;
-(defwidget power []
-	(eventbox	:onhover "eww update power=true"
-				:onhoverlost "eww update power=false"
-	(box		:orientation "h"
-				:space-evenly false
-				:hexpand false
-				:class "powermenu"
-	(revealer	:transition "slideleft"
-				:reveal power
-				:duration "550ms"
-	(box		:orientation "h"
-				:space-evenly false
-
-	(button		:class "button-wmres"
-				:tooltip "Openbox Restart"
-				:onclick "openbox --restart" "")
-
-	(button		:class "button-reb"
-				:tooltip "Reboot"
-				:onclick "systemctl reboot" "")
-
-	(button		:class "button-quit"
-				:tooltip "Logout"
-				:onclick "openbox --exit" "")
-
-	(button		:class "button-lock"
-				:tooltip "Lock Screen"
-				:onclick "loginctl lock-session" "")))
-
-	(button		:class "button-off"
-				:tooltip "Shutdown"
-				:onclick "systemctl poweroff" ""))))
-(defvar power false)
-
-;; Left Widgets ;;
-(defwidget left []
-	(box	:orientation "h"
-			:space-evenly false
-			:halign "start"
-	(launcher)
-	(workspaces)))
-
-;; Right Widgets ;;
-(defwidget right []
-	(box	:orientation "h"
-			:space-evenly false
-			:halign "end"
-			:spacing 5
-	(control)
-	(time)
-	(power)))
-
-;; Bar Widgets ;;
-(defwidget bar []
-	(box	:class "eww_bar"
-			:orientation "h"
-			:hexpand false
-			:vexpand false
-	(left)
-	(box :hexpand true)
-	(right)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;  Windows (легаси)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defwindow bar
-	:geometry (geometry	:x "0"
-						:y "0"
-						:width "100%"
-						:height "44px"
-						:anchor "bottom center")
-	:monitor 0
-	:reserve (struts :distance "44px"
-					 :side "bottom")
-	:wm-ignore false
-	:hexpand false
-	:vexpand false
-(bar))
-
-(defwindow calendar
-	:geometry (geometry	:x "10px"
-						:y "54px"
-						:width "270px"
-						:height "230px"
-						:anchor "bottom right")
-	:monitor 0
-	:stacking "fg"
-	:wm-ignore false
-(cal))
 
 (defwindow netmenu
 	:geometry (geometry	:x "330px"

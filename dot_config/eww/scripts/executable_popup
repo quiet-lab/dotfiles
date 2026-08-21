@@ -1,20 +1,8 @@
 #!/bin/sh
 # Действия по клику для виджетов панели.
 
-calendar() {
-    # Запустить демон eww, если не запущен
-    if ! pidof eww >/dev/null; then
-        eww daemon &
-        sleep 1
-    fi
-    eww open --toggle calendar
-}
-
 case "$1" in
-    launcher) rofi -show drun ;;
-    wifi)     wezterm-gui start -- nmtui ;;
     audio)    pavucontrol ;;
-    calendar) calendar ;;
 
     # Сеть
     net-editor)  nm-connection-editor & ;;

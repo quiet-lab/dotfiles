@@ -191,6 +191,11 @@ window {
     margin-top: 6px;
     font-size: 1.05em;
   }
+  calendar:selected { color: $blue; }
+  calendar.header { color: $blue; font-weight: bold; }
+  calendar.button { color: $magenta; }
+  calendar.highlight { color: $magenta; font-weight: bold; }
+  calendar:indeterminate { color: $background; }
 }
 
 // Круговые шкалы CPU/RAM/GPU
@@ -327,22 +332,6 @@ $w-storm: #BB9AF7;
   .pwr-off     { color: $red; }
 }
 
-// EWW BAR
-.eww_bar{
-  background-color: $background;
-  padding: .3rem;
-}
-
-// Launcher
-.launcher_icon{
-    color: $cyan;
-    font-size: 1.4em;
-    padding: 0 1rem 0 .5rem;
-}
-.launcher_icon:hover{
-    color: $blue;
-}
-
 // Workspaces — вертикальная колонка плиток столов
 .works {
   background-color: transparent;
@@ -397,127 +386,10 @@ $w-storm: #BB9AF7;
   color: $cyan;
 }
 
-// Control Panel
-.control {
-  padding: 0 .6rem;
-  font-size: 1.3em;
-  background-color: $black;
-  border-radius: 5px;
-}
-
-.wifi-icon{
-  margin-right: .2rem;
-  color: $magenta;
-}
-.wifi-icon:hover{
-  color: $blue;
-}
-
 .volume-icon{
   margin: 0 .2rem 0 .2rem;
   color: $green;
 }
 .volume-icon:hover{
   color: $cyan;
-}
-
-scale {
-  min-width: 90px;
-}
-
-scale trough {
-  all: unset;
-  background-color: $background;
-  border-radius: 5px;
-  min-width: 80px;
-  min-height: 10px;
-  margin: 0 .3rem 0 .3rem;
-}
-
-.volbar trough highlight {
-  background-color: $green;
-  border-radius: 5px;
-}
-
-// Clock
-.time {
-  font-weight: bold;
-  font-size: 1.15em;
-  background-color: $black;
-  color: $white;
-  border-radius: 5px;
-  padding: .2rem .8rem .2rem .8rem;
-
-  button:hover {
-    color: $cyan;
-  }
-}
-
-.time-sep {
-  color: $gray;
-}
-
-// Calendar
-.cal-box {
-  background-color: $black;
-  font-size: 1em;
-  font-weight: bold;
-
-  .cal-inner-box {
-      padding: 1rem 1rem .2rem;
-
-      .cal {
-          padding: .8rem .25rem 0rem;
-          margin-left: 10px;
-      }
-  }
-}
-
-calendar:selected {
-  color: $blue;
-}
-
-calendar.header {
-  color: $blue;
-  font-weight: bold;
-}
-
-calendar.button {
-  color: $magenta;
-}
-
-calendar.highlight {
-  color: $magenta;
-  font-weight: bold;
-}
-
-calendar:indeterminate {
-  color: $background;
-}
-
-// Powermenu
-.powermenu {
-  font-family: feather;
-  font-size: 1.3em;
-  font-weight: bold;
-}
-.button-wmres, .button-reb, .button-lock,
-.button-quit, .button-off{
-  padding: .2rem .5rem .2rem .2rem;
-}
-.button-off{
-  margin-right: .5rem;
-  color: $red;
-}
-.button-wmres{
-  color: $green;
-}
-.button-reb{
-  color: $yellow
-}
-.button-quit{
-  color: $magenta;
-}
-.button-lock{
-  color: $blue;
 }
