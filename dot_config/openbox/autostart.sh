@@ -41,3 +41,5 @@ xkbcomp /home/mne/.config/X11/xkb_custom $DISPLAY
 ~/.local/bin/kb_listener.sh &
 
 # Any additions should be added below.
+
+{ [ -x "$(command -v eww)" ] && { pidof -s eww -q || eww daemon; } && eww open dashboard; } &
