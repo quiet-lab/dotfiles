@@ -35,168 +35,162 @@
 
 ;; --- Часы, дата и календарь ---
 (defwidget clock-tile []
-	(box	:class "tile clock-tile"
-			:orientation "v"
-			:space-evenly false
-	(box	:orientation "h"
-			:space-evenly false
-	(label	:class "time-hour" :text hour)
-	(label	:class "time-sep" :text ":")
-	(label	:class "time-min" :text min)
-	(box	:hexpand true)
-	(label	:class "date-label" :text dash-date :halign "end"))
-	(calendar	:class "cal"
-				:day cal-day
-				:month cal-month
-				:year cal-year)))
+  (box :class "tile clock-tile" :orientation "v" :space-evenly false 
+    (box :orientation "h" :space-evenly false 
+      (label :class "time-hour" :text hour)
+      (label :class "time-sep" :text ":")
+      (label :class "time-min" :text min)
+      (box :hexpand true)
+      (label :class "date-label" :text dash-date :halign "end"))
+    (calendar :class "cal" :day cal-day :month cal-month :year cal-year)))
 
 ;; --- CPU / RAM (круговые шкалы) ---
 (defwidget cpu-tile []
-	(box	:class "tile gauge-tile"
-			:orientation "v"
-			:space-evenly false
-			:width 103
-			:height 103
-			:halign "center"
-			:valign "center"
-	(box	:orientation "h" :halign "center" :space-evenly false :spacing 4
-	(label	:class "gauge-name gname-cpu" :text "CPU")
-	(label	:class "gauge-name ${cputempc}" :text "${cputemp}°"))
-	(box	:orientation "v" :vexpand true)
-	(box	:class "gauge-wrap"
-			:width 70
-			:height 70
-			:halign "center"
-	(circular-progress	:class "cpu-gauge ${cpuc}"
-						:value cpu
-						:thickness 10
-						:hexpand true
-						:vexpand true
-	(label				:class "gauge-label" :text "${cpu}%")))))
+ (box :class "tile gauge-tile"
+   :orientation "v"
+   :space-evenly false
+   :width 103
+   :height 103
+   :halign "center"
+   :valign "center"
+ (box :orientation "h" :halign "center" :space-evenly false :spacing 4
+ (label :class "gauge-name gname-cpu" :text "CPU")
+ (label :class "gauge-name ${cputempc}" :text "${cputemp}°"))
+ (box :orientation "v" :vexpand true)
+ (box :class "gauge-wrap"
+   :width 70
+   :height 70
+   :halign "center"
+ (circular-progress :class "cpu-gauge ${cpuc}"
+      :value cpu
+      :thickness 10
+      :hexpand true
+      :vexpand true
+ (label    :class "gauge-label" :text "${cpu}%")))))
 
 (defwidget ram-tile []
-	(box	:class "tile gauge-tile"
-			:orientation "v"
-			:space-evenly false
-			:width 103
-			:height 103
-			:halign "center"
-			:valign "center"
-	(box	:orientation "h" :halign "center" :space-evenly false :spacing 4
-	(label	:class "gauge-name gname-ram" :text "RAM")
-	(label	:class "gauge-name gname-ram-total" :text "${ramtotal}G"))
-	(box	:orientation "v" :vexpand true)
-	(box	:class "gauge-wrap"
-			:width 70
-			:height 70
-			:halign "center"
-	(circular-progress	:class "ram-gauge ${ramc}"
-						:value ram
-						:thickness 10
-						:hexpand true
-						:vexpand true
-	(label				:class "gauge-label" :text "${ram}%")))))
+ (box :class "tile gauge-tile"
+   :orientation "v"
+   :space-evenly false
+   :width 103
+   :height 103
+   :halign "center"
+   :valign "center"
+ (box :orientation "h" :halign "center" :space-evenly false :spacing 4
+ (label :class "gauge-name gname-ram" :text "RAM")
+ (label :class "gauge-name gname-ram-total" :text "${ramtotal}G"))
+ (box :orientation "v" :vexpand true)
+ (box :class "gauge-wrap"
+   :width 70
+   :height 70
+   :halign "center"
+ (circular-progress :class "ram-gauge ${ramc}"
+      :value ram
+      :thickness 10
+      :hexpand true
+      :vexpand true
+ (label    :class "gauge-label" :text "${ram}%")))))
 
 (defwidget gpu-tile []
-	(box	:class "tile gauge-tile"
-			:orientation "v"
-			:space-evenly false
-			:width 103
-			:height 103
-			:halign "center"
-			:valign "center"
-	(box	:orientation "h" :halign "center" :space-evenly false :spacing 4
-	(label	:class "gauge-name gname-gpu" :text "GPU")
-	(label	:class "gauge-name ${gputempc}" :text "${gputemp}°"))
-	(box	:orientation "v" :vexpand true)
-	(box	:class "gauge-wrap"
-			:width 70
-			:height 70
-			:halign "center"
-	(circular-progress	:class "gpu-gauge ${gpuc}"
-						:value gpu
-						:thickness 10
-						:hexpand true
-						:vexpand true
-	(label				:class "gauge-label" :text "${gpu}%")))))
+ (box :class "tile gauge-tile"
+   :orientation "v"
+   :space-evenly false
+   :width 103
+   :height 103
+   :halign "center"
+   :valign "center"
+ (box :orientation "h" :halign "center" :space-evenly false :spacing 4
+ (label :class "gauge-name gname-gpu" :text "GPU")
+ (label :class "gauge-name ${gputempc}" :text "${gputemp}°"))
+ (box :orientation "v" :vexpand true)
+ (box :class "gauge-wrap"
+   :width 70
+   :height 70
+   :halign "center"
+ (circular-progress :class "gpu-gauge ${gpuc}"
+      :value gpu
+      :thickness 10
+      :hexpand true
+      :vexpand true
+ (label    :class "gauge-label" :text "${gpu}%")))))
 
 ;; --- Погода ---
 (defwidget weather-tile []
-	(box	:class "tile weather-tile"
-			:orientation "v"
-			:space-evenly false
-	(literal :content dash-weather)))
+ (box :class "tile weather-tile"
+   :orientation "v"
+   :space-evenly false
+ (literal :content dash-weather)))
 
 ;; --- Громкость ---
 (defwidget volume-tile []
-	(box	:class "tile volume-tile"
-			:orientation "h"
-			:space-evenly false
-			:spacing 8
-	(button		:onclick "scripts/popup audio"
-				:class "volume-icon"
-				:tooltip "Микшер"
-	"󰕾")
-	(scale		:class "volbar"
-				:hexpand true
-				:value current-volume
-				:orientation "h"
-				:tooltip "Громкость: ${current-volume}%"
-				:max 101
-				:min 0
-				:onchange "pactl set-sink-volume @DEFAULT_SINK@ {}%")))
+ (box :class "tile volume-tile"
+   :orientation "h"
+   :space-evenly false
+   :spacing 8
+ (button  :onclick "scripts/popup audio"
+    :class "volume-icon"
+    :tooltip "Микшер"
+ "󰕾")
+ (scale  :class "volbar"
+    :hexpand true
+    :value current-volume
+    :orientation "h"
+    :tooltip "Громкость: ${current-volume}%"
+    :max 101
+    :min 0
+    :onchange "pactl set-sink-volume @DEFAULT_SINK@ {}%")))
 
 ;; --- Питание ---
 (defwidget power-tile []
-	(box	:class "tile power-tile"
-			:orientation "h"
-			:space-evenly true
-	(button		:class "pwr-lock"
-				:tooltip "Lock Screen"
-				:onclick "loginctl lock-session" "󰌾")
-	(button		:class "pwr-quit"
-				:tooltip "Logout"
-				:onclick "openbox --exit" "󰗽")
-	(button		:class "pwr-restart"
-				:tooltip "Openbox Restart"
-				:onclick "openbox --restart" "󰜉")
-	(button		:class "pwr-off"
-				:tooltip "Shutdown"
-				:onclick "systemctl poweroff" "󰐥")))
+ (box :class "tile power-tile"
+   :orientation "h"
+   :space-evenly true
+ (button  :class "pwr-lock"
+    :tooltip "Lock Screen"
+    :onclick "loginctl lock-session" "󰌾")
+ (button  :class "pwr-quit"
+    :tooltip "Logout"
+    :onclick "openbox --exit" "󰗽")
+ (button  :class "pwr-restart"
+    :tooltip "Openbox Restart"
+    :onclick "openbox --restart" "󰜉")
+ (button  :class "pwr-off"
+    :tooltip "Shutdown"
+    :onclick "systemctl poweroff" "󰐥")))
 
 ;; --- Сеть ---
 (defwidget network-tile []
-	(eventbox	:class "tile network-tile"
-				:onclick "nm-connection-editor &"
-				:tooltip "ЛКМ — редактор соединений"
-	(box	:orientation "v" :space-evenly false
-	(box	:orientation "h" :space-evenly false
-	(label	:class "tile-title" :text "СЕТЬ")
-	(box	:hexpand true)
-	(button	:class "net-menu-btn"
-			:onclick "scripts/popup netmenu"
-			:tooltip "Действия сети" "⋮"))
-	(literal :content network)
-	;; Скрытая ссылка: без использования в открытом окне eww не запускает poll-страховку.
-	(label :visible false :text network-sync))))
+ (eventbox :class "tile network-tile"
+    :onclick "nm-connection-editor &"
+    :tooltip "ЛКМ — редактор соединений"
+ (box :orientation "v" :space-evenly false
+ (box :orientation "h" :space-evenly false
+ (label :class "tile-title" :text "СЕТЬ")
+ (box :hexpand true)
+ (button :class "net-menu-btn"
+   :onclick "scripts/popup netmenu"
+   :tooltip "Действия сети" "⋮"))
+ (literal :content network)
+ ;; Скрытая ссылка: без использования в открытом окне eww не запускает poll-страховку.
+ (label :visible false :text network-sync))))
 
 ;; --- Диски ---
 (defwidget disks-tile []
-	(box	:class "tile disks-tile"
-			:orientation "v"
-			:space-evenly false
-	(label	:class "tile-title" :text "ДИСКИ")
-	(literal :content disks)))
+ (box :class "tile disks-tile"
+   :orientation "v"
+   :space-evenly false
+ (label :class "tile-title" :text "ДИСКИ")
+ (literal :content disks)))
 
 ;; --- Избранное ---
 (defwidget favorites-tile []
-	(box	:class "tile favorites-tile"
-			:orientation "v"
-			:space-evenly false
-	(label	:class "tile-title" :text "ИЗБРАННОЕ")
-	(button	:class "fav-btn" :onclick "wezterm start --cwd ~ yazi &" "󰉋 ~")
-	(button	:class "fav-btn" :onclick "wezterm start --cwd ~/Загрузки yazi &" "󰉋 ~/Загрузки")
-	(button	:class "fav-btn" :onclick "wezterm start --cwd ~/.config yazi &" "󰉋 ~/.config")))
+ (box :class "tile favorites-tile"
+   :orientation "v"
+   :space-evenly false
+ (label :class "tile-title" :text "ИЗБРАННОЕ")
+ (button :class "fav-btn" :onclick "wezterm start --cwd ~ yazi &" "󰉋 ~")
+ (button :class "fav-btn" :onclick "wezterm start --cwd ~/Загрузки yazi &" "󰉋 ~/Загрузки")
+ (button :class "fav-btn" :onclick "wezterm start --cwd ~/.config yazi &" "󰉋 ~/.config")))
 
 ;; --- Лаунчер приложений ---
 ;; Все записи .desktop из ~/.local/share/applications и /usr/share/applications.
@@ -206,69 +200,69 @@
 (defpoll launcher-grid :interval "60s" :initial "(box)" "scripts/apps-list")
 
 (defwidget launcher-tile []
-	(box	:class "tile launcher-tile"
-			:orientation "v"
-			:space-evenly false
-	(box	:class "apps-header"
-			:orientation "h"
-			:space-evenly false
-			:spacing 5
-	(label	:class "tile-title" :text "ПРИЛОЖЕНИЯ")
-	(input	:class "apps-search"
-			:hexpand true
-			:tooltip "Фильтр по названию"
-			:onchange "scripts/apps-update '{}'"))
-	(scroll	:class "apps-scroll"
-			:hscroll false
-			:vscroll true
-			:height 124
-	(literal :content launcher-grid))))
+ (box :class "tile launcher-tile"
+   :orientation "v"
+   :space-evenly false
+ (box :class "apps-header"
+   :orientation "h"
+   :space-evenly false
+   :spacing 5
+ (label :class "tile-title" :text "ПРИЛОЖЕНИЯ")
+ (input :class "apps-search"
+   :hexpand true
+   :tooltip "Фильтр по названию"
+   :onchange "scripts/apps-update '{}'"))
+ (scroll :class "apps-scroll"
+   :hscroll false
+   :vscroll true
+   :height 124
+ (literal :content launcher-grid))))
 
 ;; Колонка плиток: полный ряд 320px, три в ряд — 103px+5px+103px+5px+103px.
 (defwidget dash []
-	(box	:class "dash"
-			:orientation "v"
-			:space-evenly false
-			:spacing 5
-	(clock-tile)
-	(weather-tile)
-	(box	:orientation "h" :space-evenly false :spacing 5
-		(cpu-tile)
-		(ram-tile)
-		(gpu-tile))
-	(volume-tile)
-	(network-tile)
-	(disks-tile)
-	(favorites-tile)
-	(workspaces)
-	(launcher-tile)
-	(power-tile)))
+ (box :class "dash"
+   :orientation "v"
+   :space-evenly false
+   :spacing 5
+ (clock-tile)
+ (weather-tile)
+ (box :orientation "h" :space-evenly false :spacing 5
+  (cpu-tile)
+  (ram-tile)
+  (gpu-tile))
+ (volume-tile)
+ (network-tile)
+ (disks-tile)
+ (favorites-tile)
+ (workspaces)
+ (launcher-tile)
+ (power-tile)))
 
 (defwindow dashboard
-	:geometry (geometry	:x "5px"
-						:y "0px"
-						:width "320px"
-						:anchor "left center")
-	:monitor 0
-	:reserve (struts :distance "330px" :side "left")
-	;; Не dock: такие окна Openbox лишает фокуса, и поле фильтра лаунчера
-	;; не получает клавиатуру. utility держит окно вне таскбара.
-	:windowtype "utility"
-	:stacking "fg"
-	:wm-ignore false
+ :geometry (geometry :x "5px"
+      :y "0px"
+      :width "320px"
+      :anchor "left center")
+ :monitor 0
+ :reserve (struts :distance "330px" :side "left")
+ ;; Не dock: такие окна Openbox лишает фокуса, и поле фильтра лаунчера
+ ;; не получает клавиатуру. utility держит окно вне таскбара.
+ :windowtype "utility"
+ :stacking "fg"
+ :wm-ignore false
 (dash))
 
 ;; Workspaces Widgets ;;
 (defwidget workspaces []
-	(literal :content workspace))
+ (literal :content workspace))
 (deflisten workspace :initial "(box :class \"works\" :orientation \"v\")" "scripts/workspace")
 
 (defwindow netmenu
-	:geometry (geometry	:x "330px"
-						:y "200px"
-						:width "240px"
-						:anchor "left top")
-	:monitor 0
-	:stacking "fg"
-	:wm-ignore false
+ :geometry (geometry :x "330px"
+      :y "200px"
+      :width "240px"
+      :anchor "left top")
+ :monitor 0
+ :stacking "fg"
+ :wm-ignore false
 (literal :content netmenu-content))
