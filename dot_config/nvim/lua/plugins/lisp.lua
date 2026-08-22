@@ -1,13 +1,13 @@
-local parser_config = require("nvim-treesitter.parsers").get_parser_configs()
-
-parser_config.yuck = {
-  install_info = {
-    url = "https://github.com/tree-sitter-grammars/tree-sitter-yuck",
-    files = { "src/parser.c" },
-    branch = "main",
-  },
-  filetype = "yuck",
-}
+-- local parser_config = require("nvim-treesitter.parsers").get_parser_configs()
+--
+-- parser_config.yuck = {
+--   install_info = {
+--     url = "https://github.com/tree-sitter-grammars/tree-sitter-yuck",
+--     files = { "src/parser.c" },
+--     branch = "main",
+--   },
+--   filetype = "yuck",
+-- }
 
 vim.filetype.add({
   extension = {
