@@ -31,8 +31,11 @@ $white: $foreground;
 // ==============================
 
 // Окна eww сами по себе без подложки — видны только плитки.
-window {
-  background-color: transparent;
+// window.background перекрывает заливку темы: она вешает класс .background
+// на окно и специфичностью (0,1,0) бьёт наш window (0,0,1).
+window,
+window.background {
+  background: none;
 }
 
 // Колонка плиток
