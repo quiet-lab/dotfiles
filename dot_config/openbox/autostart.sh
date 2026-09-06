@@ -21,7 +21,7 @@ exec >/dev/null 2>&1
 joyd_toggle_mode apply
 joyd_tray_programs exec
 
-picom --experimental-backends -b
+picom -b
 if [ -x "$(command -v lxpolkit)" ]; then
   lxpolkit &
 else
