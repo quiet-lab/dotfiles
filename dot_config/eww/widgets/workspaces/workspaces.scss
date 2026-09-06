@@ -1,53 +1,65 @@
-// Workspaces — вертикальная колонка плиток столов
+// Workspaces — колонка одинаковых плиток: иконки окон слева, номер стола справа
 .works {
   background-color: transparent;
 }
 
+// Плитка 320×36: рамка и фон на eventbox (.ws), отступы и min-размеры на внутреннем box (.ws-body).
+// GTK не учитывает padding и border у eventbox при размещении: рамка рисуется поверх внутренней области,
+// поэтому размер задаёт только .ws-body: 300 + 2·10 = 320 по ширине, 24 + 2·6 = 36 по высоте.
+// Рамка прозрачная у всех плиток, чтобы активная не отличалась размером.
 .works .ws {
   background-color: $black;
+  border: 2px solid transparent;
   border-radius: 12px;
-  padding: 8px 10px;
 
-  &.ws-fo { border: 2px solid $cyan; }
+  &.ws-fo { border-color: $cyan; }
+  &:hover .ws-num { color: $cyan; }
 }
 
+.ws-body {
+  padding: 6px 10px;
+  min-width: 300px;
+  min-height: 24px;
+}
+
+// Номер стола: серый у обычных, светлый у активного
 .ws-num {
   color: $gray;
   font-weight: bold;
+  margin-left: 6px;
 }
 
-.ws-icons {
-  margin-left: 10px;
-
-  image { margin-right: 4px; }
-  .ws-icons-glyph { color: $foreground; font-size: 1.1em; margin-right: 4px; }
+.ws-fo .ws-num {
+  color: $foreground;
 }
 
-.ws-name {
-  color: $gray;
-  font-size: 0.95em;
-  font-weight: bold;
-  margin-bottom: 6px;
-}
-
+// Кнопка-иконка 24×24 (иконка 20 + отступ 2), без оформления кнопки GTK
 .ws-win {
-  margin-top: 2px;
-  padding: 2px 4px;
+  min-width: 0;
+  min-height: 0;
+  padding: 2px;
+  margin: 0;
+  border: none;
   border-radius: 6px;
-
-  .ws-win-img { margin-right: 8px; }
-  .ws-win-icon { color: $blue; margin-right: 8px; }
-  .ws-win-title { color: $foreground; }
+  background: none;
+  box-shadow: none;
 
   &:hover { background-color: $background; }
 }
 
-// Свёрнутые окна — приглушённые
-.ws-min {
-  .ws-win-icon, .ws-win-title { color: $gray; }
+.ws-glyph {
+  color: $foreground;
+  font-size: 1.1em;
 }
 
-.works button:hover .ws-num,
-.works button:hover .ws-icons {
-  color: $cyan;
+// Свёрнутые окна — приглушённые
+.ws-min {
+  opacity: 0.4;
+}
+
+// Метка «+N» для окон сверх лимита
+.ws-more {
+  color: $gray;
+  font-weight: bold;
+  margin-left: 4px;
 }

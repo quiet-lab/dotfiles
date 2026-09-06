@@ -1,16 +1,31 @@
 #!/bin/sh
-# Рабочие столы Openbox → вертикальная колонка плиток (literal для виджета workspaces).
-# Активный стол развёрнут: строка на каждое окно (полноцветная иконка приложения + название),
-# свёрнутые занятые столы — номер и иконки запущенных приложений, пустые — только номер.
+# Рабочие столы Openbox → JSON-состояние для виджета workspaces (deflisten `workspace`).
+# Разметку рисует workspaces.yuck; скрипт только собирает данные.
+#
+# Формат вывода (одна строка на событие):
+#   {"desktops":[{"n":1,"idx":0,"active":false,
+#                 "windows":[{"id":29360131,"icon":"/путь.svg","glyph":"","min":false,"name":"Firefox"}],
+#                 "more":0}, ...]}
+#   n — номер стола для подписи, idx — индекс для xdotool, more — число окон сверх лимита.
+#
 # Иконки разрешает scripts/appicon (корни ~/.local/share/icons → /usr/share/icons →
 # /usr/share/pixmaps, рекурсивно, предпочтение SVG); фолбэк — Nerd Font глиф.
-# Обновление: xprop -root -spy _NET_CURRENT_DESKTOP _NET_CLIENT_LIST.
+# Обновление: xprop -root -spy _NET_CURRENT_DESKTOP _NET_CLIENT_LIST _NET_CLIENT_LIST_STACKING
+# _NET_ACTIVE_WINDOW; два последних покрывают сворачивание и поднятие окон.
+# Одинаковые состояния не выводятся повторно.
 
 # Общий резолвер appicon лежит в корневом scripts/: своя папка → корень конфигурации.
 APPICON="$(dirname "$0")/appicon"
 [ -x "$APPICON" ] || APPICON="$(dirname "$0")/executable_appicon"
 [ -x "$APPICON" ] || APPICON="$(dirname "$0")/../../../scripts/appicon"
 [ -x "$APPICON" ] || APPICON="$(dirname "$0")/../../../scripts/executable_appicon"
+
+# Максимум иконок на плитке; остальные окна считаются в поле more.
+LIMIT=10
+
+# Разделитель полей внутренних записей — управляющий символ US (0x1F).
+# Из значений все управляющие символы удаляются при экранировании, поэтому в данных он не встречается.
+US=$(printf '\037')
 
 # WM_CLASS (второе поле) → кандидаты имён иконок по убыванию приоритета.
 class_icon_names() {
@@ -40,7 +55,7 @@ class_glyph() {
 	esac
 }
 
-# WM_CLASS → название программы для подписи строки окна.
+# WM_CLASS → название программы для всплывающей подсказки.
 class_name() {
 	case "$1" in
 		firefox|Navigator)				echo 'Firefox' ;;
@@ -51,7 +66,7 @@ class_name() {
 		Urxvt)							echo 'URxvt' ;;
 		st)								echo 'st' ;;
 		kitty)							echo 'kitty' ;;
-		Neovide)						echo 'Neovide' ;;
+		Neovide|neovide)				echo 'Neovide' ;;
 		nvim)							echo 'Neovim' ;;
 		TelegramDesktop)				echo 'Telegram' ;;
 		pavucontrol|Pavucontrol)		echo 'PulseAudio' ;;
@@ -70,73 +85,76 @@ find_icon() {
 	[ -n "$1" ] && "$APPICON" $1
 }
 
-# Экранирование строки для yuck-литерала.
-esc() {
-	printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/|/∕/g'
+# Экранирование значения для JSON-строки: удалить управляющие символы, `\` → `\\`, `"` → `\"`.
+jesc() {
+	printf '%s' "$1" | tr -d '\000-\037' | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'
 }
 
+# Одна запись на окно: стол, свёрнутость, id, глиф, путь к иконке, название.
+# Строковые поля уже экранированы для JSON.
 collect() {
 	clients=$(xprop -root _NET_CLIENT_LIST 2>/dev/null | grep -o '0x[0-9a-fA-F]*')
 	for win in $clients; do
-		desk=''; cls=''; hidden=0
-		info=$(xprop -id "$win" _NET_WM_DESKTOP WM_CLASS _NET_WM_STATE_HIDDEN 2>/dev/null)
-		# Порядок строк фиксирован порядком аргументов xprop.
+		info=$(xprop -id "$win" _NET_WM_DESKTOP WM_CLASS _NET_WM_STATE 2>/dev/null)
 		desk=$(printf '%s\n' "$info" | sed -n 's/^_NET_WM_DESKTOP[^=]*= //p')
 		cls=$(printf '%s\n' "$info" | sed -n 's/^WM_CLASS[^=]*= "[^"]*", "\([^"]*\)".*/\1/p')
-		hidden=$(printf '%s\n' "$info" | sed -n 's/^_NET_WM_STATE_HIDDEN[^=]*= //p')
-		[ "$hidden" = "1" ] || hidden=0
+		# Свёрнутость — атом _NET_WM_STATE_HIDDEN в списке _NET_WM_STATE.
+		hidden=0
+		case "$info" in *_NET_WM_STATE_HIDDEN*) hidden=1 ;; esac
 		[ -n "$desk" ] || continue
 		[ "$desk" = "4294967295" ] && continue   # sticky: панели, трей, сами окна eww
 		inames=$(class_icon_names "$cls")
 		ipath=$(find_icon "$inames")
 		glyph=''
 		[ -n "$ipath" ] || glyph=$(class_glyph "$cls")
-		printf '%s|%s|%s|%s|%s|%s\n' "$desk" "$hidden" "$((win))" "$glyph" "$ipath" "$(esc "$(class_name "$cls")")"
+		printf '%s%s%s%s%s%s%s%s%s%s%s\n' \
+			"$desk" "$US" "$hidden" "$US" "$((win))" "$US" \
+			"$(jesc "$glyph")" "$US" "$(jesc "$ipath")" "$US" "$(jesc "$(class_name "$cls")")"
 	done
 }
 
+# Сборка JSON по всем столам.
 render() {
 	current=$(xdotool get_desktop 2>/dev/null || echo 0)
 	count=$(xdotool get_num_desktops 2>/dev/null || echo 8)
 	records=$(collect)
 
-	out='(box :class "works" :orientation "v" :space-evenly false :spacing 5'
+	out='{"desktops":['
 	i=0
 	while [ "$i" -lt "$count" ]; do
-		rows=''
-		icons=''
-		while IFS='|' read -r d hid wid glyph ipath name; do
+		wins=''
+		n=0
+		more=0
+		while IFS="$US" read -r d hid wid glyph ipath name; do
 			[ "$d" = "$i" ] || continue
-			if [ -n "$ipath" ]; then
-				icons="$icons(image :path \"$ipath\" :image-width 20 :image-height 20)"
-				wicon="(image :path \"$ipath\" :image-width 22 :image-height 22 :class \"ws-win-img\")"
-			else
-				icons="$icons(label :class \"ws-icons-glyph\" :text \"$glyph\")"
-				wicon="(label :class \"ws-win-icon\" :text \"$glyph\")"
+			n=$((n + 1))
+			if [ "$n" -gt "$LIMIT" ]; then
+				more=$((more + 1))
+				continue
 			fi
-			wclass='ws-win'
-			[ "$hid" = "1" ] && wclass='ws-win ws-min'
-			rows="$rows(button :class \"$wclass\" :onclick \"xdotool set_desktop $i; xdotool windowactivate $wid\" (box :orientation \"h\" :space-evenly false $wicon (label :class \"ws-win-title\" :text \"$name\" :hexpand true :xalign 0)))"
-		done <<EOF
+			min=false
+			[ "$hid" = "1" ] && min=true
+			wins="$wins{\"id\":$wid,\"icon\":\"$ipath\",\"glyph\":\"$glyph\",\"min\":$min,\"name\":\"$name\"},"
+		done <<EOR
 $records
-EOF
-
-		num=$((i + 1))
-		if [ "$i" -eq "$current" ]; then
-			out="$out(box :class \"ws ws-fo\" :orientation \"v\" :space-evenly false"
-			out="$out(label :class \"ws-name\" :text \"СТОЛ $num\")$rows)"
-		elif [ -n "$icons" ]; then
-			out="$out(button :class \"ws ws-oc\" :onclick \"xdotool set_desktop $i\" (box :orientation \"h\" :class \"ws-icons\" :space-evenly false (label :class \"ws-num\" :text \"$num\")$icons))"
-		else
-			out="$out(button :class \"ws ws-un\" :onclick \"xdotool set_desktop $i\" (label :class \"ws-num\" :text \"$num\"))"
-		fi
+EOR
+		active=false
+		[ "$i" -eq "$current" ] && active=true
+		out="$out{\"n\":$((i + 1)),\"idx\":$i,\"active\":$active,\"windows\":[${wins%,}],\"more\":$more},"
 		i=$((i + 1))
 	done
-	out="$out)"
-	printf '%s\n' "$out"
+	printf '%s\n' "${out%,}]}"
 }
 
-render
-xprop -root -spy _NET_CURRENT_DESKTOP _NET_CLIENT_LIST 2>/dev/null | while read -r _; do
-	render
+# Начальное состояние, затем перерисовка по событиям; одинаковые состояния подавляются.
+# _NET_ACTIVE_WINDOW нужен для свёрнутости: Openbox не всегда меняет порядок окон при
+# сворачивании, но при сворачивании активного окна фокус переходит, и событие приходит.
+prev=$(render)
+printf '%s\n' "$prev"
+xprop -root -spy _NET_CURRENT_DESKTOP _NET_CLIENT_LIST _NET_CLIENT_LIST_STACKING _NET_ACTIVE_WINDOW 2>/dev/null | while read -r _; do
+	new=$(render)
+	if [ "$new" != "$prev" ]; then
+		printf '%s\n' "$new"
+		prev=$new
+	fi
 done
