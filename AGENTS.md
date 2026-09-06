@@ -60,6 +60,14 @@ chezmoi add ~/путь      # взять под управление новый 
 
 `.chezmoiignore` исключает `openspec/` — это документация проекта, а не dotfile, и в `$HOME` попадать не должна.
 
+## Git
+
+- Коммит делать только по просьбе пользователя.
+- После каждого коммита сразу выполнять `git push` в `origin`, не спрашивая
+  подтверждения. Коммит без push считается незавершённой работой.
+- Логически разные изменения (например, синхронизация dotfiles и
+  переработка виджетов EWW) оформлять отдельными коммитами.
+
 ## OpenSpec
 
 Изменения ведутся по схеме spec-driven: `openspec/specs/<capability>/spec.md` — актуальные требования, `openspec/changes/<name>/` — активное изменение (proposal, design, tasks, изменения спецификаций), `openspec/changes/archive/<дата>-<name>/` — завершённые. Команды рабочего процесса лежат в `.opencode/commands/opsx-*.md` (new, apply, verify, archive, sync и т.д.) и опираются на CLI `openspec` (`openspec list --json`, `openspec status --change <name> --json`, `openspec validate`, `openspec archive`). Перед изменением поведения EWW сверяйтесь со спецификацией соответствующей capability и обновляйте её.
