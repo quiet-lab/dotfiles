@@ -1,0 +1,43 @@
+// Часы, дата и календарь
+.clock-tile {
+  .time-hour, .time-min {
+    font-size: 2.2em;
+    font-weight: bold;
+    color: $white;
+  }
+  .time-sep {
+    font-size: 2.2em;
+    color: $gray;
+    padding: 0 4px;
+  }
+  .date-label {
+    font-size: 1.56em;
+    color: $gray;
+  }
+  calendar {
+    margin-top: 6px;
+    font-size: 1.05em;
+  }
+}
+
+calendar:selected {
+  color: $blue;
+}
+
+calendar.header {
+  color: $blue;
+  font-weight: bold;
+}
+
+calendar.button {
+  color: $magenta;
+}
+
+calendar.highlight {
+  color: $magenta;
+  font-weight: bold;
+}
+
+calendar:indeterminate {
+  color: $background;
+}

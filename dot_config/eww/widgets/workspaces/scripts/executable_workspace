@@ -6,7 +6,11 @@
 # /usr/share/pixmaps, рекурсивно, предпочтение SVG); фолбэк — Nerd Font глиф.
 # Обновление: xprop -root -spy _NET_CURRENT_DESKTOP _NET_CLIENT_LIST.
 
+# Общий резолвер appicon лежит в корневом scripts/: своя папка → корень конфигурации.
 APPICON="$(dirname "$0")/appicon"
+[ -x "$APPICON" ] || APPICON="$(dirname "$0")/executable_appicon"
+[ -x "$APPICON" ] || APPICON="$(dirname "$0")/../../../scripts/appicon"
+[ -x "$APPICON" ] || APPICON="$(dirname "$0")/../../../scripts/executable_appicon"
 
 # WM_CLASS (второе поле) → кандидаты имён иконок по убыванию приоритета.
 class_icon_names() {

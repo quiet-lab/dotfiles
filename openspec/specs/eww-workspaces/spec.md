@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Модуль рабочих столов Openbox: вертикальная колонка плиток столов с окнами активного стола. Реализация — `scripts/workspace` (deflisten `workspace`), иконки через общий резолвер `scripts/appicon`.
+Модуль рабочих столов Openbox: вертикальная колонка плиток столов с окнами активного стола. Реализация — `widgets/workspaces/scripts/workspace` (deflisten `workspace`), иконки через общий резолвер `scripts/appicon`.
 
 ## Requirements
 

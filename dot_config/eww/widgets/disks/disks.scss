@@ -1,0 +1,29 @@
+// Диски
+.disks-tile {
+  .disk-row {
+    margin-top: 6px;
+  }
+  .disk-name {
+    color: $foreground;
+    min-width: 70px;
+  }
+  .disk-bar {
+    all: unset;
+    min-height: 10px;
+    background-color: $background;
+    border-radius: 5px;
+    margin: 0 8px;
+    trough highlight {
+      background-color: $blue;
+      border-radius: 5px;
+    }
+  }
+  .disk-free {
+    color: $gray;
+    min-width: 55px;
+  }
+  .disk-fs {
+    color: $gray;
+    font-size: 0.9em;
+  }
+}

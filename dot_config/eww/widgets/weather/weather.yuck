@@ -1,0 +1,8 @@
+;; Погода: текущая сводка и прогноз из wttr.in (литерал от scripts-погоды).
+(defpoll dash-weather :interval "30m" :initial "(label :class \"w-wait\" :text \"…\")" "widgets/weather/scripts/weather")
+
+(defwidget weather-tile []
+ (box :class "tile weather-tile"
+   :orientation "v"
+   :space-evenly false
+ (literal :content dash-weather)))

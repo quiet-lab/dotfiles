@@ -1,0 +1,9 @@
+;; Избранное: кнопки быстрого перехода в yazi (wezterm).
+(defwidget favorites-tile []
+  (box :class "tile favorites-tile"
+    :orientation "v"
+    :space-evenly false
+  (label :class "tile-title" :text "ИЗБРАННОЕ")
+  (button :class "fav-btn" :onclick "wezterm start --cwd ~ yazi &" "󰉋 ~")
+  (button :class "fav-btn" :onclick "wezterm start --cwd ~/Загрузки yazi &" "󰉋 ~/Загрузки")
+  (button :class "fav-btn" :onclick "wezterm start --cwd ~/.config yazi &" "󰉋 ~/.config")))

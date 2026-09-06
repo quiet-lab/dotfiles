@@ -6,7 +6,7 @@ case "$1" in
 
     # Сеть
     net-editor)  nm-connection-editor & ;;
-    netmenu)     eww update netmenu-content="$(scripts/netmenu-items)"; eww open --toggle netmenu ;;
+    netmenu)     eww update netmenu-content="$(widgets/network/scripts/netmenu-items)"; eww open --toggle netmenu ;;
     net-close)   eww close netmenu 2>/dev/null ;;
     wifi-rescan) nmcli device wifi rescan; scripts/popup net-close ;;
     wifi-toggle) if nmcli radio wifi | grep -q enabled; then nmcli radio wifi off; else nmcli radio wifi on; fi; scripts/popup net-close ;;

@@ -1,0 +1,48 @@
+// Громкость
+.volume-tile {
+  .volume-icon {
+    color: $green;
+    font-size: 1.5em;
+    padding: 0 2px;
+    &:hover { color: $cyan; }
+  }
+  scale trough {
+    all: unset;
+    background-color: $background;
+    border-radius: 6px;
+    min-height: 12px;
+    margin: 0 4px;
+  }
+  .volbar trough highlight {
+    background-color: $green;
+    border-radius: 6px;
+  }
+}
+
+// Глобальные правила ползунка и иконки громкости
+// (действуют и на scale-элементы других плиток; перенесены как есть)
+.volume-icon{
+  margin: 0 .2rem 0 .2rem;
+  color: $green;
+}
+.volume-icon:hover{
+  color: $cyan;
+}
+
+scale {
+  min-width: 90px;
+}
+
+scale trough {
+  all: unset;
+  background-color: $background;
+  border-radius: 5px;
+  min-width: 80px;
+  min-height: 10px;
+  margin: 0 .3rem 0 .3rem;
+}
+
+.volbar trough highlight {
+  background-color: $green;
+  border-radius: 5px;
+}

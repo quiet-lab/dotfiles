@@ -1,0 +1,35 @@
+// Круговые шкалы CPU/RAM/GPU
+.gauge-tile {
+  padding: 6px;
+  .gauge-label {
+    font-size: 16px;
+    font-weight: bold;
+    color: $white;
+  }
+  .gauge-name {
+    color: $gray;
+    font-size: 1.08em;
+    font-weight: bold;
+  }
+  // Кислотно-неоновая шкала
+  .gname-cpu { color: #FF073A; }
+  .gname-ram { color: #2E9FFF; }
+  .gname-ram-total { color: $white; }
+  .gname-gpu { color: #39FF14; }
+  .t-low  { color: #39FF14; }
+  .t-mid  { color: #EAFF00; }
+  .t-high { color: #FF9500; }
+  .t-crit { color: #FF073A; }
+}
+.cpu-gauge {
+  color: $green;
+  background-color: rgba(169, 177, 214, 0.15);
+}
+.ram-gauge {
+  color: $cyan;
+  background-color: rgba(169, 177, 214, 0.15);
+}
+.gpu-gauge {
+  color: $magenta;
+  background-color: rgba(169, 177, 214, 0.15);
+}

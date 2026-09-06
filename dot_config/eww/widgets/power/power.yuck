@@ -1,0 +1,17 @@
+;; Питание: блокировка сессии, выход и перезапуск Openbox, выключение.
+(defwidget power-tile []
+ (box :class "tile power-tile"
+   :orientation "h"
+   :space-evenly true
+ (button  :class "pwr-lock"
+    :tooltip "Lock Screen"
+    :onclick "loginctl lock-session" "󰌾")
+ (button  :class "pwr-quit"
+    :tooltip "Logout"
+    :onclick "openbox --exit" "󰗽")
+ (button  :class "pwr-restart"
+    :tooltip "Openbox Restart"
+    :onclick "openbox --restart" "󰜉")
+ (button  :class "pwr-off"
+    :tooltip "Shutdown"
+    :onclick "systemctl poweroff" "󰐥")))

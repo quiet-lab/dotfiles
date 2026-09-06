@@ -1,0 +1,8 @@
+;; Рабочие столы Openbox: колонка плиток с окнами активного стола.
+
+;; --- Реактивный поток состояния ---
+(deflisten workspace :initial "(box :class \"works\" :orientation \"v\")" "widgets/workspaces/scripts/workspace")
+
+;; --- Виджет ---
+(defwidget workspaces []
+ (literal :content workspace))

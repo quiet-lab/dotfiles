@@ -1,0 +1,62 @@
+// Яркие цвета иконок погоды
+$w-clear: #FFD75E;
+$w-partly: #FFC66D;
+$w-overcast: #C0CAF5;
+$w-fog: #89DDFF;
+$w-rain: #74A8FF;
+$w-snow: #CBEDFF;
+$w-storm: #BB9AF7;
+
+// Погода
+.weather-tile {
+  .w-wait { color: $gray; }
+  .w-icon {
+    font-size: 2.6em;
+    margin-right: 20px;
+  }
+  .w-temp {
+    font-size: 2em;
+    font-weight: bold;
+    color: $white;
+  }
+  .w-city {
+    color: $gray;
+    font-size: 1.56em;
+  }
+  .w-frow {
+    margin-top: 10px;
+    .w-day-name {
+      color: $foreground;
+      font-size: 1.25em;
+      font-weight: bold;
+      min-width: 24px;
+      margin-right: 20px;
+    }
+    .w-part {
+      padding: 0 8px;
+    }
+    .w-part-icon {
+      color: $white;
+      font-size: 1.6em;
+    }
+    .w-part-temp {
+      color: $white;
+      font-size: 1.25em;
+      padding-right: 1px;
+    }
+    .w-cond {
+      font-size: 1.4em;
+    }
+  }
+
+  // Цвета иконок по погоде: ясно, малооблачно, пасмурно, туман,
+  // дождь, снег, гроза.
+  .w-clear    { color: $w-clear; }
+  .w-partly   { color: $w-partly; }
+  .w-overcast { color: $w-overcast; }
+  .w-fog      { color: $w-fog; }
+  .w-rain     { color: $w-rain; }
+  .w-snow     { color: $w-snow; }
+  .w-storm    { color: $w-storm; }
+  .w-unknown  { color: $gray; }
+}

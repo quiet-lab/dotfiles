@@ -1,0 +1,53 @@
+// Workspaces — вертикальная колонка плиток столов
+.works {
+  background-color: transparent;
+}
+
+.works .ws {
+  background-color: $black;
+  border-radius: 12px;
+  padding: 8px 10px;
+
+  &.ws-fo { border: 2px solid $cyan; }
+}
+
+.ws-num {
+  color: $gray;
+  font-weight: bold;
+}
+
+.ws-icons {
+  margin-left: 10px;
+
+  image { margin-right: 4px; }
+  .ws-icons-glyph { color: $foreground; font-size: 1.1em; margin-right: 4px; }
+}
+
+.ws-name {
+  color: $gray;
+  font-size: 0.95em;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+.ws-win {
+  margin-top: 2px;
+  padding: 2px 4px;
+  border-radius: 6px;
+
+  .ws-win-img { margin-right: 8px; }
+  .ws-win-icon { color: $blue; margin-right: 8px; }
+  .ws-win-title { color: $foreground; }
+
+  &:hover { background-color: $background; }
+}
+
+// Свёрнутые окна — приглушённые
+.ws-min {
+  .ws-win-icon, .ws-win-title { color: $gray; }
+}
+
+.works button:hover .ws-num,
+.works button:hover .ws-icons {
+  color: $cyan;
+}

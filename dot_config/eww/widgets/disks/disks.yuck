@@ -1,0 +1,9 @@
+;; Диски: полосы заполнения из lsblk/df (литерал от scripts-disks).
+(defpoll disks :interval "30s" :initial "(box)" "widgets/disks/scripts/disks")
+
+(defwidget disks-tile []
+ (box :class "tile disks-tile"
+   :orientation "v"
+   :space-evenly false
+ (label :class "tile-title" :text "ДИСКИ")
+ (literal :content disks)))

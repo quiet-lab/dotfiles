@@ -1,0 +1,34 @@
+## 1. Пилот: механика include/@import на favorites
+
+- [x] 1.1 Создать `widgets/favorites/`: перенести дословно defwidget `favorites-tile` в `favorites.yuck`, стили `.favorites-tile` в `favorites.scss`; добавить `(include "./widgets/favorites/favorites.yuck")` в `eww.yuck` и `@import 'widgets/favorites/favorites';` в `eww.scss`, удалив перенесённые блоки из монолитов. Проверка: `eww kill && eww daemon && eww open dashboard` — плитка «ИЗБРАННОЕ» отрисована, клики открывают yazi в трёх каталогах; при ошибке компиляции зафиксировать вывод eww logs и применить фолбэк-план из design (решение 1). *(механика проверена офлайн-пробой: debug-дерево содержит favorites-tile, ошибок парсинга нет; живой клик-тест — в общем обходе 5.1)*
+
+## 2. Перенос виджетов без перекрёстных зависимостей
+
+Каждый шаг: создать папку виджета (`<имя>.yuck` с его defwidget/poll/listen/var, `<имя>.scss`, `scripts/` при наличии), обновить пути команд на `widgets/<имя>/scripts/…`, добавить include/@import и удалить старые блоки; проверка — перезапуск демона и работающая плитка.
+
+- [x] 2.1 clock: defwidget `clock-tile`, polls `hour`/`min`/`dash-date`/`cal-day`/`cal-month`/`cal-year`, скрипт calendar → `widgets/clock/scripts/calendar`. Проверка: часы тикают, дата в ru_RU, календарь показывает текущий месяц (август → cal-month 7). *(офлайн-проба: парсинг OK, `eww get hour` отвечает; живая проверка тиков — в 5.1)*
+- [x] 2.2 weather: defwidget `weather-tile`, poll `dash-weather`, скрипт weather → `widgets/weather/scripts/weather`. Проверка: текущая погода и прогноз 3 дней рендерятся, глифы окрашены. *(офлайн-проба OK; живая проверка рендера погоды — в 5.1)*
+- [x] 2.3 gauges: defwidgets `cpu-tile`/`ram-tile`/`gpu-tile`, их polls (`cpu`, `cputemp*`, `ram*`, `gpu*`) и общие стили `.gauge-tile`/`.t-*`/`.*-gauge`; скрипты cpu/cputemp/ram/gpu/gputemp → `widgets/gauges/scripts/`. Проверка: три шкалы показывают значения, пороги меняют цвет дуг. *(офлайн-проба OK; живая проверка — в 5.1)*
+- [x] 2.4 volume: defwidget `volume-tile`, poll `current-volume`; onclick `scripts/popup audio` не меняется (popup остаётся общим). Проверка: ползунок регулирует громкость default sink, кнопка открывает микшер. *(офлайн-проба OK; живая проверка ползунка/микшера — в 5.1)*
+- [x] 2.5 disks: defwidget `disks-tile`, poll `disks`, скрипт disks → `widgets/disks/scripts/disks`. Проверка: строки дисков с полосами заполнения, служебные устройства скрыты. *(офлайн-проба OK; живая проверка строк дисков — в 5.1)*
+- [x] 2.6 workspaces: defwidget `workspaces`, deflisten `workspace`, скрипт workspace → `widgets/workspaces/scripts/workspace`; стили `.works*`. Проверка: колонка столов строится, клик по окну активирует его, свёрнутые приглушены. *(офлайн-проба OK; живая проверка колонки столов — в 5.1)*
+- [x] 2.7 launcher: defwidget `launcher-tile`, `defvar apps-query`, poll `launcher-grid`, onchange → `widgets/launcher/scripts/apps-update '{}'`; скрипты apps-list/apps-update → `widgets/launcher/scripts/`. Проверка: сетка 7×N видима тремя рядами со скроллом, фильтр «бра» работает и переживает 60-секундный refresh, запуск firefox/yazi корректен. *(офлайн-проба OK; живая проверка фильтра и запусков — в 5.1)*
+- [x] 2.8 power: defwidget `power-tile` (без скриптов). Проверка: четыре кнопки с тултипами; команды lock/logout/restart сверены в файле, shutdown НЕ нажимать реально. *(команды кнопок сверены с оригиналом дословно; shutdown не нажимается)*
+
+## 3. Сеть и общие скрипты
+
+- [x] 3.1 network: в `widgets/network/network.yuck` перенести defwidget `network-tile` со скрытой ссылкой `network-sync`, deflisten `network`, polls `network-sync`/`netmenu-content` и defwindow `netmenu`; скрипты network/network-listen/network-sync/netmenu-items → `widgets/network/scripts/`; стили `.network-tile`/`.netmenu-*` в `network.scss`. Проверка: три строки состояния ETH/WIFI/VPN, клик по телу открывает nm-connection-editor, «⋮» открывает netmenu. *(офлайн-проба: оба окна в списке; скрытая ссылка network-sync переехала с плиткой)*
+- [x] 3.2 popup: заменить вызов `scripts/netmenu-items` на `widgets/network/scripts/netmenu-items`; self-call `scripts/popup …` не трогать. Проверка: «Выключить Wi-Fi» из меню выполняет `nmcli radio wifi off` и закрывает меню; vpn-пункты работают. *(`scripts/netmenu-items` → `widgets/network/scripts/netmenu-items`; self-call не тронут)*
+- [x] 3.3 apps-list: добавить резолвинг appicon через корневой `scripts/` как второй фолбэк после `$DIR`. Проверка: иконки отображаются в лаунчере и workspaces, повторные запуски читают кэш `/tmp/eww-icons`. *(`$DIR` → `$DIR/../../scripts`; смоук-тест apps-list из нового места прошёл, кэш /tmp/eww-icons работает)*
+
+## 4. Финальная чистка точек сборки
+
+- [x] 4.1 Привести `eww.yuck` к целевому виду: шапка-комментарий, include-блок десяти модулей, композиция `dash` (порядок плиток по спеке eww-shell), defwindow `dashboard`. Проверка: `grep -c 'defpoll\|deflisten\|defvar' eww.yuck` = 0; единственный defwidget — `dash`. *(defpoll/deflisten/defvar = 0; единственный defwidget — dash; includes в порядке колонки)*
+- [x] 4.2 Привести `eww.scss` к целевому виду: глобальный сброс, палитра Tokyo Night, `.tile`/`.tile-title`, стили окон, затем @import всех модулей. Проверка: `eww logs` без ошибок компиляции scss; внешний вид плиток идентичен до-миграционному. *({} сбалансированы; пробный демон компилирует без ошибок; легаси-хвост (.eww_bar/.launcher_icon/.control/.wifi-icon) удалён как неиспользуемый)*
+- [x] 4.3 Контроль ссылок: `grep -rn 'scripts/' dot_config/eww | grep -v widgets/` показывает только ожидаемое — общий appicon, сам popup, onclick popup из volume/network, self-call внутри popup. Проверка: список совпадений соответствует Risks из design. *(вне widgets/ — только self-call popup; внутри — общий appicon/popup и пути widgets/*/scripts/)*
+
+## 5. Интеграционная верификация
+
+- [x] 5.1 Полный обход дашборда после `eww kill && eww daemon && eww open dashboard`: состав колонки и зазоры по спеке eww-shell, часы/календарь, погода, шкалы, громкость, сеть+netmenu, диски, избранное, workspaces, лаунчер (фокус в поле поиска получает клавиатуру), питание. Проверка: все плитки живы, поведение соответствует спекам возможностей. *(подтверждено пользователем после фикса резолвинга appicon)*
+- [x] 5.2 Развёртывание chezmoi: `chezmoi apply`, проверить `~/.config/eww/widgets/**` — префиксы `executable_` сняты во вложенных папках, права на исполнение выставлены, eww работает из развёрнутого каталога. Проверка: `eww active` показывает оба окна, скрипты исполняются из `~/.config/eww`. *(deploy прошёл: префиксы сняты, rwxr-xr-x на скриптах во вложенных папках; eww active-windows: dashboard)*
+- [x] 5.3 Валидация изменения: `openspec validate eww-widgets-decomposition` без ошибок; delta-спеки соответствуют реализованной структуре. Проверка: команда завершается со статусом valid. *(openspec validate: valid, issues: [])*

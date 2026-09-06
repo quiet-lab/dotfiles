@@ -76,8 +76,11 @@ fi
 [ -n "$entries" ] || { echo '(box :orientation "v" :space-evenly false)'; exit 0; }
 
 # Карта иконок: уникальные Icon= → путь к файлу; пустые → generic-иконка.
+# Общий резолвер лежит в корневом scripts/: своя папка → корень конфигурации.
 APPICON=$DIR/appicon
 [ -x "$APPICON" ] || APPICON=$DIR/executable_appicon
+[ -x "$APPICON" ] || APPICON=$DIR/../../../scripts/appicon
+[ -x "$APPICON" ] || APPICON=$DIR/../../../scripts/executable_appicon
 export APPICON
 icons_map=$(mktemp)
 {

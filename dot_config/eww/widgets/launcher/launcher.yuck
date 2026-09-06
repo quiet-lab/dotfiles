@@ -1,0 +1,28 @@
+;; Лаунчер приложений: поиск по названию и сетка полноцветных иконок.
+;; Все записи .desktop из ~/.local/share/applications и /usr/share/applications.
+;; Сетку генерирует widgets/launcher/scripts/apps-list literal'ом: ряды по 7
+;; иконок; видно ровно три ряда (124px = 3×38 + 2×5), остальное — прокруткой.
+
+;; --- Состояние фильтра и сетки ---
+(defvar apps-query "")
+(defpoll launcher-grid :interval "60s" :initial "(box)" "widgets/launcher/scripts/apps-list")
+
+;; --- Виджет ---
+(defwidget launcher-tile []
+ (box :class "tile launcher-tile"
+   :orientation "v"
+   :space-evenly false
+ (box :class "apps-header"
+   :orientation "h"
+   :space-evenly false
+   :spacing 5
+ (label :class "tile-title" :text "ПРИЛОЖЕНИЯ")
+ (input :class "apps-search"
+   :hexpand true
+   :tooltip "Фильтр по названию"
+   :onchange "widgets/launcher/scripts/apps-update '{}'"))
+ (scroll :class "apps-scroll"
+   :hscroll false
+   :vscroll true
+   :height 124
+ (literal :content launcher-grid))))

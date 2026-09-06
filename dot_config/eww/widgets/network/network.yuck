@@ -1,0 +1,33 @@
+;; Сеть: плитка состояния ETH/WIFI/VPN и окно контекстного меню netmenu.
+
+;; --- Переменные ---
+(deflisten network :initial "(box)" "widgets/network/scripts/network-listen")
+(defpoll network-sync :interval "10s" :initial "" "widgets/network/scripts/network-sync")
+(defpoll netmenu-content :interval "60s" :initial "(box :class \"netmenu-box\")" "widgets/network/scripts/netmenu-items")
+
+;; --- Плитка ---
+(defwidget network-tile []
+ (eventbox :class "tile network-tile"
+    :onclick "nm-connection-editor &"
+    :tooltip "ЛКМ — редактор соединений"
+ (box :orientation "v" :space-evenly false
+ (box :orientation "h" :space-evenly false
+ (label :class "tile-title" :text "СЕТЬ")
+ (box :hexpand true)
+ (button :class "net-menu-btn"
+   :onclick "scripts/popup netmenu"
+   :tooltip "Действия сети" "⋮"))
+ (literal :content network)
+ ;; Скрытая ссылка: без использования в открытом окне eww не запускает poll-страховку.
+ (label :visible false :text network-sync))))
+
+;; --- Окно контекстного меню ---
+(defwindow netmenu
+ :geometry (geometry :x "330px"
+      :y "200px"
+      :width "240px"
+      :anchor "left top")
+ :monitor 0
+ :stacking "fg"
+ :wm-ignore false
+(literal :content netmenu-content))

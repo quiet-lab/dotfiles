@@ -1,0 +1,35 @@
+// Лаунчер приложений: шапка с фильтром + сетка 7×N (видимо три ряда)
+.launcher-tile {
+  .apps-header {
+    margin-bottom: 5px;
+    .tile-title { margin-bottom: 0; }
+  }
+  .apps-search {
+    font-size: 0.95em;
+    color: $foreground;
+    caret-color: $cyan;
+    min-height: 22px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    background-color: $background;
+    border: none;
+    box-shadow: none;
+    selection { background-color: $cyan; color: $black; }
+    &:focus {
+      border: none;
+      box-shadow: none;
+      outline: none;
+    }
+  }
+  // Полоса прокрутки скрыта — колесо мыши продолжает работать
+  .apps-scroll {
+    scrollbar { all: unset; }
+  }
+  .app-btn {
+    min-width: 38px;
+    min-height: 38px;
+    padding: 0;
+    border-radius: 8px;
+    &:hover { background-color: $background; }
+  }
+}

@@ -1,0 +1,37 @@
+// Сеть
+.network-tile {
+  .net-row {
+    margin-top: 4px;
+  }
+  .net-icon {
+    font-size: 1.3em;
+    margin-right: 10px;
+    &.net-on { color: $green; }
+    &.net-off { color: $gray; }
+  }
+  .net-text {
+    color: $foreground;
+    font-size: 1.05em;
+  }
+  .net-menu-btn {
+    color: $gray;
+    font-size: 1.2em;
+    &:hover { color: $cyan; }
+  }
+}
+
+// Контекстное меню сети
+.netmenu-box {
+  background-color: $black;
+  border-radius: 10px;
+  padding: 8px;
+}
+.netmenu-item {
+  padding: 8px 12px;
+  border-radius: 6px;
+  .netmenu-label { color: $foreground; }
+  &:hover {
+    background-color: $background;
+    .netmenu-label { color: $cyan; }
+  }
+}

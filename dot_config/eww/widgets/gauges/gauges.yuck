@@ -1,0 +1,84 @@
+;; Круговые шкалы загрузки: CPU, RAM, GPU с температурной подсветкой.
+
+;; --- Опросы ---
+(defpoll cpu     :interval "3s" :initial "0" "widgets/gauges/scripts/cpu")
+(defpoll cputemp :interval "5s" :initial "0" "widgets/gauges/scripts/cputemp")
+(defpoll cputempc :interval "5s" :initial "t-mid" "widgets/gauges/scripts/cputemp | awk '{if($1<50)p=\"t-low\";else if($1<75)p=\"t-mid\";else if($1<90)p=\"t-high\";else p=\"t-crit\";print p}'")
+(defpoll ram     :interval "3s" :initial "0" "widgets/gauges/scripts/ram")
+(defpoll gpu     :interval "3s" :initial "0" "widgets/gauges/scripts/gpu")
+(defpoll cpuc :interval "3s" :initial "t-low" "widgets/gauges/scripts/cpu | awk '{if($1<50)p=\"t-low\";else if($1<75)p=\"t-mid\";else if($1<90)p=\"t-high\";else p=\"t-crit\";print p}'")
+(defpoll ramc :interval "3s" :initial "t-low" "widgets/gauges/scripts/ram | awk '{if($1<50)p=\"t-low\";else if($1<75)p=\"t-mid\";else if($1<90)p=\"t-high\";else p=\"t-crit\";print p}'")
+(defpoll gpuc :interval "3s" :initial "t-low" "widgets/gauges/scripts/gpu | awk '{if($1<50)p=\"t-low\";else if($1<75)p=\"t-mid\";else if($1<90)p=\"t-high\";else p=\"t-crit\";print p}'")
+(defpoll ramtotal :interval "1h" :initial "…" "awk '/MemTotal/{printf \"%d\", $2/1048576}' /proc/meminfo")
+(defpoll gputemp :interval "5s" :initial "0" "widgets/gauges/scripts/gputemp")
+(defpoll gputempc :interval "5s" :initial "t-mid" "widgets/gauges/scripts/gputemp | awk '{if($1<50)p=\"t-low\";else if($1<75)p=\"t-mid\";else if($1<90)p=\"t-high\";else p=\"t-crit\";print p}'")
+
+;; --- Виджеты ---
+(defwidget cpu-tile []
+ (box :class "tile gauge-tile"
+   :orientation "v"
+   :space-evenly false
+   :width 103
+   :height 103
+   :halign "center"
+   :valign "center"
+ (box :orientation "h" :halign "center" :space-evenly false :spacing 4
+ (label :class "gauge-name gname-cpu" :text "CPU")
+ (label :class "gauge-name ${cputempc}" :text "${cputemp}°"))
+ (box :orientation "v" :vexpand true)
+ (box :class "gauge-wrap"
+   :width 70
+   :height 70
+   :halign "center"
+ (circular-progress :class "cpu-gauge ${cpuc}"
+      :value cpu
+      :thickness 10
+      :hexpand true
+      :vexpand true
+ (label    :class "gauge-label" :text "${cpu}%")))))
+
+(defwidget ram-tile []
+ (box :class "tile gauge-tile"
+   :orientation "v"
+   :space-evenly false
+   :width 103
+   :height 103
+   :halign "center"
+   :valign "center"
+ (box :orientation "h" :halign "center" :space-evenly false :spacing 4
+ (label :class "gauge-name gname-ram" :text "RAM")
+ (label :class "gauge-name gname-ram-total" :text "${ramtotal}G"))
+ (box :orientation "v" :vexpand true)
+ (box :class "gauge-wrap"
+   :width 70
+   :height 70
+   :halign "center"
+ (circular-progress :class "ram-gauge ${ramc}"
+      :value ram
+      :thickness 10
+      :hexpand true
+      :vexpand true
+ (label    :class "gauge-label" :text "${ram}%")))))
+
+(defwidget gpu-tile []
+ (box :class "tile gauge-tile"
+   :orientation "v"
+   :space-evenly false
+   :width 103
+   :height 103
+   :halign "center"
+   :valign "center"
+ (box :orientation "h" :halign "center" :space-evenly false :spacing 4
+ (label :class "gauge-name gname-gpu" :text "GPU")
+ (label :class "gauge-name ${gputempc}" :text "${gputemp}°"))
+ (box :orientation "v" :vexpand true)
+ (box :class "gauge-wrap"
+   :width 70
+   :height 70
+   :halign "center"
+ (circular-progress :class "gpu-gauge ${gpuc}"
+      :value gpu
+      :thickness 10
+      :hexpand true
+      :vexpand true
+ (label    :class "gauge-label" :text "${gpu}%")))))
