@@ -29,7 +29,7 @@ else
 fi
 
 { [ -x "$(command -v xss-lock)" ] && xss-lock -q -l "${JOYD_DIR}/xss-lock-tsl.sh"; } &
-Handy_0.9.4_amd64.AppImage &
+Handy.AppImage &
 wezterm-gui &
 firefox &
 xset s off &

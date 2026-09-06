@@ -17,13 +17,13 @@ vim.g.snacks_animate = false
 --   vim.lsp.inlay_hint(0, nil)
 -- end, { desc = "Toggle inlay hints" })
 if vim.g.neovide then
-  vim.g.neovide_padding_top = 6
-  vim.g.neovide_padding_bottom = 6
-  vim.g.neovide_padding_right = 6
-  vim.g.neovide_padding_left = 6
+  vim.g.neovide_padding_top = 0
+  vim.g.neovide_padding_bottom = 0
+  vim.g.neovide_padding_right = 0
+  vim.g.neovide_padding_left = 0
 
-  vim.opt.winblend = 40
-  vim.opt.pumblend = 40
+  vim.opt.winblend = 0
+  vim.opt.pumblend = 0
   -- vim.g.neovide_opacity = 0.9
   vim.g.neovide_floating_blur_amount_x = 3.0
   vim.g.neovide_floating_blur_amount_y = 3.0
@@ -36,7 +36,7 @@ if vim.g.neovide then
   vim.g.neovide_cursor_vfx_mode = "ripple"
 
   vim.g.neovide_fullscreen = false
-  vim.opt.linespace = 5
+  vim.opt.linespace = 3
 
   vim.g.neovide_scale_factor = 1.0
   local change_scale_factor = function(delta)

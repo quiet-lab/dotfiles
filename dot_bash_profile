@@ -5,3 +5,8 @@
 export PATH="$HOME/.bun/bin:$HOME/.local/bin:$PATH"
 export EDITOR=nvim
 [[ -f ~/.bashrc ]] && . ~/.bashrc
+
+# Added by LM Studio CLI (lms)
+export PATH="$PATH:/home/mne/.lmstudio/bin"
+# End of LM Studio CLI section
+

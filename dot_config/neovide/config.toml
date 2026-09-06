@@ -5,11 +5,10 @@ srgb = false
 idle = true
 frame = "none"
 fork = true
-grid = "300x50"
 startup-message-capture = false
 
 [font]
-size = 13.00
+size = 13.50
 
 [[font.normal]]
 family = "IosevkaTermSlab NF"
