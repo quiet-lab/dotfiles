@@ -3,16 +3,16 @@
 ;; XEmbed (nm-applet, parcellite) сюда не попадают, для них нужен мост
 ;; XEmbed → SNI либо трей tint2 (см. спецификацию eww-tray-lang).
 (defwidget tray-tile []
-  ;; Плитка растягивается на всю ширину окна (без :halign), иконки внутри
-  ;; прижаты к левому краю.
+  ;; Вертикальная плитка 36px шириной справа от плиток столов: иконки
+  ;; в столбик сверху вниз, высота плитки задана стилем (во весь блок столов
+  ;; минус плитка раскладки).
   ;; :menu-anchor / :menu-gap — атрибуты из локальной сборки eww (ветка с
   ;; исправлениями трея): "workarea" открывает меню внутри рабочей области
   ;; с зазором :menu-gap от её края, "pointer" — прямо в точке клика поверх
   ;; плиток.
   (box :class "tile tray-tile"
-    :orientation "h"
+    :orientation "v"
     :space-evenly false
-    :hexpand true
-    :valign "center"
-    (systray :class "tray" :orientation "h" :spacing 6 :icon-size 20 :prepend-new true :halign "start"
+    :valign "start"
+    (systray :class "tray" :orientation "v" :spacing 6 :icon-size 20 :prepend-new true :valign "start"
              :menu-anchor "workarea" :menu-gap 10)))
