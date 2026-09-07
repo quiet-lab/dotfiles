@@ -10,7 +10,9 @@
 # Сетка: ROWS иконок в ряду, ячейка 38px, иконка 32×32; прокрутку (ровно три
 # видимых ряда) обеспечивает scroll-виджет в yuck. Иконки резолвятся через
 # scripts/appicon (кэш /tmp/eww-icons), уникальные — параллельно.
-# Запуск: gtk-launch "<id>"; Terminal=true → wezterm start -- <Exec без %-кодов>.
+# Запуск: gtk-launch "<id>"; Terminal=true → wezterm start --class <id> -- <Exec без %-кодов>.
+# --class даёт окну терминала WM_CLASS по имени записи (например, yazi), и плитки
+# столов показывают иконку программы, а не терминала.
 #
 # Использование: apps-list [ЗАПРОС]
 #   Без аргумента запрос берётся из `eww get apps-query`, поэтому defpoll
@@ -113,7 +115,7 @@ while IFS="$SEP" read -r name id term icon ex; do
 		child='(label :class "app-btn-fallback" :text "?")'
 	fi
 	if [ "$term" = "true" ]; then
-		cmd="wezterm start -- $(strip_codes "$ex") &"
+		cmd="wezterm start --class ${id%.desktop} -- $(strip_codes "$ex") &"
 	else
 		cmd="gtk-launch \"$(yesc "$id")\" &"
 	fi

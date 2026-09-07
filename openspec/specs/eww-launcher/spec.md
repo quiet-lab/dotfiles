@@ -46,13 +46,13 @@
 ### Requirement: Запуск приложений
 Клик MUST запускать:
 - Terminal=false/отсутствует → `gtk-launch "<id>" &`;
-- Terminal=true → `wezterm start -- <Exec без %-кодов> &`.
+- Terminal=true → `wezterm start --class <id без .desktop> -- <Exec без %-кодов> &`; класс окна нужен плиткам столов, чтобы показывать иконку программы, а не терминала.
 
 %-коды полей Exec (`%f`, `%u` и т.п.) вырезаются, хвостовые пробелы обрезаются.
 
 #### Scenario: Консольная утилита
 - **WHEN** запись yazi.desktop имеет Terminal=true и Exec=yazi
-- **THEN** открывается wezterm с запущенным yazi
+- **THEN** открывается wezterm с запущенным yazi и WM_CLASS окна «yazi»
 
 #### Scenario: GUI-приложение
 - **WHEN** запись firefox.desktop без Terminal

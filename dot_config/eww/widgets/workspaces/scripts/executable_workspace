@@ -27,6 +27,22 @@ LIMIT=10
 # Из значений все управляющие символы удаляются при экранировании, поэтому в данных он не встречается.
 US=$(printf '\037')
 
+# Программы внутри терминала окна не создают: WM_CLASS остаётся у wezterm.
+# Такие программы распознаются по заголовку окна (_NET_WM_NAME), который они
+# выставляют сами; заголовок → подменённый класс для таблиц ниже.
+# Заголовок меняется без событий на корневом окне, поэтому после появления
+# нового окна состояние перепроверяется с задержкой (см. цикл событий).
+class_by_title() {
+	case "$1" in
+		Wezterm|org.wezfurlong.wezterm)
+			case "$2" in
+				Yazi:*|yazi:*)	echo 'yazi' ;;
+				*)				echo "$1" ;;
+			esac ;;
+		*)	echo "$1" ;;
+	esac
+}
+
 # WM_CLASS (второе поле) → кандидаты имён иконок по убыванию приоритета.
 class_icon_names() {
 	case "$1" in
@@ -95,9 +111,11 @@ jesc() {
 collect() {
 	clients=$(xprop -root _NET_CLIENT_LIST 2>/dev/null | grep -o '0x[0-9a-fA-F]*')
 	for win in $clients; do
-		info=$(xprop -id "$win" _NET_WM_DESKTOP WM_CLASS _NET_WM_STATE 2>/dev/null)
+		info=$(xprop -id "$win" _NET_WM_DESKTOP WM_CLASS _NET_WM_STATE _NET_WM_NAME 2>/dev/null)
 		desk=$(printf '%s\n' "$info" | sed -n 's/^_NET_WM_DESKTOP[^=]*= //p')
 		cls=$(printf '%s\n' "$info" | sed -n 's/^WM_CLASS[^=]*= "[^"]*", "\([^"]*\)".*/\1/p')
+		title=$(printf '%s\n' "$info" | sed -n 's/^_NET_WM_NAME[^=]*= "\(.*\)"$/\1/p')
+		cls=$(class_by_title "$cls" "$title")
 		# Свёрнутость — атом _NET_WM_STATE_HIDDEN в списке _NET_WM_STATE.
 		hidden=0
 		case "$info" in *_NET_WM_STATE_HIDDEN*) hidden=1 ;; esac
@@ -151,10 +169,19 @@ EOR
 # сворачивании, но при сворачивании активного окна фокус переходит, и событие приходит.
 prev=$(render)
 printf '%s\n' "$prev"
-xprop -root -spy _NET_CURRENT_DESKTOP _NET_CLIENT_LIST _NET_CLIENT_LIST_STACKING _NET_ACTIVE_WINDOW 2>/dev/null | while read -r _; do
+# Смена заголовка окна события не даёт, а программа в терминале (yazi) выставляет
+# заголовок уже после появления окна. Поэтому после изменения списка окон
+# состояние перепроверяется ещё раз с задержкой; одинаковые состояния подавляются.
+emit() {
 	new=$(render)
 	if [ "$new" != "$prev" ]; then
 		printf '%s\n' "$new"
 		prev=$new
 	fi
+}
+xprop -root -spy _NET_CURRENT_DESKTOP _NET_CLIENT_LIST _NET_CLIENT_LIST_STACKING _NET_ACTIVE_WINDOW 2>/dev/null | while read -r event; do
+	emit
+	case "$event" in
+		_NET_CLIENT_LIST\(*) sleep 1; emit ;;
+	esac
 done
