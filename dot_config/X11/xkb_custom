@@ -1,0 +1,17 @@
+xkb_keymap {
+    xkb_keycodes  { include "evdev+aliases(qwerty)" };
+    xkb_types     { include "complete" };
+    xkb_compat    { include "complete" };
+    xkb_symbols   { 
+        // Подключаем базовую клавиатуру США + Русскую второй раскладкой
+        include "pc+us+ru:2+inet(evdev)" 
+
+        // Назначаем на F21 (keycode 199) фиксацию первой раскладки (US)
+        key <FK21> { [ VoidSymbol ], actions[Group1] = [ LockGroup(group=1) ] };
+
+        // Назначаем на F22 (keycode 200) фиксацию второй раскладки (RU)
+        key <FK22> { [ VoidSymbol ], actions[Group1] = [ LockGroup(group=2) ] };
+    };
+    xkb_geometry  { include "pc(pc105)" };
+};
+
