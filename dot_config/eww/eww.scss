@@ -68,12 +68,12 @@ menu {
   background-color: $tile-bg;
   border: $tile-border;
   border-radius: 8px;
-  padding: 8px;
+  padding: 8px 4px;
   color: $yellow;
-  font-size: 1.15em;
+  font-size: 1.3em;
 
   menuitem {
-    padding: 6px 14px;
+    padding: 6px 8px;
     border-radius: 6px;
     min-height: 20px;
 
