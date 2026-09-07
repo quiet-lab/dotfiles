@@ -9,7 +9,8 @@ xkb_keymap {
     xkb_types     {
         include "complete"
         // Тип клавиши для Alt+буква: уровни Base, Shift/Caps, Alt.
-        // На третьем уровне символа нет, только действие смены группы.
+        // На третьем уровне повторяется базовый символ: wezterm (xkbcommon)
+        // при NoSymbol на любом уровне подставляет латиницу вместо русской буквы.
         type "ALT_GROUP_SELECT" {
             modifiers = Shift+Lock+Mod1;
             map[Shift] = Level2;
@@ -30,17 +31,17 @@ xkb_keymap {
         // Alt+E — фиксировать US; в обеих группах символы клавиши сохранены
         key <AD03> {
             type = "ALT_GROUP_SELECT",
-            symbols[Group1] = [ e, E, NoSymbol ],
+            symbols[Group1] = [ e, E, e ],
             actions[Group1] = [ NoAction(), NoAction(), LockGroup(group=1) ],
-            symbols[Group2] = [ Cyrillic_u, Cyrillic_U, NoSymbol ],
+            symbols[Group2] = [ Cyrillic_u, Cyrillic_U, Cyrillic_u ],
             actions[Group2] = [ NoAction(), NoAction(), LockGroup(group=1) ]
         };
         // Alt+R — фиксировать RU
         key <AD04> {
             type = "ALT_GROUP_SELECT",
-            symbols[Group1] = [ r, R, NoSymbol ],
+            symbols[Group1] = [ r, R, r ],
             actions[Group1] = [ NoAction(), NoAction(), LockGroup(group=2) ],
-            symbols[Group2] = [ Cyrillic_ka, Cyrillic_KA, NoSymbol ],
+            symbols[Group2] = [ Cyrillic_ka, Cyrillic_KA, Cyrillic_ka ],
             actions[Group2] = [ NoAction(), NoAction(), LockGroup(group=2) ]
         };
 
