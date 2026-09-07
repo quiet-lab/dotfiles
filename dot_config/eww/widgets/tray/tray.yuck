@@ -5,9 +5,14 @@
 (defwidget tray-tile []
   ;; Плитка растягивается на всю ширину окна (без :halign), иконки внутри
   ;; прижаты к левому краю.
+  ;; :menu-anchor / :menu-gap — атрибуты из локальной сборки eww (ветка с
+  ;; исправлениями трея): "workarea" открывает меню внутри рабочей области
+  ;; с зазором :menu-gap от её края, "pointer" — прямо в точке клика поверх
+  ;; плиток.
   (box :class "tile tray-tile"
     :orientation "h"
     :space-evenly false
     :hexpand true
     :valign "center"
-    (systray :class "tray" :orientation "h" :spacing 6 :icon-size 20 :prepend-new true :halign "start")))
+    (systray :class "tray" :orientation "h" :spacing 6 :icon-size 20 :prepend-new true :halign "start"
+             :menu-anchor "workarea" :menu-gap 10)))
