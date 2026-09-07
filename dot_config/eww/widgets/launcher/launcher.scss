@@ -5,15 +5,15 @@
   .apps-header {
     margin-bottom: 5px;
   }
-  // Подпись «APP:» — как номер стола: цвет рамки, 1.3em, начертание 900.
+  // Подпись «APP:» — как номер стола: цвет рамки, 18px, начертание 900.
   .apps-title {
     color: $yellow;
-    font-size: 1.3em;
+    font-size: 18px;
     font-weight: 900;
   }
   // Поле фильтра: фон цвета рамки, чёрный текст и курсор.
   .apps-search {
-    font-size: 0.95em;
+    font-size: 13px;
     color: #000000;
     caret-color: #000000;
     min-height: 22px;
@@ -32,7 +32,7 @@
   // Заголовок раздела в сетке (Стандартные, Разработка, …): цвет рамки, крупнее
   .apps-cat {
     color: $yellow;
-    font-size: 1.3em;
+    font-size: 18px;
     font-weight: bold;
     margin: 4px 0 0 2px;
   }

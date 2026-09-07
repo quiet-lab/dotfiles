@@ -56,7 +56,7 @@ $ws-num-bg: rgba(6, 6, 6, 0.6);
 .ws-num {
   color: $yellow;
   background-color: $ws-num-bg;
-  font-size: 1.3em;
+  font-size: 18px;
   font-weight: 900;
   min-width: 24px;
   min-height: 34px;
@@ -86,7 +86,7 @@ $ws-num-bg: rgba(6, 6, 6, 0.6);
 
 .ws-glyph {
   color: $foreground;
-  font-size: 1.1em;
+  font-size: 15px;
 }
 
 // Свёрнутые окна — приглушённые
@@ -113,8 +113,12 @@ $ws-num-bg: rgba(6, 6, 6, 0.6);
   padding: 5px 12px;
   border-radius: 8px;
   color: $yellow;
-  font-size: 1.3em;
-  font-weight: bold;
+  // размер и начертание — подписи внутри кнопки: глобальное правило
+  // `* { font-size: 14px }` не даёт ей унаследовать значение от кнопки
+  label {
+    font-size: 18px;
+    font-weight: bold;
+  }
   &:hover {
     background-color: $yellow;
     color: #000000;

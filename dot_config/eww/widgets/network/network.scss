@@ -4,18 +4,19 @@
     margin-top: 4px;
   }
   .net-icon {
-    font-size: 1.3em;
+    font-size: 18px;
     margin-right: 10px;
     &.net-on { color: $green; }
     &.net-off { color: $gray; }
   }
   .net-text {
     color: $foreground;
-    font-size: 1.05em;
+    font-size: 15px;
   }
   .net-menu-btn {
     color: $gray;
-    font-size: 1.2em;
+    // размер — подписи внутри кнопки (см. глобальное правило `* { font-size: 14px }`)
+  label { font-size: 17px; }
     &:hover { color: $cyan; }
   }
 }

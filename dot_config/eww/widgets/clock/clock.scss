@@ -1,22 +1,22 @@
 // Часы, дата и календарь
 .clock-tile {
   .time-hour, .time-min {
-    font-size: 2.2em;
+    font-size: 31px;
     font-weight: bold;
     color: $white;
   }
   .time-sep {
-    font-size: 2.2em;
+    font-size: 31px;
     color: $gray;
     padding: 0 4px;
   }
   .date-label {
-    font-size: 1.56em;
+    font-size: 22px;
     color: $gray;
   }
   calendar {
     margin-top: 6px;
-    font-size: 1.05em;
+    font-size: 15px;
   }
 }
 
