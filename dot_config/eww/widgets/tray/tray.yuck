@@ -1,0 +1,11 @@
+;; Системный трей: виджет systray eww. Работает по протоколу StatusNotifierItem
+;; (D-Bus): eww сам регистрирует StatusNotifierWatcher. Иконки старого протокола
+;; XEmbed (nm-applet, parcellite) сюда не попадают, для них нужен мост
+;; XEmbed → SNI либо трей tint2 (см. спецификацию eww-tray-lang).
+(defwidget tray-tile []
+  (box :class "tile tray-tile"
+    :orientation "h"
+    :space-evenly false
+    :halign "start"
+    :valign "center"
+    (systray :class "tray" :orientation "h" :spacing 6 :icon-size 20 :prepend-new true)))

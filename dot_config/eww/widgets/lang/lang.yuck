@@ -1,0 +1,10 @@
+;; Переключатель раскладки: текущая раскладка заглавными (US/RU), клик
+;; переключает на следующую через xkb-switch. Состояние — поток от
+;; widgets/lang/scripts/layout (xkb-switch -W).
+(deflisten kb-layout :initial "…" "widgets/lang/scripts/layout")
+
+(defwidget lang-tile []
+  (button :class "tile lang-tile"
+    :tooltip "Переключить раскладку"
+    :onclick "xkb-switch -n"
+    (label :class "lang-label" :text kb-layout)))

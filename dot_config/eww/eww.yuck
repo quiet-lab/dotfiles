@@ -21,6 +21,8 @@
 (include "./widgets/favorites/favorites.yuck")
 (include "./widgets/workspaces/workspaces.yuck")
 (include "./widgets/launcher/launcher.yuck")
+(include "./widgets/tray/tray.yuck")
+(include "./widgets/lang/lang.yuck")
 (include "./widgets/power/power.yuck")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -30,7 +32,7 @@
 ;; Каждая плитка — отдельное окно eww. Так нужно композитору: picom размывает
 ;; фон по форме окна целиком, и только при раздельных окнах промежутки между
 ;; плитками остаются без размытия. Координаты вычислены из высот плиток при
-;; зазоре 10px (колонка 219..1940px по вертикали, центр экрана 2160px).
+;; зазоре 10px (колонка 219..1986px по вертикали).
 ;; Если высота плитки меняется, координаты окон ниже нужно пересчитать.
 ;;
 ;; Полный ряд 320px при x=10; ряд шкал — три окна по 100px при x=10/120/230.
@@ -206,8 +208,27 @@
   :wm-ignore false
   (launcher-tile))
 
+;; Ряд «трей + раскладка» высотой 36px: трей 274px, зазор 10px, раскладка 36px.
+(defwindow tile-tray
+  :geometry (geometry :x "10px" :y "1895px" :width "274px" :anchor "left top")
+  :monitor 0
+  :reserve (struts :distance "330px" :side "left")
+  :windowtype "utility"
+  :stacking "fg"
+  :wm-ignore false
+  (tray-tile))
+
+(defwindow tile-lang
+  :geometry (geometry :x "294px" :y "1895px" :width "36px" :anchor "left top")
+  :monitor 0
+  :reserve (struts :distance "330px" :side "left")
+  :windowtype "utility"
+  :stacking "fg"
+  :wm-ignore false
+  (lang-tile))
+
 (defwindow tile-power
-  :geometry (geometry :x "10px" :y "1895px" :width "320px" :anchor "left top")
+  :geometry (geometry :x "10px" :y "1941px" :width "320px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"

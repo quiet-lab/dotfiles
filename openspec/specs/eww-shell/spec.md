@@ -20,7 +20,9 @@
 | `tile-favorites` | 1211px | |
 | `tile-ws1` … `tile-ws8` | 1342px + 46px·(n−1) | по окну на рабочий стол, высота 36px |
 | `tile-launcher` | 1710px | |
-| `tile-power` | 1895px | |
+| `tile-tray` | 1895px | ширина 274px, высота 36px |
+| `tile-lang` | 1895px | x = 294px, ширина 36px, высота 36px |
+| `tile-power` | 1941px | |
 
 Координаты рассчитаны из высот плиток при зазоре 10px и жёстко привязаны к экрану 3840×2160; при изменении высоты плитки координаты нижележащих окон MUST быть пересчитаны. Раздельные окна обусловлены композитором: picom размывает фон по форме окна целиком, и только так промежутки между плитками остаются без размытия.
 
@@ -37,7 +39,7 @@
 - **THEN** окно получает фокус ввода и символы попадают в поле
 
 ### Requirement: Состав колонки
-Окна плиток MUST образовывать колонку в порядке сверху вниз: clock-tile, weather-tile, ряд [cpu-tile, ram-tile, gpu-tile], volume-tile, network-tile, disks-tile, favorites-tile, плитки столов workspace-tile (по одной на стол), launcher-tile, power-tile с межплиточным зазором 10px. Тот же зазор 10px MUST выдерживаться при размещении окон горячими клавишами Openbox (`MoveResizeTo` в rc.xml): от краёв рабочей области и между окнами.
+Окна плиток MUST образовывать колонку в порядке сверху вниз: clock-tile, weather-tile, ряд [cpu-tile, ram-tile, gpu-tile], volume-tile, network-tile, disks-tile, favorites-tile, плитки столов workspace-tile (по одной на стол), launcher-tile, ряд [tray-tile, lang-tile], power-tile с межплиточным зазором 10px. Тот же зазор 10px MUST выдерживаться при размещении окон горячими клавишами Openbox (`MoveResizeTo` в rc.xml): от краёв рабочей области и между окнами.
 
 Полный ряд имеет ширину 320px; ряд из трёх шкал — 100px + 10px + 100px + 10px + 100px.
 

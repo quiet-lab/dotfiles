@@ -1,0 +1,14 @@
+// Переключатель раскладки 36×36: квадрат высотой с плитку стола.
+// padding плитки обнулён, размер задаёт min-width/min-height.
+.lang-tile {
+  padding: 0;
+  min-width: 36px;
+  min-height: 36px;
+
+  &:hover { background-color: $background; }
+}
+
+.lang-label {
+  color: $cyan;
+  font-weight: bold;
+}
