@@ -1,12 +1,11 @@
 ;; ==============================
 ;;  EWW DASHBOARD — вертикальная колонка плиток у левого края
 ;;  и окно контекстного меню сети (netmenu).
-;;  Сетка: ширина 320px, зазор 5px, хардкод под 3840×2160.
+;;  Сетка: ширина 320px, зазор 10px, хардкод под 3840×2160.
 ;;
 ;;  Точка сборки: каждый виджет живёт в widgets/<имя>/ (разметка,
 ;;  стили и скрипты рядом) и подключается ниже. Здесь — только
-;;  композиция колонки и окно dashboard; окно netmenu объявлено
-;;  в widgets/network/.
+;;  окна плиток (tile-*); окно netmenu объявлено в widgets/network/.
 ;; ==============================
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -25,39 +24,193 @@
 (include "./widgets/power/power.yuck")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;  Дашборд
+;;  Окна плиток
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Колонка плиток: полный ряд 320px, три в ряд — 103px+5px+103px+5px+103px.
-(defwidget dash []
-  (box :class "dash"
-    :orientation "v"
-    :space-evenly false
-    :spacing 5
-  (clock-tile)
-  (weather-tile)
-  (box :orientation "h" :space-evenly false :spacing 5
-   (cpu-tile)
-   (ram-tile)
-   (gpu-tile))
-  (volume-tile)
-  (network-tile)
-  (disks-tile)
-  (favorites-tile)
-  (workspaces)
-  (launcher-tile)
-  (power-tile)))
+;; Каждая плитка — отдельное окно eww. Так нужно композитору: picom размывает
+;; фон по форме окна целиком, и только при раздельных окнах промежутки между
+;; плитками остаются без размытия. Координаты вычислены из высот плиток при
+;; зазоре 10px (колонка 219..1940px по вертикали, центр экрана 2160px).
+;; Если высота плитки меняется, координаты окон ниже нужно пересчитать.
+;;
+;; Полный ряд 320px при x=10; ряд шкал — три окна по 100px при x=10/120/230.
+;; Страту слева (330px) резервирует каждое окно: Openbox выталкивает окно,
+;; целиком лежащее в зоне чужой страты, в рабочую область, а окно с
+;; собственной стратой оставляет на месте. Итоговая страта одна — 330px.
+;; Тип utility, не dock: Openbox лишает dock-окна фокуса клавиатуры,
+;; и поле фильтра лаунчера не получает клавиатуру. utility держит окна
+;; вне таскбара.
 
-(defwindow dashboard
-  :geometry (geometry :x "5px"
-       :y "0px"
-       :width "320px"
-       :anchor "left center")
+(defwindow tile-clock
+  :geometry (geometry :x "10px" :y "219px" :width "320px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
-  ;; Не dock: такие окна Openbox лишает фокуса, и поле фильтра лаунчера
-  ;; не получает клавиатуру. utility держит окно вне таскбара.
   :windowtype "utility"
   :stacking "fg"
   :wm-ignore false
-(dash))
+  (clock-tile))
+
+(defwindow tile-weather
+  :geometry (geometry :x "10px" :y "468px" :width "320px" :anchor "left top")
+  :monitor 0
+  :reserve (struts :distance "330px" :side "left")
+  :windowtype "utility"
+  :stacking "fg"
+  :wm-ignore false
+  (weather-tile))
+
+(defwindow tile-cpu
+  :geometry (geometry :x "10px" :y "689px" :width "100px" :anchor "left top")
+  :monitor 0
+  :reserve (struts :distance "330px" :side "left")
+  :windowtype "utility"
+  :stacking "fg"
+  :wm-ignore false
+  (cpu-tile))
+
+(defwindow tile-ram
+  :geometry (geometry :x "120px" :y "689px" :width "100px" :anchor "left top")
+  :monitor 0
+  :reserve (struts :distance "330px" :side "left")
+  :windowtype "utility"
+  :stacking "fg"
+  :wm-ignore false
+  (ram-tile))
+
+(defwindow tile-gpu
+  :geometry (geometry :x "230px" :y "689px" :width "100px" :anchor "left top")
+  :monitor 0
+  :reserve (struts :distance "330px" :side "left")
+  :windowtype "utility"
+  :stacking "fg"
+  :wm-ignore false
+  (gpu-tile))
+
+(defwindow tile-volume
+  :geometry (geometry :x "10px" :y "801px" :width "320px" :anchor "left top")
+  :monitor 0
+  :reserve (struts :distance "330px" :side "left")
+  :windowtype "utility"
+  :stacking "fg"
+  :wm-ignore false
+  (volume-tile))
+
+(defwindow tile-network
+  :geometry (geometry :x "10px" :y "849px" :width "320px" :anchor "left top")
+  :monitor 0
+  :reserve (struts :distance "330px" :side "left")
+  :windowtype "utility"
+  :stacking "fg"
+  :wm-ignore false
+  (network-tile))
+
+(defwindow tile-disks
+  :geometry (geometry :x "10px" :y "966px" :width "320px" :anchor "left top")
+  :monitor 0
+  :reserve (struts :distance "330px" :side "left")
+  :windowtype "utility"
+  :stacking "fg"
+  :wm-ignore false
+  (disks-tile))
+
+(defwindow tile-favorites
+  :geometry (geometry :x "10px" :y "1211px" :width "320px" :anchor "left top")
+  :monitor 0
+  :reserve (struts :distance "330px" :side "left")
+  :windowtype "utility"
+  :stacking "fg"
+  :wm-ignore false
+  (favorites-tile))
+
+;; Рабочие столы: по окну на стол, плитка 36px, шаг 46px. Число окон равно
+;; числу столов в rc.xml Openbox (<desktops><number>8</number>).
+
+(defwindow tile-ws1
+  :geometry (geometry :x "10px" :y "1342px" :width "320px" :anchor "left top")
+  :monitor 0
+  :reserve (struts :distance "330px" :side "left")
+  :windowtype "utility"
+  :stacking "fg"
+  :wm-ignore false
+  (workspace-tile :i 0))
+
+(defwindow tile-ws2
+  :geometry (geometry :x "10px" :y "1388px" :width "320px" :anchor "left top")
+  :monitor 0
+  :reserve (struts :distance "330px" :side "left")
+  :windowtype "utility"
+  :stacking "fg"
+  :wm-ignore false
+  (workspace-tile :i 1))
+
+(defwindow tile-ws3
+  :geometry (geometry :x "10px" :y "1434px" :width "320px" :anchor "left top")
+  :monitor 0
+  :reserve (struts :distance "330px" :side "left")
+  :windowtype "utility"
+  :stacking "fg"
+  :wm-ignore false
+  (workspace-tile :i 2))
+
+(defwindow tile-ws4
+  :geometry (geometry :x "10px" :y "1480px" :width "320px" :anchor "left top")
+  :monitor 0
+  :reserve (struts :distance "330px" :side "left")
+  :windowtype "utility"
+  :stacking "fg"
+  :wm-ignore false
+  (workspace-tile :i 3))
+
+(defwindow tile-ws5
+  :geometry (geometry :x "10px" :y "1526px" :width "320px" :anchor "left top")
+  :monitor 0
+  :reserve (struts :distance "330px" :side "left")
+  :windowtype "utility"
+  :stacking "fg"
+  :wm-ignore false
+  (workspace-tile :i 4))
+
+(defwindow tile-ws6
+  :geometry (geometry :x "10px" :y "1572px" :width "320px" :anchor "left top")
+  :monitor 0
+  :reserve (struts :distance "330px" :side "left")
+  :windowtype "utility"
+  :stacking "fg"
+  :wm-ignore false
+  (workspace-tile :i 5))
+
+(defwindow tile-ws7
+  :geometry (geometry :x "10px" :y "1618px" :width "320px" :anchor "left top")
+  :monitor 0
+  :reserve (struts :distance "330px" :side "left")
+  :windowtype "utility"
+  :stacking "fg"
+  :wm-ignore false
+  (workspace-tile :i 6))
+
+(defwindow tile-ws8
+  :geometry (geometry :x "10px" :y "1664px" :width "320px" :anchor "left top")
+  :monitor 0
+  :reserve (struts :distance "330px" :side "left")
+  :windowtype "utility"
+  :stacking "fg"
+  :wm-ignore false
+  (workspace-tile :i 7))
+
+(defwindow tile-launcher
+  :geometry (geometry :x "10px" :y "1710px" :width "320px" :anchor "left top")
+  :monitor 0
+  :reserve (struts :distance "330px" :side "left")
+  :windowtype "utility"
+  :stacking "fg"
+  :wm-ignore false
+  (launcher-tile))
+
+(defwindow tile-power
+  :geometry (geometry :x "10px" :y "1895px" :width "320px" :anchor "left top")
+  :monitor 0
+  :reserve (struts :distance "330px" :side "left")
+  :windowtype "utility"
+  :stacking "fg"
+  :wm-ignore false
+  (power-tile))

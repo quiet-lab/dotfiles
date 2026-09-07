@@ -1,13 +1,18 @@
-;; Рабочие столы Openbox: колонка одинаковых плиток, иконки окон слева, номер стола справа.
+;; Рабочие столы Openbox: одинаковые плитки, иконки окон слева, номер стола справа.
+;; Каждый стол — отдельное окно eww (tile-ws1…tile-ws8 в eww.yuck), чтобы picom
+;; размывал фон только под плитками, а не под промежутками между ними.
 ;; Состояние приходит JSON-строкой от скрипта (см. заголовок скрипта), разметка описана здесь.
 
 ;; --- Реактивный поток состояния ---
 (deflisten workspace :initial "{\"desktops\":[]}" "widgets/workspaces/scripts/workspace")
 
 ;; --- Виджет ---
-(defwidget workspaces []
-  (box :class "works" :orientation "v" :space-evenly false :spacing 5
-    (for d in {workspace.desktops}
+;; Плитка стола с индексом i (0-based). Стол выбирается из общего списка
+;; фильтром jq, поэтому при отсутствии стола с таким индексом плитка просто
+;; не рисуется, без ошибок индексации.
+(defwidget workspace-tile [i]
+  (box :class "works" :orientation "v" :space-evenly false
+    (for d in {jq(workspace.desktops, "map(select(.idx == ${i}))")}
       ;; Плитка стола: клик по свободному месту переключает стол.
       ;; Отступы заданы внутреннему box (ws-body): GTK не учитывает padding у eventbox при размещении.
       (eventbox :class "ws ${d.active ? 'ws-fo' : ''}" :onclick "xdotool set_desktop ${d.idx}"

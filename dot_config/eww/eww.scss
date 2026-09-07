@@ -26,11 +26,16 @@ $magenta: #BB9AF7;
 $cyan: #7DCFFF;
 $white: $foreground;
 
+// Фон плиток: чёрный, полупрозрачный — как окна приложений вне фокуса
+// (picom задаёт им opacity 0.7). Каждая плитка — отдельное окно eww,
+// picom размывает фон под каждым из них (правило class_g ?= 'eww').
+$tile-bg: rgba(0, 0, 0, 0.7);
+
 // ==============================
 //  DASHBOARD (левая колонка плиток)
 // ==============================
 
-// Окна eww сами по себе без подложки — видны только плитки.
+// Окна eww сами по себе без подложки — виден только фон плитки.
 // window.background перекрывает заливку темы: она вешает класс .background
 // на окно и специфичностью (0,1,0) бьёт наш window (0,0,1).
 window,
@@ -38,14 +43,9 @@ window.background {
   background: none;
 }
 
-// Колонка плиток
-.dash {
-  background-color: transparent;
-}
-
 // Базовая плитка
 .tile {
-  background-color: $black;
+  background-color: $tile-bg;
   border-radius: 12px;
   padding: 10px;
 }

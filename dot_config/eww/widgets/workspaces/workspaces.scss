@@ -8,7 +8,7 @@
 // поэтому размер задаёт только .ws-body: 300 + 2·10 = 320 по ширине, 24 + 2·6 = 36 по высоте.
 // Рамка прозрачная у всех плиток, чтобы активная не отличалась размером.
 .works .ws {
-  background-color: $black;
+  background-color: $tile-bg;
   border: 2px solid transparent;
   border-radius: 12px;
 
