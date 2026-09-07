@@ -17,9 +17,12 @@
 
 (defwidget tray-tile []
   ;; Внешний eventbox ловит уход курсора со всей плитки трея.
+  ;; Три слоя overlay: плитка с иконками трея, панель громкости и — поверх неё —
+  ;; иконка громкости. Окно слоя панели перекрывает всё под собой (включая свои
+  ;; поля), поэтому кнопка должна лежать выше панели, иначе клики до неё не доходят.
   (eventbox :onhoverlost "eww update tray-vol=false"
     (overlay
-      ;; Основное содержимое: иконки трея сверху, иконка громкости внизу.
+      ;; Плитка с иконками трея; внизу оставлено место под кнопку громкости.
       ;; :menu-anchor / :menu-gap — атрибуты из локальной сборки eww: "workarea"
       ;; открывает меню внутри рабочей области с зазором :menu-gap от её края.
       (box :class "tile tray-tile"
@@ -28,13 +31,11 @@
         (systray :class "tray" :orientation "v" :spacing 6 :icon-size 20 :prepend-new true :valign "start"
                  :menu-anchor "workarea" :menu-gap 10
                  :hide {["PulseAudio system tray"]})
-        (box :vexpand true)
-        (eventbox :onhover "eww update tray-vol=true"
-          (button :class "tray-vol-btn" :onclick "pavucontrol &"
-                  :onrightclick "~/.local/bin/eww-daemon tray-menu 'PulseAudio system tray'" "󰕾")))
-      ;; Панель громкости поверх иконок трея, над кнопкой громкости (отступ снизу в scss).
+        (box :vexpand true))
+      ;; Панель громкости поверх всей плитки (с рамкой и отступами), её низ — у самой
+      ;; высокой точки глифа громкости (поля в scss).
       (revealer :reveal tray-vol :transition "slideup" :duration "150ms" :valign "end"
-        (box :class "tile tray-vol-panel" :orientation "v" :space-evenly false
+        (box :class "tray-vol-panel" :orientation "v" :space-evenly false
           (scale :class "tray-vol-scale"
             :orientation "v"
             :flipped true
@@ -42,4 +43,11 @@
             :min 0 :max 101
             :value current-volume
             :onchange "pactl set-sink-volume @DEFAULT_SINK@ {}%")
-          (label :class "tray-vol-value" :text "${current-volume}"))))))
+          (label :class "tray-vol-value" :text "${current-volume}")))
+      ;; Иконка громкости: наведение раскрывает панель, левый клик — Volume
+      ;; Control, правый — штатное меню pasystray через демон. Команды
+      ;; отсоединяются через setsid -f: обработчик eww ограничен по времени,
+      ;; и запущенный прямо из него процесс не выживает.
+      (eventbox :onhover "eww update tray-vol=true" :valign "end" :halign "center"
+        (button :class "tray-vol-btn" :onclick "setsid -f pavucontrol"
+                :onrightclick "setsid -f ~/.local/bin/eww-daemon tray-menu 'PulseAudio system tray'" "󰕾")))))
