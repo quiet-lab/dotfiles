@@ -175,26 +175,8 @@
   <keyboard>
     <chainQuitKey>C-g</chainQuitKey>
 
-    <!-- Переключение на английский: Alt + Win + E -->
-    <keybind key="A-e">
-      <action name="Execute">
-        <command>xkb-switch -s us</command>
-        <!-- command>setxkbmap -layout us,ru</command -->
-      </action>
-    </keybind>
-    <!-- Переключение на русский: Alt + Win + R -->
-    <keybind key="A-r">
-      <action name="Execute">
-        <command>xkb-switch -s ru</command>
-        <!-- command>setxkbmap -layout ru,us</command -->
-      </action>
-    </keybind>
-    <!-- Циклическое переключение раскладки: Win + Пробел -->
-    <keybind key="W-space">
-      <action name="Execute">
-        <command>xkb-switch -n</command>
-      </action>
-    </keybind>
+    <!-- Переключение раскладки (Win+Пробел, Alt+E, Alt+R) выполняет XKB,
+         см. ~/.config/X11/xkb_custom; привязок Openbox для этого нет. -->
 
     <!-- Brightness control. -->
     <keybind key="XF86MonBrightnessUp">

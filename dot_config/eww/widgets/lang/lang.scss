@@ -8,7 +8,9 @@
   &:hover { background-color: $background; }
 }
 
+// Подпись раскладки: как номер стола — цвет рамки, 1.3em, начертание 900.
 .lang-label {
-  color: $cyan;
-  font-weight: bold;
+  color: $yellow;
+  font-size: 1.3em;
+  font-weight: 900;
 }

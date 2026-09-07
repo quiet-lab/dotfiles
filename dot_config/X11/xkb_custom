@@ -1,17 +1,53 @@
+// Пользовательская карта клавиатуры: две раскладки (US, RU) и переключение
+// раскладки средствами XKB, без горячих клавиш Openbox:
+//   Win + Пробел — циклическое переключение (опция group(win_space_toggle));
+//   Alt + E      — фиксировать US (группа 1);
+//   Alt + R      — фиксировать RU (группа 2).
+// Загружается из autostart.sh: xkbcomp ~/.config/X11/xkb_custom $DISPLAY.
 xkb_keymap {
     xkb_keycodes  { include "evdev+aliases(qwerty)" };
-    xkb_types     { include "complete" };
+    xkb_types     {
+        include "complete"
+        // Тип клавиши для Alt+буква: уровни Base, Shift/Caps, Alt.
+        // На третьем уровне символа нет, только действие смены группы.
+        type "ALT_GROUP_SELECT" {
+            modifiers = Shift+Lock+Mod1;
+            map[Shift] = Level2;
+            map[Lock] = Level2;
+            map[Mod1] = Level3;
+            map[Shift+Mod1] = Level3;
+            map[Lock+Mod1] = Level3;
+            level_name[Level1] = "Base";
+            level_name[Level2] = "Shift";
+            level_name[Level3] = "Alt";
+        };
+    };
     xkb_compat    { include "complete" };
-    xkb_symbols   { 
-        // Подключаем базовую клавиатуру США + Русскую второй раскладкой
-        include "pc+us+ru:2+inet(evdev)" 
+    xkb_symbols   {
+        // Базовая клавиатура США + русская второй группой + Win+Пробел для переключения
+        include "pc+us+ru:2+inet(evdev)+group(win_space_toggle)"
 
-        // Назначаем на F21 (keycode 199) фиксацию первой раскладки (US)
+        // Alt+E — фиксировать US; в обеих группах символы клавиши сохранены
+        key <AD03> {
+            type = "ALT_GROUP_SELECT",
+            symbols[Group1] = [ e, E, NoSymbol ],
+            actions[Group1] = [ NoAction(), NoAction(), LockGroup(group=1) ],
+            symbols[Group2] = [ Cyrillic_u, Cyrillic_U, NoSymbol ],
+            actions[Group2] = [ NoAction(), NoAction(), LockGroup(group=1) ]
+        };
+        // Alt+R — фиксировать RU
+        key <AD04> {
+            type = "ALT_GROUP_SELECT",
+            symbols[Group1] = [ r, R, NoSymbol ],
+            actions[Group1] = [ NoAction(), NoAction(), LockGroup(group=2) ],
+            symbols[Group2] = [ Cyrillic_ka, Cyrillic_KA, NoSymbol ],
+            actions[Group2] = [ NoAction(), NoAction(), LockGroup(group=2) ]
+        };
+
+        // F21 (keycode 199) и F22 (keycode 200) фиксируют US и RU
+        // (для внешних устройств и скриптов)
         key <FK21> { [ VoidSymbol ], actions[Group1] = [ LockGroup(group=1) ] };
-
-        // Назначаем на F22 (keycode 200) фиксацию второй раскладки (RU)
         key <FK22> { [ VoidSymbol ], actions[Group1] = [ LockGroup(group=2) ] };
     };
     xkb_geometry  { include "pc(pc105)" };
 };
-

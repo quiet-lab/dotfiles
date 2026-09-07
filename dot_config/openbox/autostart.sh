@@ -36,7 +36,9 @@ xset s off &
 xset -dpms &
 xset s noblank &
 joyd_mpd_notifier
-setxkbmap -layout "us,ru"
+# Раскладки и переключение: запасной setxkbmap (если xkbcomp не сработает),
+# затем пользовательская карта XKB с Alt+E/Alt+R и Win+Пробел.
+setxkbmap -layout "us,ru" -option grp:win_space_toggle
 xkbcomp /home/mne/.config/X11/xkb_custom $DISPLAY
 ~/.local/bin/kb_listener.sh &
 
