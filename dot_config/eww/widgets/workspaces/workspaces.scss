@@ -25,8 +25,9 @@ $ws-num-bg: rgba(6, 6, 6, 0.6);
 .works .ws {
   background-color: transparent;
 
-  // При наведении рамка и блок номера зелёные, цифра чёрная (и у активного стола).
-  &:hover {
+  // При наведении на неактивный стол рамка и блок номера зелёные, цифра чёрная;
+  // активный стол на наведение не реагирует.
+  &:not(.ws-fo):hover {
     .ws-body { border-color: $ws-hover; }
     .ws-num {
       background-color: $ws-hover;
