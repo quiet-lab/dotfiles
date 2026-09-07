@@ -4,16 +4,56 @@
   min-width: 54px;
   min-height: 54px;
 
-  &:hover { background-color: $background; }
+  &:hover {
+    background-color: $background;
+  }
 }
 
 // Выключение при наведении: тёплый тёмно-красный фон и рамка, чёрный глиф.
-$pwr-off-hover: #C8381C;
+$pwr-off-hover: #dd0000;
 .pwr-off-btn:hover {
   background-color: $pwr-off-hover;
   border-color: $pwr-off-hover;
 
-  .pwr-icon { color: #000000; }
+  .pwr-icon {
+    color: #000000;
+  }
+}
+$pwr-reboot-hover: #ff6600;
+.pwr-reboot-btn:hover {
+  background-color: $pwr-reboot-hover;
+  border-color: $pwr-reboot-hover;
+
+  .pwr-reboot {
+    color: #000000;
+  }
+}
+$pwr-restart-hover: #006600;
+.pwr-restart-btn:hover {
+  background-color: $pwr-restart-hover;
+  border-color: $pwr-restart-hover;
+
+  .pwr-restart {
+    color: #000000;
+  }
+}
+$pwr-quit-hover: #2244ff;
+.pwr-quit-btn:hover {
+  background-color: $pwr-quit-hover;
+  border-color: $pwr-quit-hover;
+
+  .pwr-quit {
+    color: #000000;
+  }
+}
+$pwr-lock-hover: #ffffff;
+.pwr-lock-btn:hover {
+  background-color: $pwr-lock-hover;
+  border-color: $pwr-lock-hover;
+
+  .pwr-lock {
+    color: #000000;
+  }
 }
 
 // Глифы: размер и отступы подписи подобраны каждому глифу по замеру на экране
@@ -27,8 +67,23 @@ $pwr-off-hover: #C8381C;
 .pwr-icon {
   color: $yellow;
 }
-.pwr-lock    { font-size: 50px; padding: 0px 10px 0px 0px; }
-.pwr-quit    { font-size: 59px; padding: 0px 16px 0px 0px; }
-.pwr-restart { font-size: 57px; padding: 0px 11px 6px 1px; }
-.pwr-reboot  { font-size: 50px; padding: 3px 14px 0px 0px; }
-.pwr-off     { font-size: 56px; padding: 0px 10px 0px 0px; }
+.pwr-lock {
+  font-size: 45px;
+  padding: 0px 10px 2px 3px;
+}
+.pwr-quit {
+  font-size: 50px;
+  padding: 0px 16px 0px 2px;
+}
+.pwr-restart {
+  font-size: 57px;
+  padding: 0px 11px 6px 1px;
+}
+.pwr-reboot {
+  font-size: 52px;
+  padding: 0px 14px 0px 0px;
+}
+.pwr-off {
+  font-size: 60px;
+  padding: 0px 10px 1px 0px;
+}
