@@ -70,12 +70,26 @@ menu {
   border-radius: 8px;
   padding: 8px 4px;
   color: $yellow;
-  font-size: 1.3em;
+  font-size: 1.5em;
 
+  // Боковой отступ пунктов равен боковому отступу разделителей: текст
+  // начинается на одной вертикали с линией (место под флажки в сборке eww
+  // не резервируется).
   menuitem {
-    padding: 6px 8px;
+    padding: 6px 4px;
     border-radius: 6px;
     min-height: 20px;
+
+    // dbusmenu ставит слева пустой слот под иконку пункта — убираем, иначе
+    // текст сдвинут вправо относительно разделителей.
+    image {
+      min-width: 0;
+      min-height: 0;
+      margin: 0;
+      padding: 0;
+      -gtk-icon-source: none;
+    }
+    > box { margin: 0; }
 
     &:hover {
       background-color: $yellow;
@@ -90,19 +104,30 @@ menu {
       margin-left: 10px;
       -gtk-icon-source: -gtk-icontheme("pan-end-symbolic");
     }
+    // dbusmenu делает каждый пункт наследником GtkCheckMenuItem, и размер
+    // индикатора резервируется у всех пунктов меню. Поэтому у неотмеченных
+    // пунктов индикатор нулевого размера, и текст начинается на уровне
+    // разделителей; отмеченный пункт получает жёлтый маркер.
     check, radio {
-      min-width: 14px;
-      min-height: 14px;
-      margin-right: 8px;
-      border: 1px solid $gray;
-      border-radius: 3px;
-      &:checked { background-color: $yellow; border-color: $yellow; }
+      min-width: 0;
+      min-height: 0;
+      margin: 0;
+      padding: 0;
+      border: none;
+      background: none;
+      &:checked {
+        min-width: 10px;
+        min-height: 10px;
+        margin-right: 8px;
+        border-radius: 3px;
+        background-color: $yellow;
+      }
     }
   }
   separator {
     min-height: 1px;
     background-color: $yellow;
-    margin: 4px 6px;
+    margin: 4px 4px;
   }
 }
 
