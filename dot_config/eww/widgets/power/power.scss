@@ -7,8 +7,8 @@
   &:hover { background-color: $background; }
 }
 
-// Выключение при наведении: ярко-красный фон и рамка, чёрный глиф.
-$pwr-off-hover: #FF073A;
+// Выключение при наведении: тёплый тёмно-красный фон и рамка, чёрный глиф.
+$pwr-off-hover: #C8381C;
 .pwr-off-btn:hover {
   background-color: $pwr-off-hover;
   border-color: $pwr-off-hover;
