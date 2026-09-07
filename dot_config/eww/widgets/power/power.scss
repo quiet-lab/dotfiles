@@ -11,6 +11,9 @@
 // (большая сторона глифа 44px, наименьший зазор до рамки 5px, зазоры слева и
 // справа, сверху и снизу равны с точностью до пикселя). Ширина подписи больше
 // глифа, поэтому центровка по горизонтали выправляется правым отступом.
+// У трёх круглых глифов (перезапуск Openbox, перезагрузка, выключение) главная
+// метрика — диаметр круга: он одинаков (≈34px по подгонке окружности к левой
+// нижней дуге), круги стоят с одинаковым зазором слева (≈8px) и снизу (≈7px).
 // Порядок в padding: сверху, справа, снизу, слева.
 .pwr-icon {
   color: $yellow;
@@ -18,5 +21,5 @@
 .pwr-lock    { font-size: 50px; padding: 0px 10px 0px 0px; }
 .pwr-quit    { font-size: 59px; padding: 0px 16px 0px 0px; }
 .pwr-restart { font-size: 57px; padding: 0px 11px 6px 1px; }
-.pwr-reboot  { font-size: 44px; padding: 9px 21px 1px 4px; }
-.pwr-off     { font-size: 57px; padding: 0px 11px 2px 2px; }
+.pwr-reboot  { font-size: 50px; padding: 3px 14px 0px 0px; }
+.pwr-off     { font-size: 56px; padding: 0px 10px 0px 0px; }
