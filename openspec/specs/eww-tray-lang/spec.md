@@ -18,6 +18,12 @@ tray-tile MUST содержать виджет eww `systray` (горизонта
 
 Виджет работает по протоколу StatusNotifierItem (D-Bus): eww регистрирует `org.kde.StatusNotifierWatcher`. Приложения, использующие только XEmbed (`_NET_SYSTEM_TRAY_S0`, например nm-applet), MUST попадать в трей через мост `xembedsniproxy` (пакет AUR `xembed-sni-proxy-standalone-git`): автозапуск Openbox запускает его после открытия окон eww, поскольку мосту нужен уже зарегистрированный StatusNotifierWatcher. Других владельцев селекции XEmbed (трей tint2) в сессии быть не должно, иначе мост не получит иконки.
 
+Клики по иконкам MUST передаваться приложениям с координатами относительно экрана. В eww 0.6.0 (до коммита 48f5aa8 включительно) виджет `systray` на X11 прибавляет к экранным координатам ещё и положение окна, из-за чего мост получает точку за пределами экрана, меню не открываются, а вызов `ContextMenu` зацикливается между eww и мостом. Используемая сборка eww MUST содержать исправление: ветка `fix-systray-x11-click-coords` в `~/builds/eww` (файл `crates/eww/src/widgets/systray.rs`).
+
+#### Scenario: Меню иконки трея
+- **WHEN** пользователь кликает правой кнопкой по иконке pasystray в tray-tile
+- **THEN** контекстное меню pasystray открывается рядом с иконкой, на шине проходит ровно один вызов `ContextMenu`
+
 #### Scenario: Приложение XEmbed через мост
 - **WHEN** запущены eww, затем xembedsniproxy, затем nm-applet
 - **THEN** иконка nm-applet отображается в tray-tile
