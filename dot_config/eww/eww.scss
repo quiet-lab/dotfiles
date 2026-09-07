@@ -9,6 +9,9 @@
 *{
   all: unset;
   font-family: "IosevkaTermSlab NF", "MesloLGMDZ Nerd Font", monospace;
+  // Базовый размер 14px. Все размеры в scss задаются в пикселях (в том числе
+  // дробных — прежние em-значения переведены точно, чтобы раскладка плиток не
+  // изменилась): em на кнопке или контейнере подписью не наследуется.
   font-size: 14px;
 }
 
@@ -148,7 +151,7 @@ tooltip {
 // Заголовок плитки
 .tile-title {
   color: $gray;
-  font-size: 13px;
+  font-size: 13.3px;
   font-weight: bold;
   margin-bottom: 6px;
 }

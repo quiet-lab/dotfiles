@@ -11,7 +11,7 @@ $w-storm: #BB9AF7;
 .weather-tile {
   .w-wait { color: $gray; }
   .w-icon {
-    font-size: 37px;
+    font-size: 36.4px;
     margin-right: 20px;
   }
   .w-temp {
@@ -21,13 +21,13 @@ $w-storm: #BB9AF7;
   }
   .w-city {
     color: $gray;
-    font-size: 22px;
+    font-size: 21.84px;
   }
   .w-frow {
     margin-top: 10px;
     .w-day-name {
       color: $foreground;
-      font-size: 17px;
+      font-size: 17.5px;
       font-weight: bold;
       min-width: 24px;
       margin-right: 20px;
@@ -37,15 +37,15 @@ $w-storm: #BB9AF7;
     }
     .w-part-icon {
       color: $white;
-      font-size: 22px;
+      font-size: 22.4px;
     }
     .w-part-temp {
       color: $white;
-      font-size: 17px;
+      font-size: 17.5px;
       padding-right: 1px;
     }
     .w-cond {
-      font-size: 19px;
+      font-size: 19.6px;
     }
   }
 

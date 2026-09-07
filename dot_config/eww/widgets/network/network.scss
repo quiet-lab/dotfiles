@@ -11,12 +11,12 @@
   }
   .net-text {
     color: $foreground;
-    font-size: 15px;
+    font-size: 14.7px;
   }
   .net-menu-btn {
     color: $gray;
     // размер — подписи внутри кнопки (см. глобальное правило `* { font-size: 14px }`)
-  label { font-size: 17px; }
+  label { font-size: 16.8px; }
     &:hover { color: $cyan; }
   }
 }
