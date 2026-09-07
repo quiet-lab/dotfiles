@@ -11,18 +11,22 @@
 ;; нельзя выровнять по сетке, а дни он рисует одним шрифтом, так что сегодняшний
 ;; день нельзя сделать крупнее. Опрос раз в час подхватывает смену суток;
 ;; стрелки (calendar shift ±1/±12) и клики по дням (calendar select <дата>)
-;; демон обрабатывает сам и сразу обновляет cal-grid. Состояние (смещение
-;; месяца, выбранный день) хранится в $XDG_RUNTIME_DIR/eww-daemon/calendar.json.
+;; демон обрабатывает сам и сразу обновляет cal-grid. Пролистанный месяц
+;; запоминается: состояние (смещение месяца, выбранный день) хранится в
+;; $XDG_RUNTIME_DIR/eww-daemon/calendar.json. Клик по времени или дате в шапке
+;; плитки (calendar today) возвращает календарь к текущему месяцу.
 (defpoll cal-grid :interval "1h" :initial "(box)" "~/.local/bin/eww-daemon calendar")
 
 ;; --- Виджет ---
 (defwidget clock-tile []
   (box :class "tile clock-tile" :orientation "v" :space-evenly false
-    ;; Строка времени и даты выровнена по сетке календаря (класс clock-head в scss).
-    (box :class "clock-head" :orientation "h" :space-evenly false
-      (label :class "time-hour" :text hour)
-      (label :class "time-sep" :text ":")
-      (label :class "time-min" :text min)
-      (box :hexpand true)
-      (label :class "date-label" :text dash-date :halign "end"))
+    ;; Строка времени и даты выровнена по сетке календаря (класс clock-head в scss);
+    ;; клик по ней возвращает календарь к текущему месяцу.
+    (eventbox :onclick "~/.local/bin/eww-daemon calendar today"
+      (box :class "clock-head" :orientation "h" :space-evenly false
+        (label :class "time-hour" :text hour)
+        (label :class "time-sep" :text ":")
+        (label :class "time-min" :text min)
+        (box :hexpand true)
+        (label :class "date-label" :text dash-date :halign "end")))
     (literal :content cal-grid)))
