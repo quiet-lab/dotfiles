@@ -59,12 +59,15 @@ window.background {
 // сам eww): правило `* { all: unset }` снимает с них оформление GTK, поэтому
 // задаём своё в духе плиток. Узлы GTK: menu > menuitem (label, arrow, check,
 // radio), separator.
+// Окно меню не имеет альфа-канала, поэтому его углы срезает picom
+// (правило для popup_menu класса eww) тем же радиусом 8px, что и рамка.
 menu {
   background-color: rgba(0, 0, 0, 0.9);
   border: $tile-border;
   border-radius: 8px;
-  padding: 6px;
-  color: $foreground;
+  padding: 8px;
+  color: $yellow;
+  font-size: 1.15em;
 
   menuitem {
     padding: 6px 14px;
@@ -95,7 +98,7 @@ menu {
   }
   separator {
     min-height: 1px;
-    background-color: $gray;
+    background-color: $yellow;
     margin: 4px 6px;
   }
 }
