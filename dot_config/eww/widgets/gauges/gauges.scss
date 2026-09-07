@@ -1,6 +1,7 @@
 // Круговые шкалы CPU/RAM/GPU
+// Отступ 5px + рамка плитки 1px: высота плитки та же, что была при 6px без рамки.
 .gauge-tile {
-  padding: 6px;
+  padding: 5px;
   .gauge-label {
     font-size: 16px;
     font-weight: bold;
