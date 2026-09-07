@@ -90,7 +90,7 @@ favorites-tile MUST содержать три кнопки, каждая отк�
 - **THEN** открывается терминал wezterm с yazi в ~/Загрузки
 
 ### Requirement: Плитка питания
-Питание MUST быть представлено пятью одинаковыми квадратными плитками 56×56px в один ряд в самом верху колонки (y = 153px, зазор 10px, ряд занимает всю ширину 320px), каждая — отдельное окно с одной кнопкой и подсказкой: Lock Screen (`loginctl lock-session`), Logout (`openbox --exit`), Openbox Restart (`openbox --restart`), Reboot (`systemctl reboot`), Shutdown (`systemctl poweroff`).
+Питание MUST быть представлено пятью одинаковыми квадратными плитками 56×56px в один ряд в самом верху колонки (y = 153px, зазор 10px, ряд занимает всю ширину 320px), каждая — отдельное окно с одной кнопкой и подсказкой; иконки — глифы Nerd Font цвета рамки, подпись лежит в overlay поверх поля 54×54 (крупный шрифт не растягивает окно), размер и отступы подобраны каждому глифу отдельно так, что большая сторона глифа 44px, наименьший зазор до рамки 5px и зазоры слева/справа и сверху/снизу равны: Lock Screen (`loginctl lock-session`), Logout (`openbox --exit`), Openbox Restart (`openbox --restart`), Reboot (`systemctl reboot`), Shutdown (`systemctl poweroff`).
 
 #### Scenario: Выключение машины
 - **WHEN** пользователь кликает кнопку питания

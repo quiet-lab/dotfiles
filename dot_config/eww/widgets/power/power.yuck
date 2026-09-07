@@ -1,11 +1,18 @@
 ;; Питание: пять квадратных плиток 56×56 в один ряд в самом верху колонки —
 ;; блокировка сессии, выход из Openbox, перезапуск Openbox, перезагрузка
 ;; системы, выключение. Каждая плитка — отдельное окно (tile-pwr-* в eww.yuck).
+;; Иконки — глифы Nerd Font. Подпись лежит в overlay поверх поля 54×54:
+;; GtkOverlay берёт размер только от основного элемента, поэтому крупный
+;; шрифт (высота строки больше поля) не растягивает окно, а глиф центрируется
+;; и обрезается по полю. Размер шрифта и отступы подобраны каждому глифу
+;; отдельно в power.scss: большая сторона глифа 44px, зазор до рамки 5px.
 (defwidget power-button [class tooltip cmd icon]
-  (button :class "tile pwr-tile ${class}"
+  (button :class "tile pwr-tile"
     :tooltip tooltip
     :onclick cmd
-    icon))
+    (overlay
+      (box :class "pwr-area" :width 54 :height 54)
+      (label :class "pwr-icon ${class}" :text icon :halign "center" :valign "center"))))
 
 (defwidget pwr-lock []    (power-button :class "pwr-lock"    :tooltip "Lock Screen"     :cmd "loginctl lock-session" :icon "󰌾"))
 (defwidget pwr-logout []  (power-button :class "pwr-quit"    :tooltip "Logout"          :cmd "openbox --exit"        :icon "󰗽"))
