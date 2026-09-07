@@ -8,13 +8,36 @@
 (defpoll cal-month :interval "10h" :initial "1" "widgets/clock/scripts/calendar")
 (defpoll cal-year  :interval "10h" :initial "2026" "date '+%Y'")
 
+;; --- Собственная шапка календаря ---
+;; Встроенную шапку GtkCalendar (месяц и год со стрелками) нельзя выровнять
+;; по сетке: CSS-поля она не учитывает, а поля самого calendar сдвигают и сетку.
+;; Поэтому шапка скрыта (:show-heading false) и нарисована своими кнопками и
+;; подписями, поля которых совпадают с чернилами сетки. cal-shift — смещение
+;; в месяцах от текущего (стрелки месяца ±1, стрелки года ±12); месяц и год
+;; для виджета вычисляются из него, выбранный день показывается только в
+;; текущем месяце.
+(defvar cal-shift 0)
+(defvar cal-months '["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"]')
+
 ;; --- Виджет ---
 (defwidget clock-tile []
   (box :class "tile clock-tile" :orientation "v" :space-evenly false 
-    (box :orientation "h" :space-evenly false 
+    ;; Строка времени и даты выровнена по сетке календаря (класс clock-head в scss).
+    (box :class "clock-head" :orientation "h" :space-evenly false
       (label :class "time-hour" :text hour)
       (label :class "time-sep" :text ":")
       (label :class "time-min" :text min)
       (box :hexpand true)
       (label :class "date-label" :text dash-date :halign "end"))
-    (calendar :class "cal" :day cal-day :month cal-month :year cal-year)))
+    (box :class "cal-head" :orientation "h" :space-evenly false
+      (button :class "cal-arrow" :onclick "eww update cal-shift=${cal-shift - 1}" "‹")
+      (label :class "cal-title" :text {cal-months[cal-month + cal-shift - 12 * floor((cal-month + cal-shift) / 12)]})
+      (button :class "cal-arrow" :onclick "eww update cal-shift=${cal-shift + 1}" "›")
+      (box :hexpand true)
+      (button :class "cal-arrow" :onclick "eww update cal-shift=${cal-shift - 12}" "‹")
+      (label :class "cal-title" :text {cal-year + floor((cal-month + cal-shift) / 12)})
+      (button :class "cal-arrow" :onclick "eww update cal-shift=${cal-shift + 12}" "›"))
+    (calendar :class "cal" :show-heading false
+      :day {cal-shift == 0 ? cal-day : 0}
+      :month {cal-month + cal-shift - 12 * floor((cal-month + cal-shift) / 12)}
+      :year {cal-year + floor((cal-month + cal-shift) / 12)})))

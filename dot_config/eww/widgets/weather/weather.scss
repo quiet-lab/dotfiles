@@ -9,6 +9,19 @@ $w-storm: #BB9AF7;
 
 // Погода
 .weather-tile {
+  // Отступы слева и справа те же, что у сетки календаря в плитке часов:
+  // видимая часть текста в 27px от левой рамки и в 33px от правой. Поля
+  // заданы строкам по отдельности: справа у строки прогноза поле больше,
+  // потому что её последний столбец центрируется в своей ячейке и его глиф
+  // не доходит до края. Снизу — отступ 4px, чтобы последняя строка прогноза
+  // отстояла от рамки так же, как первая от верхней. Внутренние зазоры прогноза
+  // ужаты, чтобы строки с полями умещались в 300px и окно не расширялось.
+  .weather-inner {
+    padding-bottom: 4px;
+  }
+  .w-now {
+    margin: 0 23px 0 14px;
+  }
   .w-wait { color: $gray; }
   .w-icon {
     font-size: 36.4px;
@@ -24,16 +37,16 @@ $w-storm: #BB9AF7;
     font-size: 21.84px;
   }
   .w-frow {
-    margin-top: 10px;
+    margin: 10px 28px 0 14px;
     .w-day-name {
       color: $foreground;
       font-size: 17.5px;
       font-weight: bold;
       min-width: 24px;
-      margin-right: 20px;
+      margin-right: 12px;
     }
     .w-part {
-      padding: 0 8px;
+      padding: 0 3px;
     }
     .w-part-icon {
       color: $white;

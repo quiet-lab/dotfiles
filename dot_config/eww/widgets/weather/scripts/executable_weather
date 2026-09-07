@@ -51,7 +51,7 @@ code=$(j '.current_condition[0].weatherCode')
 [ -n "$temp" ] || { fallback; exit; }
 
 out='(box :class "weather-inner" :orientation "v" :space-evenly false'
-out="$out (box :orientation \"h\" :space-evenly false
+out="$out (box :orientation \"h\" :class \"w-now\" :space-evenly false
  (label :class \"w-icon $(iclass "$code")\" :text \"$(icon "$code")\")
  (label :class \"w-temp\" :text \"${temp}°\")
  (box :hexpand true)
