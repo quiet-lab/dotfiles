@@ -273,35 +273,40 @@
         <direction>down</direction>
       </action>
     </keybind>
-    <!-- Tile window-placement across visible windows. -->
+    <!-- Размещение окон по половинам экрана с зазором 10px от краёв рабочей
+         области и между окнами (как между плитками eww). Размеры заданы в
+         пикселях под рабочую область 3510×2130 (экран 3840×2160, страта eww
+         330px слева, поле 30px сверху): ширина (3510 - 3*10) / 2 = 1740,
+         полная высота 2130 - 2*10 = 2110, половина (2130 - 3*10) / 2 = 1050.
+         Отрицательная координата отсчитывается от правого/нижнего края. -->
     <keybind key="W-S-Left">
       <action name="MoveResizeTo">
-        <x>0</x>
-        <y>0</y>
-        <width>1/2</width>
-        <height>1/1</height>
+        <x>10</x>
+        <y>10</y>
+        <width>1740</width>
+        <height>2110</height>
       </action>
     </keybind>
     <keybind key="W-S-Right">
       <action name="MoveResizeTo">
-        <x>-0</x>
-        <y>0</y>
-        <width>1/2</width>
-        <height>1/1</height>
+        <x>-10</x>
+        <y>10</y>
+        <width>1740</width>
+        <height>2110</height>
       </action>
     </keybind>
     <keybind key="W-S-Up">
       <action name="MoveResizeTo">
-        <y>0</y>
-        <width>1/2</width>
-        <height>1/2</height>
+        <y>10</y>
+        <width>1740</width>
+        <height>1050</height>
       </action>
     </keybind>
     <keybind key="W-S-Down">
       <action name="MoveResizeTo">
-        <y>-0</y>
-        <width>1/2</width>
-        <height>1/2</height>
+        <y>-10</y>
+        <width>1740</width>
+        <height>1050</height>
       </action>
     </keybind>
     <!-- Manage workspaces/desktop. -->
