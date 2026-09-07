@@ -33,7 +33,12 @@
 ;; Каждая плитка — отдельное окно eww. Так нужно композитору: picom размывает
 ;; фон по форме окна целиком, и только при раздельных окнах промежутки между
 ;; плитками остаются без размытия. Координаты вычислены из высот плиток при
-;; зазоре 10px (колонка 153..1940px по вертикали: ряд плиток питания сверху, далее часы).
+;; зазоре 10px по всей высоте экрана (10..2150px). Раскладка колонки:
+;; - вверху — ряд плиток питания (y=10), часы с календарём (76) и погода (325..536);
+;; - внизу — лаунчер 320×320 (y=1830), над ним блок рабочих столов с треем и
+;;   раскладкой (1462..1820);
+;; - оставшиеся плитки (шкалы, громкость, сеть, диски, избранное: 643px)
+;;   стоят строго по центру свободного промежутка 536..1462 (отступы 142/141px).
 ;; Если высота плитки меняется, координаты окон ниже нужно пересчитать.
 ;;
 ;; Полный ряд 320px при x=10; ряд шкал — три окна по 100px при x=10/120/230.
@@ -44,10 +49,10 @@
 ;; и поле фильтра лаунчера не получает клавиатуру. utility держит окна
 ;; вне таскбара.
 ;; Ряд питания: пять квадратов 56×56 с зазором 10px (5·56 + 4·10 = 320) в самом
-;; верху колонки, y=153 — на 66px выше часов.
+;; верху колонки, y=10 — на 66px выше часов.
 
 (defwindow tile-pwr-lock
-  :geometry (geometry :x "10px" :y "153px" :width "56px" :anchor "left top")
+  :geometry (geometry :x "10px" :y "10px" :width "56px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -56,7 +61,7 @@
   (pwr-lock))
 
 (defwindow tile-pwr-logout
-  :geometry (geometry :x "76px" :y "153px" :width "56px" :anchor "left top")
+  :geometry (geometry :x "76px" :y "10px" :width "56px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -65,7 +70,7 @@
   (pwr-logout))
 
 (defwindow tile-pwr-restart
-  :geometry (geometry :x "142px" :y "153px" :width "56px" :anchor "left top")
+  :geometry (geometry :x "142px" :y "10px" :width "56px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -74,7 +79,7 @@
   (pwr-restart))
 
 (defwindow tile-pwr-reboot
-  :geometry (geometry :x "208px" :y "153px" :width "56px" :anchor "left top")
+  :geometry (geometry :x "208px" :y "10px" :width "56px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -83,7 +88,7 @@
   (pwr-reboot))
 
 (defwindow tile-pwr-off
-  :geometry (geometry :x "274px" :y "153px" :width "56px" :anchor "left top")
+  :geometry (geometry :x "274px" :y "10px" :width "56px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -92,7 +97,7 @@
   (pwr-off))
 
 (defwindow tile-clock
-  :geometry (geometry :x "10px" :y "219px" :width "320px" :anchor "left top")
+  :geometry (geometry :x "10px" :y "76px" :width "320px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -101,7 +106,7 @@
   (clock-tile))
 
 (defwindow tile-weather
-  :geometry (geometry :x "10px" :y "468px" :width "320px" :anchor "left top")
+  :geometry (geometry :x "10px" :y "325px" :width "320px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -110,7 +115,7 @@
   (weather-tile))
 
 (defwindow tile-cpu
-  :geometry (geometry :x "10px" :y "689px" :width "100px" :anchor "left top")
+  :geometry (geometry :x "10px" :y "678px" :width "100px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -119,7 +124,7 @@
   (cpu-tile))
 
 (defwindow tile-ram
-  :geometry (geometry :x "120px" :y "689px" :width "100px" :anchor "left top")
+  :geometry (geometry :x "120px" :y "678px" :width "100px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -128,7 +133,7 @@
   (ram-tile))
 
 (defwindow tile-gpu
-  :geometry (geometry :x "230px" :y "689px" :width "100px" :anchor "left top")
+  :geometry (geometry :x "230px" :y "678px" :width "100px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -137,7 +142,7 @@
   (gpu-tile))
 
 (defwindow tile-volume
-  :geometry (geometry :x "10px" :y "801px" :width "320px" :anchor "left top")
+  :geometry (geometry :x "10px" :y "790px" :width "320px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -146,7 +151,7 @@
   (volume-tile))
 
 (defwindow tile-network
-  :geometry (geometry :x "10px" :y "849px" :width "320px" :anchor "left top")
+  :geometry (geometry :x "10px" :y "838px" :width "320px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -155,7 +160,7 @@
   (network-tile))
 
 (defwindow tile-disks
-  :geometry (geometry :x "10px" :y "966px" :width "320px" :anchor "left top")
+  :geometry (geometry :x "10px" :y "955px" :width "320px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -164,7 +169,7 @@
   (disks-tile))
 
 (defwindow tile-favorites
-  :geometry (geometry :x "10px" :y "1211px" :width "320px" :anchor "left top")
+  :geometry (geometry :x "10px" :y "1200px" :width "320px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -178,7 +183,7 @@
 ;; плитка раскладки) и переключатель раскладки (внизу, на уровне последнего стола).
 
 (defwindow tile-ws1
-  :geometry (geometry :x "10px" :y "1342px" :width "274px" :anchor "left top")
+  :geometry (geometry :x "10px" :y "1462px" :width "274px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -187,7 +192,7 @@
   (workspace-tile :i 0))
 
 (defwindow tile-ws2
-  :geometry (geometry :x "10px" :y "1388px" :width "274px" :anchor "left top")
+  :geometry (geometry :x "10px" :y "1508px" :width "274px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -196,7 +201,7 @@
   (workspace-tile :i 1))
 
 (defwindow tile-ws3
-  :geometry (geometry :x "10px" :y "1434px" :width "274px" :anchor "left top")
+  :geometry (geometry :x "10px" :y "1554px" :width "274px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -205,7 +210,7 @@
   (workspace-tile :i 2))
 
 (defwindow tile-ws4
-  :geometry (geometry :x "10px" :y "1480px" :width "274px" :anchor "left top")
+  :geometry (geometry :x "10px" :y "1600px" :width "274px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -214,7 +219,7 @@
   (workspace-tile :i 3))
 
 (defwindow tile-ws5
-  :geometry (geometry :x "10px" :y "1526px" :width "274px" :anchor "left top")
+  :geometry (geometry :x "10px" :y "1646px" :width "274px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -223,7 +228,7 @@
   (workspace-tile :i 4))
 
 (defwindow tile-ws6
-  :geometry (geometry :x "10px" :y "1572px" :width "274px" :anchor "left top")
+  :geometry (geometry :x "10px" :y "1692px" :width "274px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -232,7 +237,7 @@
   (workspace-tile :i 5))
 
 (defwindow tile-ws7
-  :geometry (geometry :x "10px" :y "1618px" :width "274px" :anchor "left top")
+  :geometry (geometry :x "10px" :y "1738px" :width "274px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -241,7 +246,7 @@
   (workspace-tile :i 6))
 
 (defwindow tile-ws8
-  :geometry (geometry :x "10px" :y "1664px" :width "274px" :anchor "left top")
+  :geometry (geometry :x "10px" :y "1784px" :width "274px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -250,7 +255,7 @@
   (workspace-tile :i 7))
 
 (defwindow tile-launcher
-  :geometry (geometry :x "10px" :y "1710px" :width "320px" :anchor "left top")
+  :geometry (geometry :x "10px" :y "1830px" :width "320px" :height "320px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -259,7 +264,7 @@
   (launcher-tile))
 
 (defwindow tile-tray
-  :geometry (geometry :x "294px" :y "1342px" :width "36px" :anchor "left top")
+  :geometry (geometry :x "294px" :y "1462px" :width "36px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -268,7 +273,7 @@
   (tray-tile))
 
 (defwindow tile-lang
-  :geometry (geometry :x "294px" :y "1664px" :width "36px" :anchor "left top")
+  :geometry (geometry :x "294px" :y "1784px" :width "36px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"

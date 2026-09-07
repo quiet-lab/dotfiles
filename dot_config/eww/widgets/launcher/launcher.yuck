@@ -7,7 +7,8 @@
 ;; с заголовками. При вводе фильтра заголовки исчезают, остаётся список по частоте.
 ;; Поле ввода передаёт запрос демону через сокет (eww-daemon launcher-query),
 ;; кнопки запускают приложения через демон (eww-daemon launch <id>).
-;; Ряды по 7 иконок; видно ровно три ряда (124px = 3×38 + 2×5), остальное — прокруткой.
+;; Ряды по 7 иконок; плитка квадратная 320×320 (высота задана окну и min-height
+;; в scss), сетка занимает всё место под шапкой, остальное — прокруткой.
 
 ;; --- Сетка от демона ---
 (deflisten launcher-grid :initial "(box)" "~/.local/bin/eww-daemon launcher")
@@ -29,5 +30,5 @@
  (scroll :class "apps-scroll"
    :hscroll false
    :vscroll true
-   :height 124
+   :vexpand true
  (literal :content launcher-grid))))
