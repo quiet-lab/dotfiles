@@ -1,0 +1,12 @@
+;; Всплывающая подсказка о приложении (лаунчер) или окне (плитки столов).
+;; Содержимое строит демон: eww-daemon hover launcher <id> | hover window <xid>
+;; из onhover кнопки; он же открывает окно у курсора и ведёт его за курсором,
+;; удерживая в пределах колонки плиток. onhoverlost вызывает eww-daemon hover-hide.
+(defvar hover-content "(box)")
+
+(defwindow hoverinfo
+  :geometry (geometry :x "0px" :y "0px" :width "280px" :anchor "left top")
+  :monitor 0
+  :stacking "overlay"
+  :wm-ignore true
+  (literal :content hover-content))

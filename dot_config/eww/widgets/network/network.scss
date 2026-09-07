@@ -24,7 +24,7 @@
 .netmenu-box {
   background-color: $tile-bg;
   border: $tile-border;
-  border-radius: 10px;
+  border-radius: 12px; // как срез углов окон eww в picom
   padding: 8px;
 }
 .netmenu-item {

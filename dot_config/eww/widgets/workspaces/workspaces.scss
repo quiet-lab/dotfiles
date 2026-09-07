@@ -100,3 +100,28 @@ $ws-num-bg: rgba(6, 6, 6, 0.6);
   font-weight: bold;
   margin-left: 4px;
 }
+
+// Контекстное меню окна (окно winmenu): фон и рамка как у плиток, радиус 12px
+// (совпадает со срезом углов окон eww в picom), текст как заголовки разделов лаунчера.
+.winmenu-box {
+  background-color: $tile-bg;
+  border: $tile-border;
+  border-radius: 12px;
+  padding: 6px;
+}
+.winmenu-item {
+  padding: 5px 12px;
+  border-radius: 8px;
+  color: $yellow;
+  font-size: 1.3em;
+  font-weight: bold;
+  &:hover {
+    background-color: $yellow;
+    color: #000000;
+  }
+}
+.winmenu-sep {
+  min-height: 1px;
+  background-color: $yellow;
+  margin: 4px 6px;
+}

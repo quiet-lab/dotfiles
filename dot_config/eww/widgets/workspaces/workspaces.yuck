@@ -21,17 +21,37 @@
       ;; Отступы заданы внутреннему box (ws-body): GTK не учитывает padding у eventbox при размещении.
       (eventbox :class "ws ${d.active ? 'ws-fo' : ''}" :onclick "xdotool set_desktop ${d.idx}"
         (box :class "ws-body" :orientation "h" :space-evenly false
-          ;; Ряд иконок: каждая иконка — кнопка перехода к своему окну.
+          ;; Ряд иконок: каждая иконка — кнопка перехода к своему окну (демон
+          ;; активирует окно через EWMH: стол окна + _NET_ACTIVE_WINDOW); правый
+          ;; клик открывает контекстное меню окна (окно winmenu ниже).
           ;; Без :halign — ряд тянется до блока номера и несёт фон плитки.
           (box :class "ws-icons" :orientation "h" :space-evenly false :hexpand true
             (for w in {d.windows}
-              (button :class "ws-win ${w.min ? 'ws-min' : ''}"
-                      :tooltip {w.name}
-                      :onclick "xdotool set_desktop ${d.idx}; xdotool windowactivate ${w.id}"
-                (box :orientation "h" :space-evenly false
-                  (image :visible {w.icon != ""} :path {w.icon} :image-width 20 :image-height 20)
-                  (label :visible {w.icon == ""} :class "ws-glyph" :text {w.glyph}))))
+              ;; onhover/onhoverlost есть только у eventbox, поэтому кнопка обёрнута в него
+              (eventbox :onhover "~/.local/bin/eww-daemon hover window ${w.id}"
+                        :onhoverlost "~/.local/bin/eww-daemon hover-hide"
+                (button :class "ws-win ${w.min ? 'ws-min' : ''}"
+                        :onclick "~/.local/bin/eww-daemon window ${w.id} activate"
+                        :onrightclick "~/.local/bin/eww-daemon window-menu ${w.id} ${d.idx}"
+                  (box :orientation "h" :space-evenly false
+                    (image :visible {w.icon != ""} :path {w.icon} :image-width 20 :image-height 20)
+                    (label :visible {w.icon == ""} :class "ws-glyph" :text {w.glyph})))))
             ;; Окна сверх лимита
             (label :visible {d.more > 0} :class "ws-more" :text "+${d.more}"))
           ;; Номер стола у правого края
           (label :class "ws-num" :text {d.n} :halign "end"))))))
+
+;; --- Контекстное меню окна ---
+;; Содержимое строит демон (eww-daemon window-menu <id> <стол>): Показать, Свернуть,
+;; Закрыть и «На стол N» для всех столов, кроме текущего стола окна. Демон же
+;; открывает окно у курсора (eww open winmenu --pos). Меню закрывается после
+;; действия и когда курсор его покидает.
+(defvar winmenu-content "(box)")
+
+(defwindow winmenu
+  :geometry (geometry :x "0px" :y "0px" :anchor "left top")
+  :monitor 0
+  :stacking "overlay"
+  :wm-ignore true
+  (eventbox :onhoverlost "eww close winmenu"
+    (literal :content winmenu-content)))

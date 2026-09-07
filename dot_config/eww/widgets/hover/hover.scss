@@ -1,0 +1,17 @@
+// Всплывающая подсказка (окно hoverinfo): как плитки — фон $tile-bg, жёлтая рамка,
+// радиус 12px (совпадает со срезом углов окон eww в picom, иначе углы затенены),
+// текст как заголовки разделов лаунчера: 1.3em, жёлтый.
+.hover-box {
+  background-color: $tile-bg;
+  border: $tile-border;
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+.hover-title, .hover-line, .hover-meta {
+  color: $yellow;
+  font-size: 1.3em;
+}
+.hover-title {
+  font-weight: bold;
+  margin-bottom: 2px;
+}

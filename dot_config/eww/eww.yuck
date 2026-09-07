@@ -23,6 +23,7 @@
 (include "./widgets/launcher/launcher.yuck")
 (include "./widgets/tray/tray.yuck")
 (include "./widgets/lang/lang.yuck")
+(include "./widgets/hover/hover.yuck")
 (include "./widgets/power/power.yuck")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
