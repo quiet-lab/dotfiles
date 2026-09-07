@@ -1,11 +1,11 @@
-;; Избранное: кнопки быстрого перехода в yazi (wezterm).
-;; --class yazi даёт окну WM_CLASS «yazi», чтобы плитки столов показывали
-;; иконку yazi, а не терминала.
+;; Избранное: кнопки быстрого перехода в yazi (wezterm с конфигом apps.lua —
+;; отдельный процесс без панели вкладок). --class yazi даёт окну WM_CLASS «yazi»
+;; для плиток столов, пока иконку не подбирает демон по заголовку окна.
 (defwidget favorites-tile []
   (box :class "tile favorites-tile"
     :orientation "v"
     :space-evenly false
   (label :class "tile-title" :text "ИЗБРАННОЕ")
-  (button :class "fav-btn" :onclick "wezterm start --class yazi --cwd ~ -- yazi &" "󰉋 ~")
-  (button :class "fav-btn" :onclick "wezterm start --class yazi --cwd ~/Загрузки -- yazi &" "󰉋 ~/Загрузки")
-  (button :class "fav-btn" :onclick "wezterm start --class yazi --cwd ~/.config -- yazi &" "󰉋 ~/.config")))
+  (button :class "fav-btn" :onclick "wezterm --config-file ~/.config/wezterm/apps.lua start --class yazi --cwd ~ -- yazi &" "󰉋 ~")
+  (button :class "fav-btn" :onclick "wezterm --config-file ~/.config/wezterm/apps.lua start --class yazi --cwd ~/Загрузки -- yazi &" "󰉋 ~/Загрузки")
+  (button :class "fav-btn" :onclick "wezterm --config-file ~/.config/wezterm/apps.lua start --class yazi --cwd ~/.config -- yazi &" "󰉋 ~/.config")))

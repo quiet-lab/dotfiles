@@ -174,6 +174,21 @@ wezterm.on("update-right-status", function(window, pane)
 	}))
 end)
 
+-- Заголовок окна: «<программа> · <заголовок панели>», например «yazi · dev-lab: chezmoi».
+-- Имя программы на переднем плане wezterm берёт из pty (foreground process group),
+-- это точные данные. По этому префиксу демон дашборда (eww-daemon) подбирает
+-- иконку окна для плиток рабочих столов: yazi, nvim, htop и любая другая
+-- консольная программа. Разделитель « · » в заголовке панели не встречается.
+wezterm.on("format-window-title", function(tab, pane, tabs, panes, config)
+	-- basename из обработчика update-status здесь недоступен (он локальный), поэтому свой
+	local cmd = string.gsub(pane.foreground_process_name or "", "(.*[/\\])(.*)", "%2")
+	local title = pane.title or ""
+	if cmd == "" then
+		return title
+	end
+	return cmd .. " · " .. title
+end)
+
 --  -- Функция-обработчик для добавления разделителей
 --  wezterm.on('format-tab-title', function(tab, tabs, panes, config, hover, max_width)
 --    local title = " " .. tab.tab_index + 1 .. ": " .. tab.active_pane.title .. " "

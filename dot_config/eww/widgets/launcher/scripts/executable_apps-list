@@ -10,7 +10,8 @@
 # Сетка: ROWS иконок в ряду, ячейка 38px, иконка 32×32; прокрутку (ровно три
 # видимых ряда) обеспечивает scroll-виджет в yuck. Иконки резолвятся через
 # scripts/appicon (кэш /tmp/eww-icons), уникальные — параллельно.
-# Запуск: gtk-launch "<id>"; Terminal=true → wezterm start --class <id> -- <Exec без %-кодов>.
+# Запуск: gtk-launch "<id>"; Terminal=true → wezterm --config-file ~/.config/wezterm/apps.lua start --class <id> -- <Exec без %-кодов>
+# (apps.lua — конфиг wezterm для окон-приложений: без панели вкладок и вопроса при закрытии).
 # --class даёт окну терминала WM_CLASS по имени записи (например, yazi), и плитки
 # столов показывают иконку программы, а не терминала.
 #
@@ -115,7 +116,7 @@ while IFS="$SEP" read -r name id term icon ex; do
 		child='(label :class "app-btn-fallback" :text "?")'
 	fi
 	if [ "$term" = "true" ]; then
-		cmd="wezterm start --class ${id%.desktop} -- $(strip_codes "$ex") &"
+		cmd="wezterm --config-file ~/.config/wezterm/apps.lua start --class ${id%.desktop} -- $(strip_codes "$ex") &"
 	else
 		cmd="gtk-launch \"$(yesc "$id")\" &"
 	fi
