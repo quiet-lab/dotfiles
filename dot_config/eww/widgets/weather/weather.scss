@@ -27,8 +27,10 @@ $w-storm: #BB9AF7;
     font-size: 36.4px;
     margin-right: 20px;
   }
+  // Шапка погоды набрана теми же шрифтами, что шапка часов: температура —
+  // как время (30.8px, полужирный, белый), город — как дата (21.84px, серый).
   .w-temp {
-    font-size: 28px;
+    font-size: 30.8px;
     font-weight: bold;
     color: $white;
   }
