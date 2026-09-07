@@ -7,3 +7,54 @@
   min-width: 20px;
   min-height: 296px;
 }
+
+// Кнопка громкости внизу трея: глиф 40px (видимая часть глифа ≈ 0,7 em, то есть
+// около 28px — заметно крупнее иконок трея 20px) выходит за внутренние 20px —
+// отрицательные поля компенсируют отступы плитки, ширина окна остаётся 36px.
+// Высота блока кнопки 40px.
+.tray-vol-btn {
+  color: $yellow;
+  padding: 0;
+  margin: 0 -10px -4px -10px;
+  min-width: 20px;
+  min-height: 40px;
+  // размер задаётся узлу label: глобальное правило `* { font-size: 14px }`
+  // не даёт подписи унаследовать размер от кнопки
+  label { font-size: 40px; }
+  &:hover { color: $green; }
+}
+
+// Панель громкости: непрозрачнее плитки, чтобы закрыть иконки трея; той же
+// ширины, что плитка, а по высоте — весь трей над кнопкой громкости:
+// 312 − (кнопка 40 + отступ плитки 7 + рамка 1 + зазор 6) = 258px
+// (242px содержимого + отступы 2×7 + рамка 2×1); margin-bottom 54px оставляет
+// кнопку открытой. Ползунок цвета рамки виджетов.
+.tray-vol-panel {
+  background-color: rgba(0, 0, 0, 0.95);
+  padding: 7px;
+  margin-bottom: 54px;
+  min-width: 20px;
+  min-height: 242px;
+}
+.tray-vol-value {
+  color: $yellow;
+  font-size: 0.9em;
+  font-weight: bold;
+  margin: 4px 0;
+}
+// Вертикальный ползунок: глобальные правила scale (min-width 90px) сюда не подходят
+.tray-vol-scale {
+  min-width: 0;
+  trough {
+    all: unset;
+    background-color: $background;
+    border-radius: 6px;
+    min-width: 12px;
+    min-height: 180px;
+    margin: 0;
+    highlight {
+      background-color: $yellow;
+      border-radius: 6px;
+    }
+  }
+}

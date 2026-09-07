@@ -1,18 +1,43 @@
 ;; Системный трей: виджет systray eww. Работает по протоколу StatusNotifierItem
 ;; (D-Bus): eww сам регистрирует StatusNotifierWatcher. Иконки старого протокола
-;; XEmbed (nm-applet, parcellite) сюда не попадают, для них нужен мост
-;; XEmbed → SNI либо трей tint2 (см. спецификацию eww-tray-lang).
+;; XEmbed (nm-applet и т. п.) попадают сюда через мост xembedsniproxy
+;; (см. спецификацию eww-tray-lang).
+;;
+;; Внизу плитки — собственная иконка громкости. Иконка самого pasystray в трее
+;; скрыта (атрибут :hide локальной сборки eww), но программа работает: правый клик
+;; по нашей иконке открывает его штатное меню (демон вызывает ContextMenu элемента
+;; по D-Bus). Наведение выдвигает над иконкой (не закрывая её) панель с
+;; вертикальным ползунком громкости во всю остальную высоту трея (revealer
+;; slideup — панель «выезжает» снизу вверх); громкость меняется колесом и кликом
+;; по полосе. Левый клик по иконке открывает Volume Control (pavucontrol).
+;; Панель исчезает, как только курсор покидает трей.
+(defvar tray-vol false)
+
 (defwidget tray-tile []
-  ;; Вертикальная плитка 36px шириной справа от плиток столов: иконки
-  ;; в столбик сверху вниз, высота плитки задана стилем (во весь блок столов
-  ;; минус плитка раскладки).
-  ;; :menu-anchor / :menu-gap — атрибуты из локальной сборки eww (ветка с
-  ;; исправлениями трея): "workarea" открывает меню внутри рабочей области
-  ;; с зазором :menu-gap от её края, "pointer" — прямо в точке клика поверх
-  ;; плиток.
-  (box :class "tile tray-tile"
-    :orientation "v"
-    :space-evenly false
-    :valign "start"
-    (systray :class "tray" :orientation "v" :spacing 6 :icon-size 20 :prepend-new true :valign "start"
-             :menu-anchor "workarea" :menu-gap 10)))
+  ;; Внешний eventbox ловит уход курсора со всей плитки трея.
+  (eventbox :onhoverlost "eww update tray-vol=false"
+    (overlay
+      ;; Основное содержимое: иконки трея сверху, иконка громкости внизу.
+      ;; :menu-anchor / :menu-gap — атрибуты из локальной сборки eww: "workarea"
+      ;; открывает меню внутри рабочей области с зазором :menu-gap от её края.
+      (box :class "tile tray-tile"
+        :orientation "v"
+        :space-evenly false
+        (systray :class "tray" :orientation "v" :spacing 6 :icon-size 20 :prepend-new true :valign "start"
+                 :menu-anchor "workarea" :menu-gap 10
+                 :hide {["PulseAudio system tray"]})
+        (box :vexpand true)
+        (eventbox :onhover "eww update tray-vol=true"
+          (button :class "tray-vol-btn" :onclick "pavucontrol &"
+                  :onrightclick "~/.local/bin/eww-daemon tray-menu 'PulseAudio system tray'" "󰕾")))
+      ;; Панель громкости поверх иконок трея, над кнопкой громкости (отступ снизу в scss).
+      (revealer :reveal tray-vol :transition "slideup" :duration "150ms" :valign "end"
+        (box :class "tile tray-vol-panel" :orientation "v" :space-evenly false
+          (scale :class "tray-vol-scale"
+            :orientation "v"
+            :flipped true
+            :vexpand true
+            :min 0 :max 101
+            :value current-volume
+            :onchange "pactl set-sink-volume @DEFAULT_SINK@ {}%")
+          (label :class "tray-vol-value" :text "${current-volume}"))))))
