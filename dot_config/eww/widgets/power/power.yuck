@@ -7,7 +7,7 @@
 ;; и обрезается по полю. Размер шрифта и отступы подобраны каждому глифу
 ;; отдельно в power.scss: большая сторона глифа 44px, зазор до рамки 5px.
 (defwidget power-button [class tooltip cmd icon]
-  (button :class "tile pwr-tile"
+  (button :class "tile pwr-tile ${class}-btn"
     :tooltip tooltip
     :onclick cmd
     (overlay
