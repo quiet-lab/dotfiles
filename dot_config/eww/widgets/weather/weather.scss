@@ -41,9 +41,9 @@ $w-storm: #A020F0; // гроза — фиолетовый (в сводке и в
   }
   .w-frow {
     margin: 10px 23px 0 14px;
-    // Дни недели и иконки времени суток — ярко-зелёные, как иероглифы на обоях.
+    // Дни недели и иконки времени суток — белые.
     .w-day-name {
-      color: $wall-green;
+      color: #FFFFFF;
       font-size: 17.5px;
       font-weight: bold;
       min-width: 24px;
@@ -53,7 +53,7 @@ $w-storm: #A020F0; // гроза — фиолетовый (в сводке и в
       padding: 0 3px;
     }
     .w-part-icon {
-      color: $wall-green;
+      color: #FFFFFF;
       font-size: 22.4px;
     }
     // Температуры частей суток — цвета рамки.
