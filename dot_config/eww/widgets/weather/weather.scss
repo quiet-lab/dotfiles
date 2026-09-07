@@ -41,8 +41,9 @@ $w-storm: #BB9AF7;
   }
   .w-frow {
     margin: 10px 23px 0 14px;
+    // Дни недели и иконки времени суток — ярко-зелёные, как иероглифы на обоях.
     .w-day-name {
-      color: $foreground;
+      color: $wall-green;
       font-size: 17.5px;
       font-weight: bold;
       min-width: 24px;
@@ -52,7 +53,7 @@ $w-storm: #BB9AF7;
       padding: 0 3px;
     }
     .w-part-icon {
-      color: $white;
+      color: $wall-green;
       font-size: 22.4px;
     }
     .w-part-temp {
