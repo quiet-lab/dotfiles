@@ -13,9 +13,11 @@
 ;; по сетке: CSS-поля она не учитывает, а поля самого calendar сдвигают и сетку.
 ;; Поэтому шапка скрыта (:show-heading false) и нарисована своими кнопками и
 ;; подписями, поля которых совпадают с чернилами сетки. cal-shift — смещение
-;; в месяцах от текущего (стрелки месяца ±1, стрелки года ±12); месяц и год
-;; для виджета вычисляются из него, выбранный день показывается только в
-;; текущем месяце.
+;; в месяцах от текущего (стрелки месяца ±1, стрелки года ±12); месяц (1–12)
+;; и год для виджета вычисляются из него. Сегодняшний день отмечается
+;; (:mark-day, стиль calendar.highlight) только в текущем месяце; выбранного
+;; дня изначально нет (:day 0), его выбирает клик по сетке. Свойства :day 0 и
+;; :mark-day есть только в локальной сборке eww.
 (defvar cal-shift 0)
 (defvar cal-months '["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"]')
 
@@ -31,13 +33,14 @@
       (label :class "date-label" :text dash-date :halign "end"))
     (box :class "cal-head" :orientation "h" :space-evenly false
       (button :class "cal-arrow" :onclick "eww update cal-shift=${cal-shift - 1}" "‹")
-      (label :class "cal-title" :text {cal-months[cal-month + cal-shift - 12 * floor((cal-month + cal-shift) / 12)]})
+      (label :class "cal-title" :text {cal-months[cal-month - 1 + cal-shift - 12 * floor((cal-month - 1 + cal-shift) / 12)]})
       (button :class "cal-arrow" :onclick "eww update cal-shift=${cal-shift + 1}" "›")
       (box :hexpand true)
       (button :class "cal-arrow" :onclick "eww update cal-shift=${cal-shift - 12}" "‹")
-      (label :class "cal-title" :text {cal-year + floor((cal-month + cal-shift) / 12)})
+      (label :class "cal-title" :text {cal-year + floor((cal-month - 1 + cal-shift) / 12)})
       (button :class "cal-arrow" :onclick "eww update cal-shift=${cal-shift + 12}" "›"))
     (calendar :class "cal" :show-heading false
-      :day {cal-shift == 0 ? cal-day : 0}
-      :month {cal-month + cal-shift - 12 * floor((cal-month + cal-shift) / 12)}
-      :year {cal-year + floor((cal-month + cal-shift) / 12)})))
+      :day 0
+      :mark-day {cal-shift == 0 ? cal-day : 0}
+      :month {cal-month + cal-shift - 12 * floor((cal-month - 1 + cal-shift) / 12)}
+      :year {cal-year + floor((cal-month - 1 + cal-shift) / 12)})))

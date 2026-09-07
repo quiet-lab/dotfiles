@@ -1,5 +1,4 @@
 #!/bin/sh
-# Месяц для виджета calendar (eww ожидает 0-based номер).
-month=$(date +%-m)
-month=$((month - 1))
-echo $month
+# Номер текущего месяца для виджета calendar: eww 0.6 ждёт 1–12
+# (внутри сам переводит в отсчёт GTK с нуля).
+date +%-m

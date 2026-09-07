@@ -48,22 +48,32 @@
     }
     &:hover label { color: $blue; }
   }
+  // Сетка: дни месяца цвета рамки, дни соседних месяцев приглушены,
+  // сегодняшний день (отметка :mark-day, GTK рисует его состоянием :active
+  // и полужирным) — ярко-зелёный, как иероглифы на обоях, выбранный кликом
+  // день — белый (правило стоит последним и берёт верх, если выбран сегодняшний
+  // день). Класс .highlight у GtkCalendar носит строка названий дней недели.
   calendar {
     margin-top: 0;
+    margin-bottom: 2px; // высота плитки остаётся 239px, как до собственной шапки
     font-size: 14.7px;
+    color: $yellow;
   }
 }
 
-calendar:selected {
-  color: $blue;
+calendar:indeterminate {
+  color: $background;
 }
-
 
 calendar.highlight {
   color: $magenta;
   font-weight: bold;
 }
 
-calendar:indeterminate {
-  color: $background;
+calendar:active {
+  color: $wall-green;
+}
+
+calendar:selected {
+  color: #FFFFFF;
 }
