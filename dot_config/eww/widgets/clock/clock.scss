@@ -23,8 +23,8 @@
     font-size: 21.84px;
     color: $gray;
   }
-  // Собственная шапка календаря (см. clock.yuck): те же поля, что у строки
-  // времени, чтобы стрелки стояли на одной вертикали с цифрами сетки.
+  // Календарь (литерал от демона, см. clock.yuck). Шапка — те же поля, что
+  // у строки времени: стрелки стоят на одной вертикали с цифрами сетки.
   .cal-head {
     margin: 6px 17px 0 15px;
   }
@@ -48,32 +48,31 @@
     }
     &:hover label { color: $blue; }
   }
-  // Сетка: дни месяца цвета рамки, дни соседних месяцев приглушены,
-  // сегодняшний день (отметка :mark-day, GTK рисует его состоянием :active
-  // и полужирным) — ярко-зелёный, как иероглифы на обоях, выбранный кликом
-  // день — белый (правило стоит последним и берёт верх, если выбран сегодняшний
-  // день). Класс .highlight у GtkCalendar носит строка названий дней недели.
-  calendar {
-    margin-top: 0;
-    margin-bottom: 2px; // высота плитки остаётся 239px, как до собственной шапки
-    font-size: 14.7px;
-    color: $yellow;
+  // Сетка: семь равных ячеек в строке; поля подобраны так, что видимая часть
+  // цифр начинается в 27px от левой рамки и заканчивается в 33px от правой,
+  // как у прежнего GtkCalendar. Высота строки 20px — прежний шаг сетки.
+  .cal-days, .cal-row {
+    margin: 0 9px 0 3px;
   }
-}
-
-calendar:indeterminate {
-  color: $background;
-}
-
-calendar.highlight {
-  color: $magenta;
-  font-weight: bold;
-}
-
-calendar:active {
-  color: $wall-green;
-}
-
-calendar:selected {
-  color: #FFFFFF;
+  .cal-days { margin-top: 5px; }
+  .cal { margin-bottom: 7px; } // высота плитки 239px, как у прежнего GtkCalendar
+  .cal-dayname, .cal-day {
+    font-size: 14.7px;
+    min-height: 20px;
+  }
+  .cal-dayname {
+    color: $magenta;
+    font-weight: bold;
+  }
+  // Дни месяца цвета рамки, дни соседних месяцев приглушены, сегодняшний день —
+  // ярко-зелёный полужирный на 2px крупнее (цвет иероглифов на обоях),
+  // выбранный кликом день — белый (правило последнее и берёт верх).
+  .cal-day { color: $yellow; }
+  .cal-other { color: $background; }
+  .cal-today {
+    color: $wall-green;
+    font-weight: bold;
+    font-size: 16.7px;
+  }
+  .cal-sel { color: #FFFFFF; }
 }
