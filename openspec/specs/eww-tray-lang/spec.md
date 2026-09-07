@@ -16,7 +16,15 @@
 ### Requirement: Системный трей
 tray-tile MUST содержать виджет eww `systray` (горизонтальный, иконки 20px, зазор 6px, новые иконки добавляются в начало). Высота плитки MUST сохраняться и при пустом трее.
 
-Виджет работает по протоколу StatusNotifierItem (D-Bus): eww регистрирует `org.kde.StatusNotifierWatcher`. Приложения, использующие только XEmbed (`_NET_SYSTEM_TRAY_S0`, например nm-applet и parcellite), в этот трей не попадают: для них нужен либо мост XEmbed → SNI (xembed-sni-proxy), либо трей tint2, владеющий селекцией XEmbed.
+Виджет работает по протоколу StatusNotifierItem (D-Bus): eww регистрирует `org.kde.StatusNotifierWatcher`. Приложения, использующие только XEmbed (`_NET_SYSTEM_TRAY_S0`, например nm-applet), MUST попадать в трей через мост `xembedsniproxy` (пакет AUR `xembed-sni-proxy-standalone-git`): автозапуск Openbox запускает его после открытия окон eww, поскольку мосту нужен уже зарегистрированный StatusNotifierWatcher. Других владельцев селекции XEmbed (трей tint2) в сессии быть не должно, иначе мост не получит иконки.
+
+#### Scenario: Приложение XEmbed через мост
+- **WHEN** запущены eww, затем xembedsniproxy, затем nm-applet
+- **THEN** иконка nm-applet отображается в tray-tile
+
+#### Scenario: Приложение со StatusNotifierItem
+- **WHEN** запускается приложение, регистрирующее StatusNotifierItem (например, Telegram)
+- **THEN** его иконка появляется в tray-tile
 
 ### Requirement: Переключатель раскладки
 lang-tile MUST показывать текущую раскладку заглавными буквами (US, RU) из потока `xkb-switch -W` (deflisten `kb-layout`, скрипт `widgets/lang/scripts/layout` сначала выводит текущую раскладку `xkb-switch -p`). Клик по плитке MUST переключать раскладку на следующую (`xkb-switch -n`). Скрипт MUST выводить каждое значение без буферизации, чтобы плитка обновлялась сразу.

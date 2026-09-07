@@ -399,6 +399,12 @@
     <keybind key="W-c">
       <action name="Close"/>
     </keybind>
+    <!-- Меню буфера обмена (clipcat, выбор через rofi). -->
+    <keybind key="W-v">
+      <action name="Execute">
+        <command>clipcat-menu</command>
+      </action>
+    </keybind>
     <keybind key="W-d">
       <action name="ToggleShowDesktop"/>
     </keybind>

@@ -42,4 +42,10 @@ xkbcomp /home/mne/.config/X11/xkb_custom $DISPLAY
 
 # Any additions should be added below.
 
-{ [ -x "$(command -v eww)" ] && { pidof -s eww -q || eww daemon; } && eww open-many tile-clock tile-weather tile-cpu tile-ram tile-gpu tile-volume tile-network tile-disks tile-favorites tile-ws1 tile-ws2 tile-ws3 tile-ws4 tile-ws5 tile-ws6 tile-ws7 tile-ws8 tile-launcher tile-tray tile-lang tile-power; } &
+# Менеджер буфера обмена: clipcatd сам уходит в фон (daemonize в clipcatd.toml).
+{ [ -x "$(command -v clipcatd)" ] && { pgrep -x clipcatd >/dev/null || clipcatd; }; } &
+
+# Дашборд eww, затем мост XEmbed → StatusNotifier: иконки старого протокола
+# (nm-applet и т. п.) попадают в трей eww. Мост стартует после eww, потому что
+# ему нужен StatusNotifierWatcher, который регистрирует eww.
+{ [ -x "$(command -v eww)" ] && { pidof -s eww -q || eww daemon; } && eww open-many tile-clock tile-weather tile-cpu tile-ram tile-gpu tile-volume tile-network tile-disks tile-favorites tile-ws1 tile-ws2 tile-ws3 tile-ws4 tile-ws5 tile-ws6 tile-ws7 tile-ws8 tile-launcher tile-tray tile-lang tile-power && [ -x "$(command -v xembedsniproxy)" ] && { pgrep -x xembedsniproxy >/dev/null || xembedsniproxy; }; } &
