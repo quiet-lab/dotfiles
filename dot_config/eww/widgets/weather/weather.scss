@@ -1,5 +1,5 @@
 // Яркие цвета иконок погоды
-$w-clear: #FFD75E;
+$w-clear: #FFFF00; // ясно — чистый жёлтый (и в сводке, и в прогнозе)
 $w-partly: #FFC66D;
 $w-overcast: #C0CAF5;
 $w-fog: #89DDFF;
@@ -64,8 +64,6 @@ $w-storm: #BB9AF7;
     }
     .w-cond {
       font-size: 19.6px;
-      // Солнце возле температур частей суток — чистый жёлтый.
-      &.w-clear { color: #FFFF00; }
     }
   }
 
