@@ -2,31 +2,37 @@
 .launcher-tile {
   .apps-header {
     margin-bottom: 5px;
-    .tile-title { margin-bottom: 0; }
   }
+  // Подпись «APP:» — как номер стола: цвет рамки, 1.3em, начертание 900.
+  .apps-title {
+    color: $yellow;
+    font-size: 1.3em;
+    font-weight: 900;
+  }
+  // Поле фильтра: фон цвета рамки, чёрный текст и курсор.
   .apps-search {
     font-size: 0.95em;
-    color: $foreground;
-    caret-color: $cyan;
+    color: #000000;
+    caret-color: #000000;
     min-height: 22px;
     padding: 2px 6px;
     border-radius: 6px;
-    background-color: $background;
+    background-color: $yellow;
     border: none;
     box-shadow: none;
-    selection { background-color: $cyan; color: $black; }
+    selection { background-color: #000000; color: $yellow; }
     &:focus {
       border: none;
       box-shadow: none;
       outline: none;
     }
   }
-  // Заголовок раздела в сетке (Стандартные, Разработка, …)
+  // Заголовок раздела в сетке (Стандартные, Разработка, …): цвет рамки, крупнее
   .apps-cat {
-    color: $gray;
-    font-size: 0.85em;
+    color: $yellow;
+    font-size: 1.1em;
     font-weight: bold;
-    margin: 2px 0 0 2px;
+    margin: 4px 0 0 2px;
   }
   // Полоса прокрутки скрыта — колесо мыши продолжает работать
   .apps-scroll {

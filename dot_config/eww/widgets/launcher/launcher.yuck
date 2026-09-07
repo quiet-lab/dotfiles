@@ -21,7 +21,7 @@
    :orientation "h"
    :space-evenly false
    :spacing 5
- (label :class "tile-title" :text "ПРИЛОЖЕНИЯ")
+ (label :class "apps-title" :text "APP:")
  (input :class "apps-search"
    :hexpand true
    :tooltip "Фильтр по названию"
