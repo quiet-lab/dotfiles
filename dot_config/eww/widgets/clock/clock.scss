@@ -29,8 +29,9 @@
   .cal-head {
     margin: 6px 17px 0 15px;
   }
+  // Месяц и год — ярко-зелёные, как названия дней недели.
   .cal-title {
-    color: $blue;
+    color: $wall-green;
     font-size: 14.7px;
     font-weight: bold;
     margin: 0 6px;
