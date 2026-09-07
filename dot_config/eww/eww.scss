@@ -55,6 +55,61 @@ window.background {
 
 // Заглушка каркаса удалена — колонка собрана из рабочих плиток.
 
+// Всплывающие меню трея (DBusMenu приложений вроде Telegram и handy рисует
+// сам eww): правило `* { all: unset }` снимает с них оформление GTK, поэтому
+// задаём своё в духе плиток. Узлы GTK: menu > menuitem (label, arrow, check,
+// radio), separator.
+menu {
+  background-color: rgba(0, 0, 0, 0.9);
+  border: $tile-border;
+  border-radius: 8px;
+  padding: 6px;
+  color: $foreground;
+
+  menuitem {
+    padding: 6px 14px;
+    border-radius: 6px;
+    min-height: 20px;
+
+    &:hover {
+      background-color: $yellow;
+      color: #000000;
+    }
+    &:disabled {
+      color: $gray;
+    }
+    arrow {
+      min-width: 12px;
+      min-height: 12px;
+      margin-left: 10px;
+      -gtk-icon-source: -gtk-icontheme("pan-end-symbolic");
+    }
+    check, radio {
+      min-width: 14px;
+      min-height: 14px;
+      margin-right: 8px;
+      border: 1px solid $gray;
+      border-radius: 3px;
+      &:checked { background-color: $yellow; border-color: $yellow; }
+    }
+  }
+  separator {
+    min-height: 1px;
+    background-color: $gray;
+    margin: 4px 6px;
+  }
+}
+
+// Всплывающие подсказки (у иконок трея, кнопок питания): тоже лишены
+// оформления правилом `all: unset`, задаём фон и отступы.
+tooltip {
+  background-color: rgba(0, 0, 0, 0.9);
+  border: $tile-border;
+  border-radius: 6px;
+  padding: 4px 8px;
+  color: $foreground;
+}
+
 // Заголовок плитки
 .tile-title {
   color: $gray;
