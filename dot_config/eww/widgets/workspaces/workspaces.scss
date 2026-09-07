@@ -6,14 +6,17 @@
 // Плитка 320×36: рамка и фон на eventbox (.ws), отступы и min-размеры на внутреннем box (.ws-body).
 // GTK не учитывает padding и border у eventbox при размещении: рамка рисуется поверх внутренней области,
 // поэтому размер задаёт только .ws-body: 300 + 2·10 = 320 по ширине, 24 + 2·6 = 36 по высоте.
-// Рамка у всех плиток одинаковой толщины (жёлтая, у активной — cyan), поэтому активная не отличается размером.
+// Цвет активного стола: белая рамка плитки и белый блок номера.
+$ws-active: #FFFFFF;
+
+// Рамка у всех плиток одинаковой толщины (жёлтая, у активной — белая), поэтому активная не отличается размером.
 .works .ws {
   background-color: $tile-bg;
   border: $tile-border;
   border-radius: 12px;
 
-  &.ws-fo { border-color: $cyan; }
-  &:hover .ws-num { color: $cyan; }
+  &.ws-fo { border-color: $ws-active; }
+  &:not(.ws-fo):hover .ws-num { color: $cyan; }
 }
 
 .ws-body {
@@ -22,15 +25,24 @@
   min-height: 24px;
 }
 
-// Номер стола: серый у обычных, светлый у активного
+// Номер стола — собственный блок: серый фон и светлая цифра у обычных столов,
+// белый фон и чёрная цифра у активного. Блок 22px высотой умещается в ряд 24px,
+// поэтому высота плитки остаётся 36px.
 .ws-num {
-  color: $gray;
+  color: $foreground;
+  background-color: $gray;
+  font-size: 1.3em;
   font-weight: bold;
+  min-width: 26px;
+  min-height: 22px;
+  padding: 0 4px;
+  border-radius: 6px;
   margin-left: 6px;
 }
 
 .ws-fo .ws-num {
-  color: $foreground;
+  color: #000000;
+  background-color: $ws-active;
 }
 
 // Кнопка-иконка 24×24 (иконка 20 + отступ 2), без оформления кнопки GTK
