@@ -17,8 +17,9 @@
       ;; Отступы заданы внутреннему box (ws-body): GTK не учитывает padding у eventbox при размещении.
       (eventbox :class "ws ${d.active ? 'ws-fo' : ''}" :onclick "xdotool set_desktop ${d.idx}"
         (box :class "ws-body" :orientation "h" :space-evenly false
-          ;; Ряд иконок: каждая иконка — кнопка перехода к своему окну
-          (box :class "ws-icons" :orientation "h" :space-evenly false :hexpand true :halign "start"
+          ;; Ряд иконок: каждая иконка — кнопка перехода к своему окну.
+          ;; Без :halign — ряд тянется до блока номера и несёт фон плитки.
+          (box :class "ws-icons" :orientation "h" :space-evenly false :hexpand true
             (for w in {d.windows}
               (button :class "ws-win ${w.min ? 'ws-min' : ''}"
                       :tooltip {w.name}
