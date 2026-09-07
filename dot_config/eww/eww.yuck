@@ -15,7 +15,6 @@
 (include "./widgets/clock/clock.yuck")
 (include "./widgets/weather/weather.yuck")
 (include "./widgets/gauges/gauges.yuck")
-(include "./widgets/volume/volume.yuck")
 (include "./widgets/network/network.yuck")
 (include "./widgets/disks/disks.yuck")
 (include "./widgets/favorites/favorites.yuck")
@@ -37,8 +36,8 @@
 ;; - вверху — ряд плиток питания (y=10), часы с календарём (76) и погода (325..540);
 ;; - внизу — лаунчер 320×320 (y=1830), над ним блок рабочих столов с треем и
 ;;   раскладкой (1462..1820);
-;; - оставшиеся плитки (шкалы, громкость, сеть, диски, избранное: 643px)
-;;   стоят строго по центру свободного промежутка 540..1462 (отступы 140/139px).
+;; - оставшиеся плитки (шкалы, сеть, диски, избранное: 595px)
+;;   стоят строго по центру свободного промежутка 540..1462 (отступы 164/163px).
 ;; Если высота плитки меняется, координаты окон ниже нужно пересчитать.
 ;;
 ;; Полный ряд 320px при x=10; ряд шкал — три окна по 100px при x=10/120/230.
@@ -115,7 +114,7 @@
   (weather-tile))
 
 (defwindow tile-cpu
-  :geometry (geometry :x "10px" :y "680px" :width "100px" :anchor "left top")
+  :geometry (geometry :x "10px" :y "704px" :width "100px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -124,7 +123,7 @@
   (cpu-tile))
 
 (defwindow tile-ram
-  :geometry (geometry :x "120px" :y "680px" :width "100px" :anchor "left top")
+  :geometry (geometry :x "120px" :y "704px" :width "100px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -133,7 +132,7 @@
   (ram-tile))
 
 (defwindow tile-gpu
-  :geometry (geometry :x "230px" :y "680px" :width "100px" :anchor "left top")
+  :geometry (geometry :x "230px" :y "704px" :width "100px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -141,17 +140,8 @@
   :wm-ignore false
   (gpu-tile))
 
-(defwindow tile-volume
-  :geometry (geometry :x "10px" :y "792px" :width "320px" :anchor "left top")
-  :monitor 0
-  :reserve (struts :distance "330px" :side "left")
-  :windowtype "utility"
-  :stacking "fg"
-  :wm-ignore false
-  (volume-tile))
-
 (defwindow tile-network
-  :geometry (geometry :x "10px" :y "840px" :width "320px" :anchor "left top")
+  :geometry (geometry :x "10px" :y "816px" :width "320px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -160,7 +150,7 @@
   (network-tile))
 
 (defwindow tile-disks
-  :geometry (geometry :x "10px" :y "957px" :width "320px" :anchor "left top")
+  :geometry (geometry :x "10px" :y "933px" :width "320px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"
@@ -169,7 +159,7 @@
   (disks-tile))
 
 (defwindow tile-favorites
-  :geometry (geometry :x "10px" :y "1202px" :width "320px" :anchor "left top")
+  :geometry (geometry :x "10px" :y "1178px" :width "320px" :anchor "left top")
   :monitor 0
   :reserve (struts :distance "330px" :side "left")
   :windowtype "utility"

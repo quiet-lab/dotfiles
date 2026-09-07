@@ -12,6 +12,8 @@
 ;; по полосе. Левый клик по иконке открывает Volume Control (pavucontrol).
 ;; Панель исчезает, как только курсор покидает трей.
 (defvar tray-vol false)
+;; Громкость default sink (скрипт widgets/tray/scripts/volume, всегда число).
+(defpoll current-volume :interval "1s" :initial "0" "widgets/tray/scripts/volume")
 
 (defwidget tray-tile []
   ;; Внешний eventbox ловит уход курсора со всей плитки трея.
