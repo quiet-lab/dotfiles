@@ -9,4 +9,5 @@
 # parcellite заменён на clipcat: демон clipcatd запускается из autostart.sh,
 # меню — clipcat-menu по W-v (rc.xml). В трее ему иконка не нужна.
 nm-applet
+pasystray
 #xfce4-power-manager
