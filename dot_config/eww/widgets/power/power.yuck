@@ -1,17 +1,14 @@
-;; Питание: блокировка сессии, выход и перезапуск Openbox, выключение.
-(defwidget power-tile []
- (box :class "tile power-tile"
-   :orientation "h"
-   :space-evenly true
- (button  :class "pwr-lock"
-    :tooltip "Lock Screen"
-    :onclick "loginctl lock-session" "󰌾")
- (button  :class "pwr-quit"
-    :tooltip "Logout"
-    :onclick "openbox --exit" "󰗽")
- (button  :class "pwr-restart"
-    :tooltip "Openbox Restart"
-    :onclick "openbox --restart" "󰜉")
- (button  :class "pwr-off"
-    :tooltip "Shutdown"
-    :onclick "systemctl poweroff" "󰐥")))
+;; Питание: пять квадратных плиток 56×56 в один ряд в самом верху колонки —
+;; блокировка сессии, выход из Openbox, перезапуск Openbox, перезагрузка
+;; системы, выключение. Каждая плитка — отдельное окно (tile-pwr-* в eww.yuck).
+(defwidget power-button [class tooltip cmd icon]
+  (button :class "tile pwr-tile ${class}"
+    :tooltip tooltip
+    :onclick cmd
+    icon))
+
+(defwidget pwr-lock []    (power-button :class "pwr-lock"    :tooltip "Lock Screen"     :cmd "loginctl lock-session" :icon "󰌾"))
+(defwidget pwr-logout []  (power-button :class "pwr-quit"    :tooltip "Logout"          :cmd "openbox --exit"        :icon "󰗽"))
+(defwidget pwr-restart [] (power-button :class "pwr-restart" :tooltip "Openbox Restart" :cmd "openbox --restart"     :icon "󰜉"))
+(defwidget pwr-reboot []  (power-button :class "pwr-reboot"  :tooltip "Reboot"          :cmd "systemctl reboot"      :icon "󰑓"))
+(defwidget pwr-off []     (power-button :class "pwr-off"     :tooltip "Shutdown"        :cmd "systemctl poweroff"    :icon "󰐥"))

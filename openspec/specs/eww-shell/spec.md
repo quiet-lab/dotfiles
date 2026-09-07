@@ -11,6 +11,7 @@
 
 | Окно | y | Особенности |
 |------|---|-------------|
+| `tile-pwr-lock`, `tile-pwr-logout`, `tile-pwr-restart`, `tile-pwr-reboot`, `tile-pwr-off` | 153px | x = 10/76/142/208/274px, квадраты 56×56 в один ряд |
 | `tile-clock` | 219px | |
 | `tile-weather` | 468px | |
 | `tile-cpu`, `tile-ram`, `tile-gpu` | 689px | x = 10/120/230px, ширина 100px |
@@ -22,7 +23,6 @@
 | `tile-tray` | 1342px | x = 294px, ширина 36px, высота 312px (вертикальный, справа от столов) |
 | `tile-lang` | 1664px | x = 294px, ширина 36px, высота 36px (на уровне `tile-ws8`) |
 | `tile-launcher` | 1710px | |
-| `tile-power` | 1895px | |
 
 Координаты рассчитаны из высот плиток при зазоре 10px и жёстко привязаны к экрану 3840×2160; при изменении высоты плитки координаты нижележащих окон MUST быть пересчитаны. Раздельные окна обусловлены композитором: picom размывает фон по форме окна целиком, и только так промежутки между плитками остаются без размытия.
 
@@ -39,7 +39,7 @@
 - **THEN** окно получает фокус ввода и символы попадают в поле
 
 ### Requirement: Состав колонки
-Окна плиток MUST образовывать колонку в порядке сверху вниз: clock-tile, weather-tile, ряд [cpu-tile, ram-tile, gpu-tile], volume-tile, network-tile, disks-tile, favorites-tile, блок [плитки столов workspace-tile (по одной на стол) слева, справа от них столбик tray-tile над lang-tile], launcher-tile, power-tile с межплиточным зазором 10px. Тот же зазор 10px MUST выдерживаться при размещении окон горячими клавишами Openbox (`MoveResizeTo` в rc.xml): от краёв рабочей области и между окнами.
+Окна плиток MUST образовывать колонку в порядке сверху вниз: ряд из пяти плиток питания [pwr-lock, pwr-logout, pwr-restart, pwr-reboot, pwr-off], clock-tile, weather-tile, ряд [cpu-tile, ram-tile, gpu-tile], volume-tile, network-tile, disks-tile, favorites-tile, блок [плитки столов workspace-tile (по одной на стол) слева, справа от них столбик tray-tile над lang-tile], launcher-tile с межплиточным зазором 10px. Тот же зазор 10px MUST выдерживаться при размещении окон горячими клавишами Openbox (`MoveResizeTo` в rc.xml): от краёв рабочей области и между окнами.
 
 Полный ряд имеет ширину 320px; ряд из трёх шкал — 100px + 10px + 100px + 10px + 100px.
 
@@ -90,7 +90,7 @@ favorites-tile MUST содержать три кнопки, каждая отк�
 - **THEN** открывается терминал wezterm с yazi в ~/Загрузки
 
 ### Requirement: Плитка питания
-power-tile MUST содержать четыре кнопки с тултипами: Lock Screen (`loginctl lock-session`), Logout (`openbox --exit`), Openbox Restart (`openbox --restart`), Shutdown (`systemctl poweroff`).
+Питание MUST быть представлено пятью одинаковыми квадратными плитками 56×56px в один ряд в самом верху колонки (y = 153px, зазор 10px, ряд занимает всю ширину 320px), каждая — отдельное окно с одной кнопкой и подсказкой: Lock Screen (`loginctl lock-session`), Logout (`openbox --exit`), Openbox Restart (`openbox --restart`), Reboot (`systemctl reboot`), Shutdown (`systemctl poweroff`).
 
 #### Scenario: Выключение машины
 - **WHEN** пользователь кликает кнопку питания

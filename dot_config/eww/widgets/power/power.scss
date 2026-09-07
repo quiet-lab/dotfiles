@@ -1,13 +1,14 @@
-// Питание
-.power-tile {
-  button {
-    font-size: 1.7em;
-    padding: 4px 16px;
-    border-radius: 10px;
-    &:hover { background-color: $background; }
-  }
-  .pwr-lock    { color: $blue; }
-  .pwr-quit    { color: $magenta; }
-  .pwr-restart { color: $yellow; }
-  .pwr-off     { color: $red; }
+// Плитки питания: квадрат 56×56 (54px содержимого + рамка 1px), иконка по центру.
+.pwr-tile {
+  padding: 0;
+  min-width: 54px;
+  min-height: 54px;
+  font-size: 1.7em;
+
+  &:hover { background-color: $background; }
 }
+.pwr-lock    { color: $blue; }
+.pwr-quit    { color: $magenta; }
+.pwr-restart { color: $yellow; }
+.pwr-reboot  { color: $cyan; }
+.pwr-off     { color: $red; }
