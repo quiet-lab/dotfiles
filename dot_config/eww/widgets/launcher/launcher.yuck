@@ -1,11 +1,16 @@
 ;; Лаунчер приложений: поиск по названию и сетка полноцветных иконок.
-;; Все записи .desktop из ~/.local/share/applications и /usr/share/applications.
-;; Сетку генерирует widgets/launcher/scripts/apps-list literal'ом: ряды по 7
-;; иконок; видно ровно три ряда (124px = 3×38 + 2×5), остальное — прокруткой.
+;; Сетку отдаёт демон eww-daemon (~/work/pets/eww-daemon): при старте читает все
+;; записи .desktop из ~/.local/share/applications и /usr/share/applications,
+;; дальше следит за каталогами через inotify — опросов по таймеру нет.
+;; Без фильтра: первый ряд — семь самых частых приложений (статистика запусков
+;; хранится в ~/.local/share/eww-daemon/usage.json), затем разделы как в jgmenu
+;; с заголовками. При вводе фильтра заголовки исчезают, остаётся список по частоте.
+;; Поле ввода передаёт запрос демону через сокет (eww-daemon launcher-query),
+;; кнопки запускают приложения через демон (eww-daemon launch <id>).
+;; Ряды по 7 иконок; видно ровно три ряда (124px = 3×38 + 2×5), остальное — прокруткой.
 
-;; --- Состояние фильтра и сетки ---
-(defvar apps-query "")
-(defpoll launcher-grid :interval "60s" :initial "(box)" "widgets/launcher/scripts/apps-list")
+;; --- Сетка от демона ---
+(deflisten launcher-grid :initial "(box)" "~/.local/bin/eww-daemon launcher")
 
 ;; --- Виджет ---
 (defwidget launcher-tile []
@@ -20,7 +25,7 @@
  (input :class "apps-search"
    :hexpand true
    :tooltip "Фильтр по названию"
-   :onchange "widgets/launcher/scripts/apps-update '{}'"))
+   :onchange "~/.local/bin/eww-daemon launcher-query '{}'"))
  (scroll :class "apps-scroll"
    :hscroll false
    :vscroll true

@@ -21,6 +21,13 @@
       outline: none;
     }
   }
+  // Заголовок раздела в сетке (Стандартные, Разработка, …)
+  .apps-cat {
+    color: $gray;
+    font-size: 0.85em;
+    font-weight: bold;
+    margin: 2px 0 0 2px;
+  }
   // Полоса прокрутки скрыта — колесо мыши продолжает работать
   .apps-scroll {
     scrollbar { all: unset; }
