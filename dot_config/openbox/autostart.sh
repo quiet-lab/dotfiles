@@ -9,33 +9,32 @@
 # ---
 
 exec >/dev/null 2>&1
-. "${HOME}/.joyfuld"
-
-# https://gnu.org/software/bash/manual/html_node/The-Shopt-Builtin.html#:~:text=expand_aliases
-[ -z "$BASH" ] || shopt -s expand_aliases
-
-#{ [ "$(joyd_launch_apps -g terminal)" = 'urxvtc' ] && urxvtd -f -q; } &
 
 { pidof -s pulseaudio -q || pulseaudio --start --log-target=syslog; } &
 
-joyd_toggle_mode apply
-joyd_tray_programs exec
+# Уведомления (~/.config/dunst/dunstrc) и обои, сохранённые nitrogen
+# (~/.config/nitrogen/bg-saved.cfg). Раньше их запускал механизм режимов
+# joyful-desktop, теперь он удалён.
+dunst &
+nitrogen --restore &
+
+# Программы трея XEmbed: через xembedsniproxy попадают в трей eww.
+{ pidof -s nm-applet -q || nm-applet; } &
+{ pidof -s pasystray -q || pasystray; } &
 
 picom -b
 if [ -x "$(command -v lxpolkit)" ]; then
   lxpolkit &
 else
-  $(find ${LIBS_PATH} -type f -iname 'polkit-gnome-authentication-agent-*' | sed 1q) &
+  $(find /usr/lib /usr/lib64 /usr/libexec /usr/local/lib -type f -iname 'polkit-gnome-authentication-agent-*' 2>/dev/null | sed 1q) &
 fi
 
-{ [ -x "$(command -v xss-lock)" ] && xss-lock -q -l "${JOYD_DIR}/xss-lock-tsl.sh"; } &
 Handy.AppImage &
 wezterm-gui &
 firefox &
 xset s off &
 xset -dpms &
 xset s noblank &
-joyd_mpd_notifier
 # Раскладки и переключение: запасной setxkbmap (если xkbcomp не сработает),
 # затем пользовательская карта XKB с Alt+E/Alt+R и Win+Пробел.
 setxkbmap -layout "us,ru" -option grp:win_space_toggle

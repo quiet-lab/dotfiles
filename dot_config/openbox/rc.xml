@@ -205,25 +205,25 @@
         <command>~/.scripts/change-volume.sh 0</command>
       </action>
     </keybind>
-    <!-- Media control. -->
+    <!-- Мультимедиа-клавиши: playerctl управляет любым плеером через MPRIS. -->
     <keybind key="XF86AudioPrev">
       <action name="Execute">
-        <command>~/.scripts/music-controller.sh prev</command>
+        <command>playerctl previous</command>
       </action>
     </keybind>
     <keybind key="XF86AudioNext">
       <action name="Execute">
-        <command>~/.scripts/music-controller.sh next</command>
+        <command>playerctl next</command>
       </action>
     </keybind>
     <keybind key="XF86AudioStop">
       <action name="Execute">
-        <command>~/.scripts/music-controller.sh stop</command>
+        <command>playerctl stop</command>
       </action>
     </keybind>
     <keybind key="XF86AudioPlay">
       <action name="Execute">
-        <command>~/.scripts/music-controller.sh toggle</command>
+        <command>playerctl play-pause</command>
       </action>
     </keybind>
     <!-- Move window-focus across visible windows. -->
@@ -428,20 +428,10 @@
         </finalactions>
       </action>
     </keybind>
-    <!-- Rofi-menu scripts. -->
-    <keybind key="W-Escape">
-      <action name="Execute">
-        <command>~/.config/rofi/scripts/rofi-exts.sh</command>
-      </action>
-    </keybind>
-    <keybind key="W-Print">
-      <action name="Execute">
-        <command>~/.config/rofi/scripts/rofi-exts.sh screenshot</command>
-      </action>
-    </keybind>
+    <!-- Лаунчер приложений: rofi с конфигом по умолчанию (~/.config/rofi/config.rasi). -->
     <keybind key="W-r">
       <action name="Execute">
-        <command>~/.config/rofi/scripts/rofi-main.sh</command>
+        <command>rofi -show drun -no-lazy-grab</command>
       </action>
     </keybind>
     <!-- Screenshots. -->
@@ -484,7 +474,7 @@
     <!-- Misc. -->
     <keybind key="W-e">
       <action name="Execute">
-        <command>~/.scripts/launch-apps.sh file_manager</command>
+        <command>thunar</command>
       </action>
     </keybind>
     <keybind key="W-l">
@@ -494,17 +484,7 @@
     </keybind>
     <keybind key="W-Return">
       <action name="Execute">
-        <command>~/.scripts/launch-apps.sh terminal</command>
-      </action>
-    </keybind>
-    <keybind key="W-S-Return">
-      <action name="Execute">
-        <command>~/.config/openbox/joyful-desktop/terminal-set.sh reverse</command>
-      </action>
-    </keybind>
-    <keybind key="W-S-r">
-      <action name="Execute">
-        <command>~/.config/openbox/joyful-desktop/toggle-mode.sh apply</command>
+        <command>wezterm-gui</command>
       </action>
     </keybind>
   </keyboard>
