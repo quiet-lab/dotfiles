@@ -1,0 +1,196 @@
+// Конфигурация rofi. Единственный файл: настройки, переменные, палитра и
+// оформление меню собраны из темы owl4ce (config.rasi, themes/shared.rasi,
+// themes/colorschemes/mechanical.rasi, themes/main.rasi), чтобы `rofi -show drun`
+// без аргументов выглядел так же, как раньше по Win+R.
+
+configuration {
+
+  filebrowser {
+    directories-first: true;
+  }
+
+  cycle:               true;
+  disable-history:     true;
+  hover-select:        true;
+  show-icons:          true;
+  steal-focus:         false;
+  window-thumbnail:    true;
+
+  monitor:             "-4";
+  dpi:                    0;
+
+  modi:                "drun,run,filebrowser,window";
+
+  display-drun:        "";
+  display-run:         "";
+  display-filebrowser: "";
+  display-window:      "";
+
+  me-select-entry:     "";
+  me-accept-entry:     "MousePrimary";
+}
+
+// Переменные оформления и палитра (mechanical).
+* {
+  text-font:           "Comfortaa Bold 12";
+  icon-font:           "Material 14";
+  center-align:        0.5;
+  window-padding:      15.4% 8%;
+  button-padding:      14px;
+  entry-padding:       @button-padding;
+  indicator-padding:   @entry-padding;
+  message-padding:     @indicator-padding;
+  element-padding:     @message-padding;
+  element-border:      0px 4px;
+  element-icon-margin: 0px 6px 0px 0px;
+  border-radius:       8px;
+
+  accent1:             #f9f9f9;
+  accent2:             #f9f9f9;
+  button-gradient:     linear-gradient(90, #f9f9f9, #f9f9f9);
+  background-alpha:    #373e4df7;
+  background:          #373e4d;
+  background-light:    #3b4252;
+  background-focus:    #434c5e;
+  foreground:          #f9f9f9;
+  foreground-list:     #f9f9f9;
+  on:                  #2be491;
+  off:                 #fa5aa4;
+  urgent:              #fa946e;
+
+  font:                @text-font;
+  text-color:          @foreground-list;
+  vertical-align:      @center-align;
+}
+
+// Окно на весь экран: список в три колонки с фиксированными отступами,
+// 4px снаружи и 6px внутри.
+window {
+  width: 100%;
+  height: 100%;
+  border: inherit;
+  border-radius: inherit;
+  background-color: @background-alpha;
+  padding: @window-padding;
+}
+
+mainbox {
+  children: [ inputbar, listview, message ];
+}
+
+inputbar {
+  margin: 4px 4px 2px 4px;
+  padding: inherit;
+  spacing: 6px;
+  children: [ mode-switcher, entry, indicator ];
+}
+
+mode-switcher, button,
+entry,
+indicator, num-filtered-rows, textbox-sep, num-rows {
+  background-color: @background-light;
+  text-color: @accent1;
+  horizontal-align: @center-align;
+}
+
+mode-switcher {
+  padding: 0px 1px;
+}
+
+button {
+  margin: -1px;
+  font: @icon-font;
+  padding: @button-padding;
+}
+
+button.selected {
+  background-image: @button-gradient;
+  text-color: @background-light;
+}
+
+entry {
+  padding: @entry-padding;
+  placeholder: "FILTER";
+  placeholder-color: @background-focus;
+}
+
+indicator {
+  children: [ num-filtered-rows, textbox-sep, num-rows ];
+  expand: false;
+  orientation: horizontal;
+  padding: @indicator-padding;
+}
+
+num-filtered-rows,
+textbox-sep,
+num-rows {
+  str: "/";
+}
+
+listview {
+  scrollbar: false;
+  margin: 0px 2px 2px 2px;
+  padding: inherit;
+  border: inherit;
+  columns: 3;
+}
+
+element {
+  margin: 2px;
+  padding: @element-padding;
+  border: @element-border;
+}
+
+element.normal.normal,
+element.alternate.normal {
+  background-color: @background-light;
+  text-color: inherit;
+  border-color: @background-light;
+}
+
+element.normal.active,
+element.normal.urgent,
+element.alternate.active,
+element.alternate.urgent,
+element.selected.normal,
+element.selected.active,
+element.selected.urgent {
+  background-color: @background-focus;
+  text-color: inherit;
+}
+
+element.selected.normal,
+element.selected.active,
+element.selected.urgent {
+  border-color: @accent2;
+}
+
+element.normal.active,
+element.alternate.active {
+  border-color: @on;
+}
+
+element.normal.urgent,
+element.alternate.urgent {
+  border-color: @urgent;
+}
+
+element-text,
+element-icon {
+  background-color: transparent;
+}
+
+element-icon {
+  margin: @element-icon-margin;
+}
+
+message {
+  margin: 2px 4px 4px 4px;
+  border: inherit;
+  background-color: @background-light;
+  padding: @message-padding;
+}
+
+textbox {
+  background-color: inherit;
+}
