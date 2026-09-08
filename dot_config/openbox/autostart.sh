@@ -50,4 +50,20 @@ xkbcomp /home/mne/.config/X11/xkb_custom $DISPLAY
 # Дашборд eww, затем мост XEmbed → StatusNotifier: иконки старого протокола
 # (nm-applet и т. п.) попадают в трей eww. Мост стартует после eww, потому что
 # ему нужен StatusNotifierWatcher, который регистрирует eww.
-{ [ -x "$(command -v eww)" ] && { pidof -s eww -q || eww daemon; } && eww open-many tile-pwr-lock tile-pwr-logout tile-pwr-restart tile-pwr-reboot tile-pwr-off tile-clock tile-weather tile-cpu tile-ram tile-gpu tile-network tile-disks tile-favorites tile-ws1 tile-ws2 tile-ws3 tile-ws4 tile-ws5 tile-ws6 tile-ws7 tile-ws8 tile-launcher tile-tray tile-lang && [ -x "$(command -v xembedsniproxy)" ] && { pgrep -x xembedsniproxy >/dev/null || xembedsniproxy; }; } &
+#
+# `eww daemon` возвращает управление сразу после fork, а сокет поднимает позже,
+# уже после инициализации GTK. Если `open-many` не дождётся сокета, он запустит
+# второй демон, поэтому перед ним ждём ответа `eww ping` (до 20 с), а сам
+# `open-many` вызываем с --no-daemonize: тогда он не сможет породить демон.
+{
+  if [ -x "$(command -v eww)" ]; then
+    pidof -s eww -q || eww daemon
+    eww_wait=0
+    until eww ping >/dev/null 2>&1 || [ "$eww_wait" -ge 100 ]; do
+      eww_wait=$((eww_wait + 1))
+      sleep 0.2
+    done
+    eww --no-daemonize open-many tile-pwr-lock tile-pwr-logout tile-pwr-restart tile-pwr-reboot tile-pwr-off tile-clock tile-weather tile-cpu tile-ram tile-gpu tile-network tile-disks tile-favorites tile-ws1 tile-ws2 tile-ws3 tile-ws4 tile-ws5 tile-ws6 tile-ws7 tile-ws8 tile-launcher tile-tray tile-lang \
+      && [ -x "$(command -v xembedsniproxy)" ] && { pgrep -x xembedsniproxy >/dev/null || xembedsniproxy; }
+  fi
+} &
