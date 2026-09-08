@@ -1,0 +1,28 @@
+#!/bin/sh
+# Пока панель громкости открыта (tray-vol=true), следит за курсором и закрывает
+# панель, как только он выходит за окно трея. Событие ухода курсора (onhoverlost
+# внешнего eventbox) не доходит до eww, когда указатель захвачен открытым меню
+# (штатное меню pasystray или DBusMenu иконки трея), поэтому положение курсора
+# опрашивается через X11. Запускается из обработчика наведения (setsid -f);
+# второй экземпляр не стартует (файл-замок с PID). Геометрия окна берётся по
+# имени окна eww «Eww - tile-tray».
+lock="${XDG_RUNTIME_DIR:-/tmp}/eww-tray-vol-watch.pid"
+if [ -f "$lock" ] && kill -0 "$(cat "$lock" 2>/dev/null)" 2>/dev/null; then
+    exit 0
+fi
+echo $$ > "$lock"
+trap 'rm -f "$lock"' EXIT
+
+wid=$(xdotool search --name '^Eww - tile-tray$' 2>/dev/null | head -n1)
+[ -n "$wid" ] || exit 0
+eval "$(xdotool getwindowgeometry --shell "$wid")"
+wx=$X; wy=$Y; wr=$((X + WIDTH)); wb=$((Y + HEIGHT))
+
+while [ "$(eww get tray-vol)" = "true" ]; do
+    eval "$(xdotool getmouselocation --shell)"
+    if [ "$X" -lt "$wx" ] || [ "$X" -ge "$wr" ] || [ "$Y" -lt "$wy" ] || [ "$Y" -ge "$wb" ]; then
+        eww update tray-vol=false
+        break
+    fi
+    sleep 0.1
+done

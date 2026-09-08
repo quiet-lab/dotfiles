@@ -1,0 +1,10 @@
+#!/bin/sh
+# Шаг громкости колесом над иконкой трея: up/down на 5% в пределах 0…100.
+# После установки сразу обновляет переменную eww, не дожидаясь очередного poll.
+v=$("$(dirname "$0")/volume")
+case "$1" in
+    up)   v=$((v + 5)); [ "$v" -gt 100 ] && v=100 ;;
+    down) v=$((v - 5)); [ "$v" -lt 0 ] && v=0 ;;
+    *)    exit 1 ;;
+esac
+pactl set-sink-volume @DEFAULT_SINK@ "$v%" && eww update current-volume="$v"

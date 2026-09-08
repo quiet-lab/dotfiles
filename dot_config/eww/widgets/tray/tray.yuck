@@ -8,9 +8,10 @@
 ;; по нашей иконке открывает его штатное меню (демон вызывает ContextMenu элемента
 ;; по D-Bus). Наведение выдвигает над иконкой (не закрывая её) панель с
 ;; вертикальным ползунком громкости во всю остальную высоту трея (revealer
-;; slideup — панель «выезжает» снизу вверх); громкость меняется колесом и кликом
-;; по полосе. Левый клик по иконке открывает Volume Control (pavucontrol).
-;; Панель исчезает, как только курсор покидает трей.
+;; slideup — панель «выезжает» снизу вверх); громкость меняется колесом над
+;; иконкой, колесом и кликом по полосе. Левый клик по иконке открывает Volume
+;; Control (pavucontrol). Панель исчезает, как только курсор покидает трей, в том
+;; числе при открытом меню.
 (defvar tray-vol false)
 ;; Громкость default sink (скрипт widgets/tray/scripts/volume, всегда число).
 (defpoll current-volume :interval "1s" :initial "0" "widgets/tray/scripts/volume")
@@ -33,21 +34,32 @@
                  :hide {["PulseAudio system tray"]})
         (box :vexpand true))
       ;; Панель громкости поверх всей плитки (с рамкой и отступами), её низ — у самой
-      ;; высокой точки глифа громкости (поля в scss).
-      (revealer :reveal tray-vol :transition "slideup" :duration "150ms" :valign "end"
-        (box :class "tray-vol-panel" :orientation "v" :space-evenly false
-          (scale :class "tray-vol-scale"
-            :orientation "v"
-            :flipped true
-            :vexpand true
-            :min 0 :max 101
-            :value current-volume
-            :onchange "pactl set-sink-volume @DEFAULT_SINK@ {}%")
-          (label :class "tray-vol-value" :text "${current-volume}")))
-      ;; Иконка громкости: наведение раскрывает панель, левый клик — Volume
-      ;; Control, правый — штатное меню pasystray через демон. Команды
-      ;; отсоединяются через setsid -f: обработчик eww ограничен по времени,
-      ;; и запущенный прямо из него процесс не выживает.
-      (eventbox :onhover "eww update tray-vol=true" :valign "end" :halign "center"
+      ;; высокой точки глифа громкости. Revealer лежит в box с нижним полем (класс
+      ;; tray-vol-reveal в scss): при slideup GTK прижимает верх панели к верху
+      ;; revealer и открывает её сверху вниз, поэтому поле на самой панели во время
+      ;; анимации срезалось, и панель выезжала от низа окна поверх иконки. Поле
+      ;; задаётся именно box: у revealer нет узла CSS, и его поле GTK применяет
+      ;; как сдвиг содержимого вниз.
+      (box :class "tray-vol-reveal" :valign "end" :orientation "v" :space-evenly false
+        (revealer :reveal tray-vol :transition "slideup" :duration "150ms"
+          (box :class "tray-vol-panel" :orientation "v" :space-evenly false
+            (scale :class "tray-vol-scale"
+              :orientation "v"
+              :flipped true
+              :vexpand true
+              :min 0 :max 101
+              :value current-volume
+              :onchange "pactl set-sink-volume @DEFAULT_SINK@ {}%")
+            (label :class "tray-vol-value" :text "${current-volume}"))))
+      ;; Иконка громкости: наведение раскрывает панель и запускает слежение за
+      ;; курсором (widgets/tray/scripts/vol-watch закрывает панель, когда курсор
+      ;; выходит за окно трея, даже если открытое меню захватило указатель и
+      ;; onhoverlost не приходит); колесо над иконкой меняет громкость на 5%
+      ;; (vol-step); левый клик — Volume Control, правый — штатное меню pasystray
+      ;; через демон. Команды отсоединяются через setsid -f: обработчик eww
+      ;; ограничен по времени, и запущенный прямо из него процесс не выживает.
+      (eventbox :onhover "eww update tray-vol=true && setsid -f widgets/tray/scripts/vol-watch"
+                :onscroll "widgets/tray/scripts/vol-step {}"
+                :valign "end" :halign "center"
         (button :class "tray-vol-btn" :onclick "setsid -f pavucontrol"
                 :onrightclick "setsid -f ~/.local/bin/eww-daemon tray-menu 'PulseAudio system tray'" "󰕾")))))
