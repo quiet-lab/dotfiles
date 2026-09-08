@@ -149,7 +149,7 @@
        or when they are initially placed. Many programs reserve space automatically,
        but you can use this in other cases. -->
   <margins>
-    <top>30</top>
+    <top>0</top>
     <bottom>0</bottom>
     <left>0</left>
     <right>0</right>
@@ -257,16 +257,16 @@
     </keybind>
     <!-- Размещение окон по половинам экрана с зазором 10px от краёв рабочей
          области и между окнами (как между плитками eww). Размеры заданы в
-         пикселях под рабочую область 3510×2130 (экран 3840×2160, страта eww
-         330px слева, поле 30px сверху): ширина (3510 - 3*10) / 2 = 1740,
-         полная высота 2130 - 2*10 = 2110, половина (2130 - 3*10) / 2 = 1050.
+         пикселях под рабочую область 3510×2160 (экран 3840×2160, страта eww
+         330px слева, полей Openbox нет): ширина (3510 - 3*10) / 2 = 1740,
+         полная высота 2160 - 2*10 = 2140, половина (2160 - 3*10) / 2 = 1065.
          Отрицательная координата отсчитывается от правого/нижнего края. -->
     <keybind key="W-S-Left">
       <action name="MoveResizeTo">
         <x>10</x>
         <y>10</y>
         <width>1740</width>
-        <height>2110</height>
+        <height>2140</height>
       </action>
     </keybind>
     <keybind key="W-S-Right">
@@ -274,21 +274,21 @@
         <x>-10</x>
         <y>10</y>
         <width>1740</width>
-        <height>2110</height>
+        <height>2140</height>
       </action>
     </keybind>
     <keybind key="W-S-Up">
       <action name="MoveResizeTo">
         <y>10</y>
         <width>1740</width>
-        <height>1050</height>
+        <height>1065</height>
       </action>
     </keybind>
     <keybind key="W-S-Down">
       <action name="MoveResizeTo">
         <y>-10</y>
         <width>1740</width>
-        <height>1050</height>
+        <height>1065</height>
       </action>
     </keybind>
     <!-- Manage workspaces/desktop. -->
