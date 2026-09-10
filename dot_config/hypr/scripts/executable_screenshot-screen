@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+# Снимок всего экрана (Print), версия для Hyprland.
+. "${HOME}/.config/hypr/scripts/screenshot-common"
+tmp=$(mktemp --suffix=.png)
+grim "$tmp" || ss_notify_fail 'Screenshot failed!' screenshot-screen
+ss_finish "$tmp" screenshot-screen

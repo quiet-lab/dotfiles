@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+# Снимок экрана с обратным отсчётом (Ctrl+Print), версия для Hyprland.
+. "${HOME}/.config/hypr/scripts/screenshot-common"
+SS_COUNTDOWN_SECONDS=5
+dunstify '' "Taken in ${SS_COUNTDOWN_SECONDS}s .." -h string:synchronous:screenshot-countdown \
+    -a hotkeys -i camera-photo -t 1000
+sleep "$SS_COUNTDOWN_SECONDS"
+tmp=$(mktemp --suffix=.png)
+grim "$tmp" || ss_notify_fail 'Screenshot failed!' screenshot-countdown
+ss_finish "$tmp" screenshot-countdown

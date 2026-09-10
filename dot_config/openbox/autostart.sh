@@ -10,6 +10,12 @@
 
 exec >/dev/null 2>&1
 
+# Если сессия Hyprland завершилась падением (известная ошибка aquamarine при
+# выходе), её обработчик hyprland.shutdown не сработал и graphical-session.target
+# остался активным вместе с юнитами hyprpaper, hypridle, hyprpolkitagent, voxtype.
+# В X11-сессии они не нужны.
+systemctl --user stop graphical-session.target
+
 { pidof -s pulseaudio -q || pulseaudio --start --log-target=syslog; } &
 
 # Уведомления (~/.config/dunst/dunstrc) и обои, сохранённые nitrogen
@@ -21,6 +27,19 @@ nitrogen --restore &
 # Программы трея XEmbed: через xembedsniproxy попадают в трей eww.
 { pidof -s nm-applet -q || nm-applet; } &
 { pidof -s pasystray -q || pasystray; } &
+
+# VPN axata поднимается при старте сессии (пароль хранится в NetworkManager,
+# агент не нужен). Соединение kozloff-de включается только вручную из меню
+# сети: в NetworkManager у него выключено connection.autoconnect. Ждём до 30 с,
+# пока NetworkManager сообщит о подключении к сети, иначе VPN не поднимется.
+{
+  vpn_wait=0
+  until [ "$(nmcli -t -f STATE general 2>/dev/null)" = connected ] || [ "$vpn_wait" -ge 30 ]; do
+    vpn_wait=$((vpn_wait + 1))
+    sleep 1
+  done
+  nmcli -t -f NAME con show --active 2>/dev/null | grep -qxF axata || nmcli con up id axata
+} &
 
 picom -b
 if [ -x "$(command -v lxpolkit)" ]; then

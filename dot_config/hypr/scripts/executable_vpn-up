@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+# Поднимает VPN axata при старте сессии Hyprland (то же, что блок в autostart.sh
+# Openbox). Пароль хранится в NetworkManager, агент не нужен. Соединение
+# kozloff-de включается только вручную: в NetworkManager у него выключено
+# connection.autoconnect. Ждём до 30 с, пока NetworkManager сообщит о сети.
+vpn_wait=0
+until [ "$(nmcli -t -f STATE general 2>/dev/null)" = connected ] || [ "$vpn_wait" -ge 30 ]; do
+    vpn_wait=$((vpn_wait + 1))
+    sleep 1
+done
+nmcli -t -f NAME con show --active 2>/dev/null | grep -qxF axata || exec nmcli con up id axata
+exit 0

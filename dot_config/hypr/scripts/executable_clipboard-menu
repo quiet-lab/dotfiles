@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+# Меню буфера обмена (Super+V): история cliphist через rofi, выбранная запись
+# попадает в буфер обмена Wayland.
+cliphist list | rofi -dmenu -p 'Буфер' | cliphist decode | wl-copy

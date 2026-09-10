@@ -1,0 +1,22 @@
+# Терминальный выбор файла для портала FileChooser: yazi в новом окне wezterm.
+# Обёртка из пакета: yazi запускается с --chooser-file, выбранные пути уходят приложению.
+# Окно с классом termfilechooser плавает по центру, прозрачность и размытие как у wezterm
+# (правила в hypr/hyprland.lua).
+# yazi установлен через mise; его каталог есть в PATH пользовательского systemd.
+#
+# Сохранение: портал создаёт в стартовом каталоге файл с предложенным именем и
+# инструкцией внутри (create_help_file=1). В yazi его можно перенести (x, затем p)
+# или переименовать (r), а затем «открыть» клавишей Enter: этот путь уходит
+# приложению, и оно перезаписывает файл. Выход по q отменяет сохранение, файл
+# удаляется. Без файла-подсказки при сохранении выбирать было бы нечего.
+#
+# Режимы стартового каталога: suggested — каталог, который предложило приложение
+# (Firefox помнит свой каталог загрузок), default — default_dir, last — каталог
+# последнего выбора.
+[filechooser]
+cmd=/usr/share/xdg-desktop-portal-termfilechooser/yazi-wrapper.sh
+default_dir=$HOME
+create_help_file=1
+env=TERMCMD=wezterm start --always-new-process --class termfilechooser --
+open_mode=suggested
+save_mode=suggested

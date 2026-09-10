@@ -1,0 +1,12 @@
+# Цель сессии Hyprland: поднимает graphical-session.target, потому что Hyprland
+# 0.56.2 сам этого не делает (в бинарнике только import-environment).
+# Запускается из hyprland.lua по событию hyprland.start, останавливается
+# вместе с graphical-session.target по событию hyprland.shutdown.
+# Когда обновление Hyprland принесёт встроенную интеграцию, файл удаляется:
+# `systemctl --user revert hyprland-session.target`.
+[Unit]
+Description=Hyprland compositor session
+Documentation=man:systemd.special(7)
+BindsTo=graphical-session.target
+Wants=graphical-session-pre.target
+After=graphical-session-pre.target

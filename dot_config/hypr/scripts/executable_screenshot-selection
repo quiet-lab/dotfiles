@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+# Снимок выбранной области (Shift+Print), версия для Hyprland: область
+# выделяется slurp, снимок делает grim.
+. "${HOME}/.config/hypr/scripts/screenshot-common"
+area=$(slurp -b '#1a1b2680' -c '#2be491ff' -w 2) || ss_notify_fail 'Screenshot canceled!' screenshot-selection
+tmp=$(mktemp --suffix=.png)
+grim -g "$area" "$tmp" || ss_notify_fail 'Screenshot failed!' screenshot-selection
+ss_finish "$tmp" screenshot-selection

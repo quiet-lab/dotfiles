@@ -1,0 +1,31 @@
+#!/usr/bin/env sh
+# Общая часть скриптов скриншотов для Wayland (grim, wl-copy, dunstify).
+# Подключается через `. ~/.config/hypr/scripts/screenshot-common`.
+# Поведение и именование повторяют X11-версии из ~/.scripts/:
+# каталог ~/Pictures/Screenshots, имя <дата>_<ШxВ>_grim.png, копия в буфер,
+# уведомление dunst с тем же оформлением.
+
+SS_SVDIR="${HOME}/Pictures"   # снимки попадают в $SS_SVDIR/Screenshots
+SS_DIR="${SS_SVDIR}/Screenshots"
+
+ss_notify_fail() {
+    exec dunstify '' "$1" -h "string:synchronous:$2" -a hotkeys -i camera-photo -u low
+}
+
+# Сохраняет снимок из временного файла $1, копирует в буфер, сообщает.
+# $2 — метка уведомления (screenshot-screen и т. п.).
+ss_finish() {
+    tmp="$1"; tag="$2"
+    [ -s "$tmp" ] || ss_notify_fail 'Screenshot failed!' "$tag"
+    if command -v magick >/dev/null 2>&1; then
+        size="_$(magick identify -format '%wx%h' "$tmp" 2>/dev/null)"
+    else
+        size=''
+    fi
+    mkdir -p "$SS_DIR"
+    out="${SS_DIR}/$(date +%Y-%m-%d-%H%M%S)${size}_grim.png"
+    mv -f "$tmp" "$out"
+    wl-copy --type image/png < "$out"
+    exec dunstify '' "<span size='small'><u>${SS_SVDIR##*/}/Screenshots</u><i>\nCLIPBOARD</i></span>\nPicture obtained!" \
+        -h "string:synchronous:$tag" -a hotkeys -i camera-photo -u low
+}
