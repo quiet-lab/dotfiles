@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Сессия Hyprland на этой машине: условия со стороны драйвера NVIDIA, обязательное окружение для клиентов, изоляция пробной сессии от действующей X11-сессии и критерии, которым сессия обязана соответствовать, чтобы считаться пригодной для переезда с Openbox.
+Сессия Hyprland на этой машине: условия со стороны драйвера NVIDIA, запуск из lightdm рядом с сессией Openbox, обязательное окружение для клиентов и критерии, которым сессия обязана соответствовать, чтобы считаться пригодной для переезда с Openbox.
 
 ## Requirements
 
@@ -17,8 +17,23 @@
 - **WHEN** атомарный modeset `nvidia_drm` выключен
 - **THEN** сессия не считается пригодной, и до повторной проверки modeset включается через `/etc/modprobe.d`
 
+### Requirement: Запуск сессии из lightdm
+Сессия Hyprland MUST запускаться из lightdm записью `hyprland.desktop` из пакета (`/usr/bin/start-hyprland`), выбранной в greeter. Конфигурация lightdm (`user-session=openbox`) и сессия Openbox MUST NOT изменяться: обе сессии остаются доступными в меню greeter, а выбранная сессия запоминается lightdm для следующего входа. Две графические сессии одного пользователя MUST NOT работать одновременно: выход из Hyprland останавливает `graphical-session.target`. uwsm MUST NOT использоваться для запуска; запись `hyprland-uwsm.desktop` остаётся в меню как неиспользуемая.
+
+#### Scenario: Вход в Hyprland через greeter
+- **WHEN** в greeter lightdm выбрана сессия «Hyprland» и введён пароль
+- **THEN** запускается Hyprland с конфигом из `~/.config/hypr/hyprland.lua`, `loginctl show-session` показывает `Type=wayland`, а `echo $XDG_SESSION_DESKTOP` в терминале сессии даёт `Hyprland`
+
+#### Scenario: Выход в greeter
+- **WHEN** пользователь завершает сессию Hyprland
+- **THEN** lightdm показывает greeter, и вход в сессию Openbox выполняется как прежде, с дашбордом eww
+
+#### Scenario: Возврат в Openbox
+- **WHEN** в greeter выбрана сессия Openbox после работы в Hyprland
+- **THEN** сессия Openbox запускается с автозапуском без изменений, `chezmoi status` не показывает расхождений
+
 ### Requirement: Окружение клиентов для NVIDIA
-Сессия MUST передавать всем запускаемым из неё клиентам переменные окружения `LIBVA_DRIVER_NAME=nvidia`, `__GLX_VENDOR_LIBRARY_NAME=nvidia`, `NVD_BACKEND=direct` и `ELECTRON_OZONE_PLATFORM_HINT=auto`. Аппаратное декодирование видео через VA-API MUST работать в браузере, запущенном из сессии. Для Firefox это условие выполняется только при настройках профиля `media.hardware-video-decoding.force-enabled`, `media.rdd-ffmpeg.enabled`, `gfx.x11-egl.force-enabled`, `widget.dmabuf.force-enabled`, `media.av1.enabled=false` (Turing не декодирует AV1) и переменной окружения `MOZ_DISABLE_RDD_SANDBOX=1`; без них Firefox на NVIDIA VA-API не включает.
+Сессия MUST передавать всем запускаемым из неё клиентам переменные окружения `LIBVA_DRIVER_NAME=nvidia`, `__GLX_VENDOR_LIBRARY_NAME=nvidia`, `NVD_BACKEND=direct` и `ELECTRON_OZONE_PLATFORM_HINT=auto`; они задаются в управляемом chezmoi конфиге `dot_config/hypr/hyprland.lua`. Аппаратное декодирование видео через VA-API MUST работать в браузере, запущенном из сессии. Для Firefox это условие выполняется только при настройках профиля `media.hardware-video-decoding.force-enabled`, `media.rdd-ffmpeg.enabled`, `gfx.x11-egl.force-enabled`, `widget.dmabuf.force-enabled`, `media.av1.enabled=false` (Turing не декодирует AV1) и переменной окружения `MOZ_DISABLE_RDD_SANDBOX=1`; без них Firefox на NVIDIA VA-API не включает.
 
 #### Scenario: Клиент видит переменные
 - **WHEN** из сессии Hyprland запущен терминал
@@ -27,21 +42,6 @@
 #### Scenario: Видео декодируется аппаратно
 - **WHEN** в браузере, запущенном из сессии, воспроизводится видео в H.264 или AV1
 - **THEN** `nvidia-smi` показывает ненулевую загрузку декодера
-
-### Requirement: Изоляция пробной сессии
-Пока сессия Hyprland является пробной, она MUST запускаться из текстовой консоли, отличной от консоли lightdm, и MUST NOT изменять конфигурацию lightdm, автозапуск Openbox и файлы, управляемые chezmoi. Переключение между виртуальными консолями с X11-сессией и сессией Hyprland MUST сохранять обе сессии в рабочем состоянии.
-
-#### Scenario: Возврат в X11-сессию
-- **WHEN** пользователь переключается с консоли Hyprland на консоль lightdm
-- **THEN** сессия Openbox продолжает работать со всеми окнами и дашбордом eww
-
-#### Scenario: Возврат в Hyprland
-- **WHEN** пользователь переключается обратно на консоль Hyprland
-- **THEN** сессия Hyprland продолжает работать со всеми окнами, без чёрного экрана и без потери ввода
-
-#### Scenario: Управляемые файлы не тронуты
-- **WHEN** пробная сессия завершена
-- **THEN** `chezmoi status` не показывает расхождений, вызванных пробой, а `dot_config/openbox/autostart.sh` не изменён
 
 ### Requirement: Критерии совместимости
 Чтобы считаться совместимой с оборудованием, сессия MUST одновременно выполнять условия: монитор DP-2 работает в режиме 3840×2160 с родной частотой; курсор отображается и следует за указателем без артефактов (допускается программный курсор, если аппаратный даёт артефакты); нативные Wayland-клиенты (браузер, редактор) и клиенты Xwayland (приложение GTK, запущенное с `GDK_BACKEND=x11`) отрисовываются без мерцания и чёрных областей; размытие, скругление углов и анимации окон при разрешении 4K не дают заметных рывков; панель Quickshell на layer-shell с зарезервированной зоной и непрерывной анимацией работает без замираний интерфейса; пользовательская карта XKB из `~/.config/X11/xkb_custom` загружается файлом, и переключение раскладок Alt+E, Alt+R и Win+Пробел работает.
