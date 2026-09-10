@@ -56,7 +56,9 @@ mode = "push_to_talk"
 [audio]
 # Audio input device ("default" uses system default)
 # List devices with: pactl list sources short
-device = "sysdefault"
+# "pipewire": через PipeWire с источником по умолчанию; прямой путь ALSA "sysdefault"
+# отказывает, когда карту держит PipeWire (например, открыт pavucontrol).
+device = "pipewire"
 
 # Sample rate in Hz (whisper expects 16000)
 sample_rate = 16000
