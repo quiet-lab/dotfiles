@@ -6,8 +6,12 @@
 # больше экрана: окно тогда выходит за край, например
 # { x = -400, y = 0, w = 4600, h = "100%" }.
 
-# Зазор в пикселях, на который окно отступает внутрь ячейки с каждой стороны:
-# ячейки лежат вплотную, между окнами получается 10 px, как у Super+Shift+стрелки.
+# Зазор в пикселях, на который окно отступает внутрь ячейки с каждой стороны.
+# Правило: расстояние от края экрана и панели до окна, между окнами и между
+# плитками панели — одно число, 2·gap = 10 px. Поэтому ячейки отодвинуты на
+# gap от границ рабочей области (x от 335, y от 5, до 3835 и 2155), а панель
+# держит те же 10 px (Theme.margin и Theme.gap в quickshell/panel/Theme.qml).
+# Команда `half` (Super+Shift+стрелки) считает половины по тому же правилу.
 gap = 5
 
 # Общее окружение для всех приложений; переопределяется в workspace и приложении.
@@ -20,6 +24,17 @@ EDITOR = "neovide"
 save_workspace = "SUPER+W s"
 sessions = "SUPER+S"
 next_workspace = "SUPER+TAB"
+# Сочетания, которые не может занять ни одна привязка; `workspaced check`
+# отклоняет конфиг с такой привязкой (спецификация hyprland-binds).
+# Карта XKB (~/.config/X11/xkb_custom): Super+Пробел, Alt+E, Alt+R — иначе
+# композитор перехватит их раньше XKB.
+# Сочетания Openbox, не перенесённые намеренно: Alt+Пробел (меню окна),
+# Alt+Super+Пробел (корневое меню), Super+T (рамки окна), Super+D (показать
+# рабочий стол).
+reserved = [
+  "SUPER+space", "ALT+E", "ALT+R",
+  "ALT+space", "ALT+SUPER+space", "SUPER+T", "SUPER+D",
+]
 
 # ---- Шаблоны геометрии --------------------------------------------------
 
@@ -142,3 +157,255 @@ action = { desktop = 3, workspace = "chat" }
 chain = "SUPER+A f"
 cmd = "thunar"
 
+# ---- Горячие клавиши сессии ---------------------------------------------
+# Все привязки Hyprland живут здесь (спецификация hyprland-binds): hyprland.lua
+# только загружает код, который печатает `workspaced keys --lua`. Одиночное
+# сочетание — прямая привязка, цепочка через пробел — подкарта. Ровно одно
+# действие на запись: action (демон), exec (команда), dispatch (диспетчер
+# hl.dsp.* без префикса, строка или список по порядку), lua (тело функции).
+# Флаги: locked (и при заблокированном экране), repeating (повтор при
+# удержании), mouse (кнопка мыши с удержанием), release (по отпусканию).
+# range = [от, до] разворачивает запись, $n заменяется числом.
+# Соответствие rc.xml Openbox сохранено; список привязок — `workspaced keys --list`.
+
+# Программы.
+[[binds]]
+chain = "SUPER+Return"
+exec = "wezterm-gui"
+
+[[binds]]
+chain = "SUPER+R"
+exec = "rofi -show drun"
+
+[[binds]]
+chain = "SUPER+E"
+exec = "thunar"
+
+# Меню буфера обмена: история cliphist через rofi.
+[[binds]]
+chain = "SUPER+V"
+exec = "~/.config/hypr/scripts/clipboard-menu"
+
+# Окно.
+[[binds]]
+chain = "SUPER+C"
+dispatch = "window.close()"
+
+[[binds]]
+chain = "SUPER+F"
+dispatch = "window.fullscreen({ mode = \"fullscreen\", action = \"toggle\" })"
+
+[[binds]]
+chain = "SUPER+X"
+dispatch = "window.fullscreen({ mode = \"maximized\", action = \"toggle\" })"
+
+[[binds]]
+chain = "SUPER+SHIFT+V"
+dispatch = "window.float({ action = \"toggle\" })"
+
+# Замена сворачивания: Super+Z прячет окно в специальный стол «hidden»,
+# Super+Shift+Z показывает и скрывает этот стол.
+[[binds]]
+chain = "SUPER+Z"
+dispatch = "window.move({ workspace = \"special:hidden\", follow = false })"
+
+[[binds]]
+chain = "SUPER+SHIFT+Z"
+dispatch = "workspace.toggle_special(\"hidden\")"
+
+# Фокус.
+[[binds]]
+chain = "SUPER+left"
+dispatch = "focus({ direction = \"l\" })"
+
+[[binds]]
+chain = "SUPER+right"
+dispatch = "focus({ direction = \"r\" })"
+
+[[binds]]
+chain = "SUPER+up"
+dispatch = "focus({ direction = \"u\" })"
+
+[[binds]]
+chain = "SUPER+down"
+dispatch = "focus({ direction = \"d\" })"
+
+# Alt+Tab с подъёмом окна наверх, как NextWindow в Openbox. Диспетчер
+# cycle_next обходит окна в порядке слоёв, а bring_to_top этот порядок меняет,
+# поэтому назад он ходил только между двумя последними окнами. Здесь обход
+# идёт по порядку создания окон (stable_id) среди окон текущего стола.
+[[binds]]
+chain = "ALT+Tab"
+lua = """
+local cur = hl.get_active_window()
+if not cur or not cur.workspace then return end
+local list = {}
+for _, w in ipairs(hl.get_windows()) do
+  if w.mapped and w.workspace and w.workspace.id == cur.workspace.id then table.insert(list, w) end
+end
+table.sort(list, function(a, b) return a.stable_id < b.stable_id end)
+local idx = 1
+for i, w in ipairs(list) do if w.address == cur.address then idx = i end end
+hl.dispatch(hl.dsp.focus({ window = list[(idx) % #list + 1] }))
+hl.dispatch(hl.dsp.window.bring_to_top())
+"""
+
+[[binds]]
+chain = "ALT+SHIFT+Tab"
+lua = """
+local cur = hl.get_active_window()
+if not cur or not cur.workspace then return end
+local list = {}
+for _, w in ipairs(hl.get_windows()) do
+  if w.mapped and w.workspace and w.workspace.id == cur.workspace.id then table.insert(list, w) end
+end
+table.sort(list, function(a, b) return a.stable_id < b.stable_id end)
+local idx = 1
+for i, w in ipairs(list) do if w.address == cur.address then idx = i end end
+hl.dispatch(hl.dsp.focus({ window = list[(idx - 2) % #list + 1] }))
+hl.dispatch(hl.dsp.window.bring_to_top())
+"""
+
+# Половины рабочей области (MoveResizeTo из rc.xml): команда демона `half`,
+# отступы по правилу gap выше.
+[[binds]]
+chain = "SUPER+SHIFT+left"
+action = { half = "left" }
+
+[[binds]]
+chain = "SUPER+SHIFT+right"
+action = { half = "right" }
+
+[[binds]]
+chain = "SUPER+SHIFT+up"
+action = { half = "up" }
+
+[[binds]]
+chain = "SUPER+SHIFT+down"
+action = { half = "down" }
+
+# Рабочие столы: переход и перенос окна с переходом за ним (SendToDesktop).
+[[binds]]
+chain = "SUPER+$n"
+range = [1, 8]
+dispatch = "focus({ workspace = $n })"
+
+[[binds]]
+chain = "SUPER+SHIFT+$n"
+range = [1, 8]
+dispatch = "window.move({ workspace = $n, follow = true })"
+
+# Мышь: перемещение и изменение размера с удержанием Super.
+[[binds]]
+chain = "SUPER+mouse:272"
+mouse = true
+dispatch = "window.drag()"
+
+[[binds]]
+chain = "SUPER+mouse:273"
+mouse = true
+dispatch = "window.resize()"
+
+# Блокировка сессии: hypridle слушает logind и запускает hyprlock.
+[[binds]]
+chain = "SUPER+L"
+exec = "loginctl --no-ask-password lock-session"
+
+# Скриншоты (grim и slurp, см. ~/.config/hypr/scripts).
+[[binds]]
+chain = "Print"
+exec = "~/.config/hypr/scripts/screenshot-screen"
+
+[[binds]]
+chain = "CTRL+Print"
+exec = "~/.config/hypr/scripts/screenshot-countdown"
+
+[[binds]]
+chain = "SHIFT+Print"
+exec = "~/.config/hypr/scripts/screenshot-selection"
+
+# Уведомления dunst.
+[[binds]]
+chain = "CTRL+Escape"
+exec = "dunstctl history-pop"
+
+[[binds]]
+chain = "CTRL+Return"
+exec = "dunstctl context"
+
+[[binds]]
+chain = "CTRL+space"
+exec = "dunstctl close"
+
+[[binds]]
+chain = "CTRL+SHIFT+space"
+exec = "dunstctl close-all"
+
+# Мультимедиа: работают и при заблокированном экране.
+[[binds]]
+chain = "XF86AudioRaiseVolume"
+exec = "~/.scripts/change-volume.sh +"
+locked = true
+repeating = true
+
+[[binds]]
+chain = "XF86AudioLowerVolume"
+exec = "~/.scripts/change-volume.sh -"
+locked = true
+repeating = true
+
+[[binds]]
+chain = "XF86AudioMute"
+exec = "~/.scripts/change-volume.sh 0"
+locked = true
+
+[[binds]]
+chain = "XF86MonBrightnessUp"
+exec = "~/.scripts/change-brightness.sh +"
+locked = true
+repeating = true
+
+[[binds]]
+chain = "XF86MonBrightnessDown"
+exec = "~/.scripts/change-brightness.sh -"
+locked = true
+repeating = true
+
+[[binds]]
+chain = "XF86AudioPlay"
+exec = "playerctl play-pause"
+locked = true
+
+[[binds]]
+chain = "XF86AudioStop"
+exec = "playerctl stop"
+locked = true
+
+[[binds]]
+chain = "XF86AudioPrev"
+exec = "playerctl previous"
+locked = true
+
+[[binds]]
+chain = "XF86AudioNext"
+exec = "playerctl next"
+locked = true
+
+# Служебные привязки, которых в Openbox не было.
+# Выход из сессии, пока нет плитки питания.
+[[binds]]
+chain = "SUPER+M"
+dispatch = "exit()"
+
+# Переключение аппаратного и программного курсора на лету.
+[[binds]]
+chain = "SUPER+SHIFT+C"
+lua = """
+local soft = hl.get_config("cursor.no_hardware_cursors")
+hl.config({ ["cursor.no_hardware_cursors"] = not soft })
+hl.notification.create({
+  text    = soft and "Курсор: аппаратный" or "Курсор: программный",
+  timeout = 3000,
+  icon    = "ok",
+})
+"""

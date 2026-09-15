@@ -271,180 +271,53 @@ hl.layer_rule({
 ---- ПРИВЯЗКИ ----
 ------------------
 
--- Соответствие rc.xml Openbox (спецификация hyprland-binds).
--- Не перенесены намеренно, сочетания остаются свободными:
---   Alt+Пробел (меню окна), Alt+Super+Пробел (корневое меню),
---   Super+T (рамки окна), Super+D (показать рабочий стол).
--- Зарезервированы за картой XKB: Super+Пробел, Alt+E, Alt+R.
-local mainMod = "SUPER"
-local scripts = HOME .. "/.config/hypr/scripts/"
-
--- Программы.
-hl.bind(mainMod .. " + Return", hl.dsp.exec_cmd("wezterm-gui"))
-hl.bind(mainMod .. " + R",      hl.dsp.exec_cmd("rofi -show drun"))
-hl.bind(mainMod .. " + E",      hl.dsp.exec_cmd("thunar"))
-hl.bind(mainMod .. " + V",      hl.dsp.exec_cmd(scripts .. "clipboard-menu"))
-
--- Окно.
-hl.bind(mainMod .. " + C",         hl.dsp.window.close())
-hl.bind(mainMod .. " + F",         hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }))
-hl.bind(mainMod .. " + X",         hl.dsp.window.fullscreen({ mode = "maximized",  action = "toggle" }))
-hl.bind(mainMod .. " + SHIFT + V", hl.dsp.window.float({ action = "toggle" }))
--- Замена сворачивания: Super+Z прячет окно в специальный стол «hidden»,
--- Super+Shift+Z показывает и скрывает этот стол.
-hl.bind(mainMod .. " + Z",         hl.dsp.window.move({ workspace = "special:hidden", follow = false }))
-hl.bind(mainMod .. " + SHIFT + Z", hl.dsp.workspace.toggle_special("hidden"))
-
--- Фокус.
-hl.bind(mainMod .. " + left",  hl.dsp.focus({ direction = "l" }))
-hl.bind(mainMod .. " + right", hl.dsp.focus({ direction = "r" }))
-hl.bind(mainMod .. " + up",    hl.dsp.focus({ direction = "u" }))
-hl.bind(mainMod .. " + down",  hl.dsp.focus({ direction = "d" }))
--- Alt+Tab с подъёмом окна наверх, как NextWindow в Openbox.
-hl.bind("ALT + Tab", function()
-    hl.dispatch(hl.dsp.window.cycle_next({ next = true }))
-    hl.dispatch(hl.dsp.window.bring_to_top())
-end)
-hl.bind("ALT + SHIFT + Tab", function()
-    hl.dispatch(hl.dsp.window.cycle_next({ prev = true }))
-    hl.dispatch(hl.dsp.window.bring_to_top())
-end)
-
--- Половины рабочей области (MoveResizeTo из rc.xml). Рабочая область — монитор
--- без зон, зарезервированных слоями; отступ 10 px от краёв и между окнами.
-local GAP = 10
-
-local function vec(v)
-    if type(v) ~= "table" then return 0, 0 end
-    return v.x or v[1] or 0, v.y or v[2] or 0
-end
-
--- Зарезервированные зоны монитора в порядке left, top, right, bottom.
--- Форма поля reserved в Lua-API не задокументирована, поэтому разбираются
--- три варианта; уточняется командой `hyprctl eval 'return hl.get_active_monitor().reserved'`.
-local function reserved_of(mon)
-    local r = mon.reserved
-    if type(r) ~= "table" then return 0, 0, 0, 0 end
-    if r.left or r.top or r.right or r.bottom then
-        return r.left or 0, r.top or 0, r.right or 0, r.bottom or 0
-    end
-    if r.top_left or r.bottom_right then
-        local l, t = vec(r.top_left)
-        local rr, b = vec(r.bottom_right)
-        return l, t, rr, b
-    end
-    return r[1] or 0, r[2] or 0, r[3] or 0, r[4] or 0
-end
-
-local function half(side)
-    return function()
-        local mon = hl.get_active_monitor()
-        if not mon then return end
-        local mx, my = vec(mon.position)
-        local mw, mh = mon.width, mon.height
-        local l, t, r, b = reserved_of(mon)
-        -- Рабочая область без отступов по краям.
-        local ax, ay = mx + l + GAP, my + t + GAP
-        local aw, ah = mw - l - r - 2 * GAP, mh - t - b - 2 * GAP
-        local x, y, w, h = ax, ay, aw, ah
-        if side == "left" or side == "right" then
-            w = math.floor((aw - GAP) / 2)
-            if side == "right" then x = ax + aw - w end
-        else
-            h = math.floor((ah - GAP) / 2)
-            if side == "down" then y = ay + ah - h end
-        end
-        hl.dispatch(hl.dsp.window.float({ action = "on" }))
-        hl.dispatch(hl.dsp.window.resize({ x = w, y = h, relative = false }))
-        hl.dispatch(hl.dsp.window.move({ x = x, y = y, relative = false }))
-    end
-end
-hl.bind(mainMod .. " + SHIFT + left",  half("left"))
-hl.bind(mainMod .. " + SHIFT + right", half("right"))
-hl.bind(mainMod .. " + SHIFT + up",    half("up"))
-hl.bind(mainMod .. " + SHIFT + down",  half("down"))
-
--- Рабочие столы: переход и перенос окна с переходом за ним (SendToDesktop).
-for i = 1, 8 do
-    hl.bind(mainMod .. " + " .. i,         hl.dsp.focus({ workspace = i }))
-    hl.bind(mainMod .. " + SHIFT + " .. i, hl.dsp.window.move({ workspace = i, follow = true }))
-end
-
--- Мышь: перемещение и изменение размера с зажатым Super.
-hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(),   { mouse = true })
-hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
-
--- Блокировка: hypridle ловит сигнал logind и запускает hyprlock.
-hl.bind(mainMod .. " + L", hl.dsp.exec_cmd("loginctl --no-ask-password lock-session"))
-
--- Скриншоты (grim, slurp, wl-copy; каталог ~/Pictures/Screenshots).
-hl.bind("Print",         hl.dsp.exec_cmd(scripts .. "screenshot-screen"))
-hl.bind("CTRL + Print",  hl.dsp.exec_cmd(scripts .. "screenshot-countdown"))
-hl.bind("SHIFT + Print", hl.dsp.exec_cmd(scripts .. "screenshot-selection"))
-
--- Уведомления dunst.
-hl.bind("CTRL + Escape",        hl.dsp.exec_cmd("dunstctl history-pop"))
-hl.bind("CTRL + Return",        hl.dsp.exec_cmd("dunstctl context"))
-hl.bind("CTRL + space",         hl.dsp.exec_cmd("dunstctl close"))
-hl.bind("CTRL + SHIFT + space", hl.dsp.exec_cmd("dunstctl close-all"))
-
--- Медиаклавиши: те же скрипты, что в Openbox (amixer, brightnessctl).
-hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd(HOME .. "/.scripts/change-volume.sh +"),     { locked = true, repeating = true })
-hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd(HOME .. "/.scripts/change-volume.sh -"),     { locked = true, repeating = true })
-hl.bind("XF86AudioMute",        hl.dsp.exec_cmd(HOME .. "/.scripts/change-volume.sh 0"),     { locked = true })
-hl.bind("XF86MonBrightnessUp",  hl.dsp.exec_cmd(HOME .. "/.scripts/change-brightness.sh +"), { locked = true, repeating = true })
-hl.bind("XF86MonBrightnessDown",hl.dsp.exec_cmd(HOME .. "/.scripts/change-brightness.sh -"), { locked = true, repeating = true })
-hl.bind("XF86AudioPlay",        hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
-hl.bind("XF86AudioStop",        hl.dsp.exec_cmd("playerctl stop"),       { locked = true })
-hl.bind("XF86AudioPrev",        hl.dsp.exec_cmd("playerctl previous"),   { locked = true })
-hl.bind("XF86AudioNext",        hl.dsp.exec_cmd("playerctl next"),       { locked = true })
-
--- Служебные привязки, которых в Openbox не было.
--- Выход из сессии, пока нет плиток питания.
-hl.bind(mainMod .. " + M", hl.dsp.exit())
--- Переключение аппаратного и программного курсора на лету.
-hl.bind(mainMod .. " + SHIFT + C", function()
-    local soft = hl.get_config("cursor.no_hardware_cursors")
-    hl.config({ ["cursor.no_hardware_cursors"] = not soft })
-    hl.notification.create({
-        text    = soft and "Курсор: аппаратный" or "Курсор: программный",
-        timeout = 3000,
-        icon    = "ok",
-    })
-end)
-
------------------------------------
----- ЦЕПОЧКИ КЛАВИШ WORKSPACED ----
------------------------------------
-
--- Цепочки workspace, приложений и служебных действий генерирует демон
--- workspaced из ~/.config/workspaced/config.toml (спецификация ws-config):
--- первое сочетание открывает подкарту, последнее выполняет команду демона,
--- Escape сбрасывает подкарту. Ошибка или отсутствие демона не должны ломать
--- перезагрузку конфига: цепочки просто не загружаются, причина уходит в журнал
--- (`hyprctl rollinglog`, метка [Lua]) и в уведомление на экране.
+-- Все привязки и цепочки клавиш сессии задаёт ~/.config/workspaced/config.toml
+-- (спецификации hyprland-binds и ws-config); собственных hl.bind в этом файле
+-- нет. Код Lua печатает `workspaced keys --lua`, удачный результат команда
+-- сохраняет в ~/.local/state/workspaced/keys.lua. Если команда недоступна или
+-- конфиг демона сломан, загружается сохранённая копия, причина уходит в журнал
+-- (`hyprctl rollinglog`, метка [Lua]) и в уведомление; без копии сессия остаётся
+-- без привязок, о чём тоже сообщает уведомление. Ошибка привязок не должна
+-- ломать перезагрузку остального конфига.
 do
-    local function fail(msg)
+    local function notify(msg, icon)
         print("workspaced: " .. msg)
-        hl.notification.create({ text = "workspaced: " .. msg, timeout = 8000, icon = "error" })
+        hl.notification.create({ text = "workspaced: " .. msg, timeout = 8000, icon = icon or "error" })
+    end
+    local env = setmetatable({ hl = hl }, { __index = _G })
+    -- Выполнить код привязок; nil при успехе, иначе текст ошибки. Сообщение
+    -- демона или оболочки об ошибке разбором как Lua не пройдёт и попадёт в текст.
+    local function run(code, name)
+        local chunk, err = load(code, name, "t", env)
+        if not chunk then return (code:match("^[^\n]*") or tostring(err)) end
+        local ok, rerr = pcall(chunk)
+        if not ok then return tostring(rerr) end
+        return nil
     end
     -- Код завершения команды недоступен: Hyprland сам подбирает дочерние
-    -- процессы, и pclose получает ECHILD. Признак успеха — вывод разбирается
-    -- как Lua; сообщение демона или оболочки об ошибке разбором не пройдёт и
-    -- попадёт в текст уведомления.
+    -- процессы, и pclose получает ECHILD, поэтому признак успеха — вывод.
     local pipe = io.popen(HOME .. "/.local/bin/workspaced keys --lua 2>&1")
     local code = pipe and pipe:read("a") or ""
     if pipe then pipe:close() end
+    local err
     if code == "" then
-        fail("workspaced keys --lua ничего не вернула")
+        err = "workspaced keys --lua ничего не вернула"
     else
-        local env = setmetatable({ hl = hl }, { __index = _G })
-        local chunk, err = load(code, "workspaced keys", "t", env)
-        if not chunk then
-            fail("привязки не загружены: " .. (code:match("^[^\n]*") or tostring(err)))
+        err = run(code, "workspaced keys")
+    end
+    if err then
+        local f = io.open(HOME .. "/.local/state/workspaced/keys.lua", "r")
+        local copy = f and f:read("a") or ""
+        if f then f:close() end
+        if copy == "" then
+            notify("привязки не загружены, копии нет: " .. err)
         else
-            local ran, rerr = pcall(chunk)
-            if not ran then fail("привязки не выполнены: " .. tostring(rerr)) end
+            local cerr = run(copy, "workspaced keys.lua")
+            if cerr then
+                notify("привязки не загружены, копия тоже с ошибкой: " .. cerr)
+            else
+                notify("загружена копия привязок, конфиг с ошибкой: " .. err, "warning")
+            end
         end
     end
 end
@@ -464,6 +337,8 @@ end
 -- «Systemd startup»), цель удаляется командой
 -- `systemctl --user revert hyprland-session.target`, а два обработчика ниже
 -- (start и stop) убираются.
+local scripts = HOME .. "/.config/hypr/scripts/"
+
 hl.on("hyprland.start", function()
     hl.exec_cmd("systemctl --user start hyprland-session.target")
     -- Апплет NetworkManager как StatusNotifier: значок появится с панелью,

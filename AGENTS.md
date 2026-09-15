@@ -96,3 +96,12 @@ chezmoi add ~/путь      # взять под управление новый 
 ## Neovim (`dot_config/nvim`)
 
 LazyVim-конфиг: `lua/config/*` — options/keymaps/autocmds, `lua/plugins/*.lua` — по одному файлу на плагин или тему, `lazyvim.json` — включённые extras. `lazy-lock.json` меняет сам nvim в `$HOME`, после обновления плагинов его нужно забрать через `chezmoi re-add ~/.config/nvim/lazy-lock.json`. Форматирование Lua — `stylua` по `stylua.toml`. Настройки под Neovide (`vim.g.neovide`) лежат в `options.lua`, параллельно с `dot_config/neovide/config.toml`.
+
+## Сессия Hyprland (`dot_config/hypr`, `dot_config/workspaced`, `dot_config/quickshell`)
+
+Рабочая сессия — Hyprland с Lua-конфигом `dot_config/hypr/hyprland.lua`; Openbox остался запасной. Панель — Quickshell (`dot_config/quickshell/panel`), состояние workspace и сессий — демон `workspaced` (Rust, проект `~/work/pets/workspaced`, ссылка `~/.local/bin/workspaced`, сборка `cargo build --release`, юнит `workspaced.service`).
+
+- Все привязки и цепочки клавиш сессии живут в одном файле `dot_config/workspaced/config.toml`, раздел `[[binds]]` (спецификации hyprland-binds и ws-config). В `hyprland.lua` собственных `hl.bind` нет: он выполняет код, который печатает `workspaced keys --lua`, а при ошибке загружает копию `~/.local/state/workspaced/keys.lua` и показывает уведомление. Новую привязку добавлять в конфиг демона, проверять `workspaced check` и смотреть `workspaced keys --list`; демон сам вызывает `hyprctl reload config-only` после удачного перечитывания.
+- Сочетания из списка `reserved` в `[keys]` (карта XKB Super+Пробел, Alt+E, Alt+R и намеренно свободные Super+T, Super+D, Alt+Пробел, Alt+Super+Пробел) занимать нельзя, проверка конфига их отклоняет.
+- Правило геометрии: расстояние от края экрана и панели до окна, между окнами и между плитками панели — одно число, 10 px. У панели это `Theme.margin` и `Theme.gap`, у демона `gap = 5` при ячейках, отодвинутых на 5 px от границ рабочей области; команда `workspaced half` (Super+Shift+стрелки) считает половины по тому же правилу.
+- `hyprctl keyword` и `hyprctl dispatch` с Lua-конфигом не работают: диспетчеры вызываются через `hyprctl eval 'hl.dispatch(hl.dsp.…)'`. Виртуальная клавиатура `wtype` привязки композитора не запускает, проверки нажатиями делает пользователь.
