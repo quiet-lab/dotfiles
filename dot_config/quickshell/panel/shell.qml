@@ -58,7 +58,7 @@ ShellRoot {
             Favorites { x: Theme.margin; y: 1178 }
 
             // ---- Нижняя группа: столы с треем и раскладкой (1462…1820), лаунчер (1830…2150) ----
-            Workspaces { x: Theme.margin; y: 1462 }
+            Workspaces { id: workspacesTile; x: Theme.margin; y: 1462 }
             Tray { x: 294; y: 1462 }
             Lang { x: 294; y: 1784 }
             Launcher { x: Theme.margin; y: 1830 }
@@ -67,6 +67,29 @@ ShellRoot {
             TooltipPopup { id: tooltip }
             MenuPopup { id: menu }
             HoverInfoPopup { id: hoverInfo }
+            // Окно выбора сессии открывается по событию демона workspaced на уровне
+            // плиток столов. Клавиши принимает слой панели: на время показа он берёт
+            // клавиатуру монопольно (у всплывающего окна без захвата ввода нет),
+            // а при закрытии отпускает, и ввод возвращается окну.
+            SessionsPopup { id: sessionsPopup }
+            Item {
+                id: sessionsKeys
+                focus: sessionsPopup.visible
+                Keys.onPressed: (ev) => sessionsPopup.key(ev)
+            }
+            Connections {
+                target: Wsd
+                function onShowSessions(list) {
+                    sessionsPopup.open(workspacesTile, list);
+                    panel.WlrLayershell.keyboardFocus = WlrKeyboardFocus.Exclusive;
+                    sessionsKeys.forceActiveFocus();
+                }
+            }
+            Connections {
+                target: sessionsPopup
+                function onVisibleChanged() { if (!sessionsPopup.visible) panel.releaseKeyboard(); }
+            }
+
             // Попросить клавиатуру по требованию (перед кликом в поле фильтра) и отдать
             // её обратно окнам: слой перестаёт просить фокус, и композитор возвращает
             // его последнему окну.
@@ -78,6 +101,7 @@ ShellRoot {
                 Popups.tooltip = tooltip;
                 Popups.menu = menu;
                 Popups.hoverInfo = hoverInfo;
+                Popups.sessions = sessionsPopup;
             }
         }
     }

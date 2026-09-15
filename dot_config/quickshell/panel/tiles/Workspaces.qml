@@ -1,7 +1,9 @@
 // Плитки рабочих столов (спецификация qs-workspaces): восемь одинаковых плиток
 // 274×36, иконки окон слева, номер справа. Состояние — из модуля Hyprland
 // (события сокета), окна на special:hidden показываются приглушёнными в плитке
-// стола, с которого были скрыты (design D5).
+// стола, с которого были скрыты (design D5). После иконок окон идут иконки
+// workspace демона workspaced из списка стола (синглтон Wsd): активный первым
+// с подсветкой, остальные приглушённые; клик поднимает workspace на этом столе.
 import Quickshell
 import Quickshell.Hyprland
 import QtQuick
@@ -183,6 +185,29 @@ Item {
         return lines;
     }
 
+    // --- Workspace демона ---
+    // Список workspace стола: активный первым, остальные по порядку списка демона.
+    function wsListFor(wsName) {
+        const d = Wsd.desktops[wsName];
+        if (!d || !d.workspaces) return [];
+        const list = d.workspaces.map(w => ({ kind: "ws", name: w.name, icon: candidates([w.icon || "folder"]), active: !!w.active, apps: w.apps || [], windows: w.windows || [], desktop: Number(wsName) }));
+        return list.filter(w => w.active).concat(list.filter(w => !w.active));
+    }
+    // Общий ряд плитки: окна, затем workspace; лимит 10 и «+N» считаются по сумме.
+    function itemsFor(wins, wsList) {
+        return wins.map(w => Object.assign({ kind: "win" }, w)).concat(wsList);
+    }
+    function wsMenuFor(w) {
+        return [
+            { label: "Поднять", action: () => Wsd.raise(w.name, w.desktop) },
+            { label: "Убрать со стола", action: () => Wsd.remove(w.name, w.desktop) },
+        ];
+    }
+    function wsInfoFor(w) {
+        const lines = ["workspace " + w.name, w.active ? "активен на столе " + w.desktop : "на столе " + w.desktop + ", припаркован"];
+        for (const a of w.apps) lines.push("  " + a);
+        return lines;
+    }
 
     // --- Плитки ---
     Repeater {
@@ -192,6 +217,8 @@ Item {
             required property int index
             readonly property string wsName: String(index + 1)
             readonly property var wins: root.byWs[wsName] || []
+            readonly property var wsList: root.wsListFor(wsName)
+            readonly property var items: root.itemsFor(wins, wsList)
             readonly property bool active: root.focusedName === wsName
             y: index * 46
             width: 274
@@ -221,13 +248,15 @@ Item {
                     x: 9; y: 5
                     spacing: 0
                     Repeater {
-                        model: row.wins.slice(0, 10)
+                        model: row.items.slice(0, 10)
                         Rectangle {
                             id: btn
                             required property var modelData
+                            readonly property bool isWs: modelData.kind === "ws"
                             width: 24; height: 24; radius: 6
-                            color: btnMouse.containsMouse ? Theme.background : "transparent"
-                            opacity: modelData.hidden ? 0.4 : 1
+                            // Активный workspace подсвечен, припаркованный приглушён; скрытое окно приглушено.
+                            color: btnMouse.containsMouse ? Theme.background : (isWs && modelData.active ? Qt.rgba(224/255, 175/255, 104/255, 0.3) : "transparent")
+                            opacity: (isWs ? !modelData.active : modelData.hidden) ? 0.4 : 1
                             AppIcon {
                                 anchors.centerIn: parent
                                 width: 20; height: 20
@@ -238,22 +267,25 @@ Item {
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 acceptedButtons: Qt.LeftButton | Qt.RightButton
-                                onEntered: Popups.hoverInfo.show(btn, root.infoFor(btn.modelData), "ws-" + row.wsName)
+                                onEntered: Popups.hoverInfo.show(btn, btn.isWs ? root.wsInfoFor(btn.modelData) : root.infoFor(btn.modelData), "ws-" + row.wsName)
                                 onExited: Popups.hoverInfo.hide()
                                 onClicked: (m) => {
                                     Popups.hoverInfo.hide();
-                                    if (m.button === Qt.RightButton) Popups.menu.open(btn, root.menuFor(btn.modelData));
+                                    if (btn.isWs) {
+                                        if (m.button === Qt.RightButton) Popups.menu.open(btn, root.wsMenuFor(btn.modelData));
+                                        else Wsd.raise(btn.modelData.name, btn.modelData.desktop);
+                                    } else if (m.button === Qt.RightButton) Popups.menu.open(btn, root.menuFor(btn.modelData));
                                     else root.activate(btn.modelData);
                                 }
                             }
                         }
                     }
                     Text {
-                        visible: row.wins.length > 10
+                        visible: row.items.length > 10
                         leftPadding: 4
                         height: 24
                         verticalAlignment: Text.AlignVCenter
-                        text: "+" + (row.wins.length - 10)
+                        text: "+" + (row.items.length - 10)
                         color: Theme.gray
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.fontSize

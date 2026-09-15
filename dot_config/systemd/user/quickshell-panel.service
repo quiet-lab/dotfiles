@@ -2,11 +2,13 @@
 # quickshell-panel): одна копия на сессию, перезапуск при аварийном завершении,
 # остановка вместе с hyprland-session.target. В сессии Openbox цель не поднимается,
 # и юнит не стартует. WAYLAND_DISPLAY и HYPRLAND_INSTANCE_SIGNATURE приходят из
-# окружения пользовательского systemd, куда их импортирует Hyprland.
+# окружения пользовательского systemd, куда их импортирует Hyprland. Панель
+# запускается после демона workspaced, но не зависит от него: без демона плитки
+# столов показывают только окна.
 [Unit]
 Description=Панель Quickshell (конфигурация panel)
 PartOf=hyprland-session.target
-After=hyprland-session.target
+After=hyprland-session.target workspaced.service
 
 [Service]
 ExecStart=/usr/bin/qs -c panel

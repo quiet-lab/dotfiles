@@ -9,6 +9,7 @@ QtObject {
     property var tooltip: null
     property var menu: null
     property var hoverInfo: null
+    property var sessions: null
     // Окно панели: у него плитки просят отдать фокус клавиатуры (releaseKeyboard).
     property var panel: null
 }

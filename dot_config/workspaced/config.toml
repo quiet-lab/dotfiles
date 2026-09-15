@@ -1,0 +1,143 @@
+# Конфиг демона workspaced (спецификация ws-config).
+# Демон пишет сюда только по команде сохранения workspace (SUPER+W s).
+# Координаты — от левого верхнего угла экрана 3840×2160; панель занимает
+# 330 px слева, поэтому ячейки начинаются с x = 335. Число — пиксели, строка
+# с процентом — доля монитора. Координаты могут быть отрицательными, а размеры
+# больше экрана: окно тогда выходит за край, например
+# { x = -400, y = 0, w = 4600, h = "100%" }.
+
+# Зазор в пикселях, на который окно отступает внутрь ячейки с каждой стороны:
+# ячейки лежат вплотную, между окнами получается 10 px, как у Super+Shift+стрелки.
+gap = 5
+
+# Общее окружение для всех приложений; переопределяется в workspace и приложении.
+[env]
+EDITOR = "nvim"
+
+# Служебные цепочки: сохранить активный workspace в этот файл, окно выбора
+# сессии, следующий workspace из списка текущего стола.
+[keys]
+save_workspace = "SUPER+W s"
+sessions       = "SUPER+S"
+next_workspace = "SUPER+TAB"
+
+# ---- Шаблоны геометрии --------------------------------------------------
+
+# Две колонки, главная справа.
+[templates.halves]
+main = "right"
+[templates.halves.cells]
+left  = { x = 335,  y = 5, w = 1750, h = 2150 }
+right = { x = 2085, y = 5, w = 1750, h = 2150 }
+
+# Три колонки: узкие по краям, широкая главная в центре.
+[templates.thirds]
+main = "center"
+[templates.thirds.cells]
+left   = { x = 335,  y = 5, w = 800,  h = 2150 }
+center = { x = 1135, y = 5, w = 1900, h = 2150 }
+right  = { x = 3035, y = 5, w = 800,  h = 2150 }
+
+# Крест: колонки по краям, центр разбит на верх, середину (главная) и низ.
+[templates.cross]
+main = "center"
+[templates.cross.cells]
+left   = { x = 335,  y = 5,    w = 700,  h = 2150 }
+top    = { x = 1035, y = 5,    w = 2100, h = 600 }
+center = { x = 1035, y = 605,  w = 2100, h = 950 }
+bottom = { x = 1035, y = 1555, w = 2100, h = 600 }
+right  = { x = 3135, y = 5,    w = 700,  h = 2150 }
+
+# ---- Приложения ---------------------------------------------------------
+# Одно приложение — одно окно: workspace, ссылающиеся на одно имя, делят окно.
+# Firefox с одним профилем не умеет второй экземпляр, поэтому браузер с
+# основным профилем описан один раз; для отдельного профиля нужно своё
+# приложение с `--no-remote -P <профиль>` (профиль должен существовать).
+
+[apps.firefox]
+chain = "SUPER+A b"
+cmd   = "firefox"
+
+[apps.telegram]
+chain = "SUPER+A m"
+cmd   = "Telegram"
+
+# Редактор и терминал для dotfiles.
+[apps.editor-dots]
+chain = "SUPER+A e"
+cmd   = "neovide"
+args  = ["--", "$ROOT"]
+cwd   = "$ROOT"
+
+[apps.terminal-dots]
+chain = "SUPER+A t"
+cmd   = "wezterm-gui"
+args  = ["start", "--always-new-process", "--cwd", "$ROOT"]
+cwd   = "$ROOT"
+
+# Редактор и терминал для проекта демона.
+[apps.editor-workspaced]
+chain = "SUPER+A e"
+cmd   = "neovide"
+args  = ["--", "$ROOT"]
+cwd   = "$ROOT"
+
+[apps.terminal-workspaced]
+chain = "SUPER+A t"
+cmd   = "wezterm-gui"
+args  = ["start", "--always-new-process", "--cwd", "$ROOT"]
+cwd   = "$ROOT"
+
+# ---- Workspace ----------------------------------------------------------
+
+[workspaces.dots]
+chain    = "SUPER+W d"
+template = "thirds"
+main     = "editor-dots"
+icon     = "folder-templates"
+env      = { ROOT = "~/.local/share/chezmoi" }
+[workspaces.dots.apps]
+editor-dots   = "center"
+terminal-dots = "left"
+firefox       = "right"
+
+[workspaces.workspaced]
+chain    = "SUPER+W w"
+template = "thirds"
+main     = "editor-workspaced"
+icon     = "folder-development"
+env      = { ROOT = "~/work/pets/workspaced" }
+[workspaces.workspaced.apps]
+editor-workspaced   = "center"
+terminal-workspaced = "left"
+firefox             = "right"
+
+[workspaces.chat]
+chain    = "SUPER+W c"
+template = "halves"
+main     = "telegram"
+icon     = "dialog-messages"
+[workspaces.chat.apps]
+telegram = "right"
+firefox  = "left"
+
+# ---- Привязки со столом -------------------------------------------------
+# Полная форма для цепочек, включающих стол: перейти и поднять там.
+
+[[binds]]
+chain  = "SUPER+W 1 d"
+action = { desktop = 1, workspace = "dots" }
+
+[[binds]]
+chain  = "SUPER+W 2 w"
+action = { desktop = 2, workspace = "workspaced" }
+
+[[binds]]
+chain  = "SUPER+W 3 c"
+action = { desktop = 3, workspace = "chat" }
+
+# Приложение без workspace: по цепочке открывается плавающим в центре экрана
+# поверх остальных окон и остаётся на текущем workspace до закрытия.
+[apps.thunar]
+chain = "SUPER+A f"
+cmd   = "thunar"

@@ -187,8 +187,9 @@ end
 ---- ПРАВИЛА ОКОН ----
 ----------------------
 
--- Переходный период до Lua-раскладки зон: все окна открываются плавающими,
--- как в Openbox. Мозаика по Super+Shift+V.
+-- Все окна открываются плавающими, как в Openbox; по ячейкам workspace их
+-- расставляет демон workspaced (спецификация ws-daemon), собственная
+-- раскладка зон не планируется. Мозаика по Super+Shift+V.
 hl.window_rule({
     name  = "float-by-default",
     match = { class = ".*" },
@@ -411,6 +412,42 @@ hl.bind(mainMod .. " + SHIFT + C", function()
         icon    = "ok",
     })
 end)
+
+-----------------------------------
+---- ЦЕПОЧКИ КЛАВИШ WORKSPACED ----
+-----------------------------------
+
+-- Цепочки workspace, приложений и служебных действий генерирует демон
+-- workspaced из ~/.config/workspaced/config.toml (спецификация ws-config):
+-- первое сочетание открывает подкарту, последнее выполняет команду демона,
+-- Escape сбрасывает подкарту. Ошибка или отсутствие демона не должны ломать
+-- перезагрузку конфига: цепочки просто не загружаются, причина уходит в журнал
+-- (`hyprctl rollinglog`, метка [Lua]) и в уведомление на экране.
+do
+    local function fail(msg)
+        print("workspaced: " .. msg)
+        hl.notification.create({ text = "workspaced: " .. msg, timeout = 8000, icon = "error" })
+    end
+    -- Код завершения команды недоступен: Hyprland сам подбирает дочерние
+    -- процессы, и pclose получает ECHILD. Признак успеха — вывод разбирается
+    -- как Lua; сообщение демона или оболочки об ошибке разбором не пройдёт и
+    -- попадёт в текст уведомления.
+    local pipe = io.popen(HOME .. "/.local/bin/workspaced keys --lua 2>&1")
+    local code = pipe and pipe:read("a") or ""
+    if pipe then pipe:close() end
+    if code == "" then
+        fail("workspaced keys --lua ничего не вернула")
+    else
+        local env = setmetatable({ hl = hl }, { __index = _G })
+        local chunk, err = load(code, "workspaced keys", "t", env)
+        if not chunk then
+            fail("привязки не загружены: " .. (code:match("^[^\n]*") or tostring(err)))
+        else
+            local ran, rerr = pcall(chunk)
+            if not ran then fail("привязки не выполнены: " .. tostring(rerr)) end
+        end
+    end
+end
 
 --------------------
 ---- АВТОЗАПУСК ----
