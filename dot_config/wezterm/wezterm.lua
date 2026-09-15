@@ -14,8 +14,8 @@ config.color_scheme = "onedarkpro_onedark"
 -- config.font = wezterm.font("IosevkaTermSlab NF", { weight = "ExtraLight", stretch = "Normal", style = "Normal" })
 --config.font = wezterm.font("Iosevka", { weight = "ExtraLight", stretch = "Normal", style = "Normal" })
 
-config.font_size = 15.10
-config.line_height = 1.1
+config.font_size = 16.10
+config.line_height = 1.30
 config.freetype_load_flags = "NO_HINTING"
 config.font = wezterm.font_with_fallback({
 	{

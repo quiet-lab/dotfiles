@@ -36,7 +36,7 @@ if vim.g.neovide then
   vim.g.neovide_cursor_vfx_mode = "ripple"
 
   vim.g.neovide_fullscreen = false
-  vim.opt.linespace = 3
+  vim.opt.linespace = 4
 
   vim.g.neovide_scale_factor = 1.0
   local change_scale_factor = function(delta)

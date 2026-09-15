@@ -8,7 +8,7 @@ fork = true
 startup-message-capture = false
 
 [font]
-size = 13.50
+size = 16.00
 
 [[font.normal]]
 family = "IosevkaTermSlab NF"
