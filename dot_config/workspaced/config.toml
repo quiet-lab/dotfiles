@@ -12,13 +12,13 @@ gap = 5
 
 # Общее окружение для всех приложений; переопределяется в workspace и приложении.
 [env]
-EDITOR = "nvim"
+EDITOR = "neovide"
 
 # Служебные цепочки: сохранить активный workspace в этот файл, окно выбора
 # сессии, следующий workspace из списка текущего стола.
 [keys]
 save_workspace = "SUPER+W s"
-sessions       = "SUPER+S"
+sessions = "SUPER+S"
 next_workspace = "SUPER+TAB"
 
 # ---- Шаблоны геометрии --------------------------------------------------
@@ -27,26 +27,26 @@ next_workspace = "SUPER+TAB"
 [templates.halves]
 main = "right"
 [templates.halves.cells]
-left  = { x = 335,  y = 5, w = 1750, h = 2150 }
+left = { x = 335, y = 5, w = 1750, h = 2150 }
 right = { x = 2085, y = 5, w = 1750, h = 2150 }
 
 # Три колонки: узкие по краям, широкая главная в центре.
 [templates.thirds]
 main = "center"
 [templates.thirds.cells]
-left   = { x = 335,  y = 5, w = 800,  h = 2150 }
-center = { x = 1135, y = 5, w = 1900, h = 2150 }
-right  = { x = 3035, y = 5, w = 800,  h = 2150 }
+left = { x = 335, y = 5, w = 1920, h = 2150 }
+center = { x = 1135, y = 5, w = 1920, h = 2150 }
+right = { x = 3035, y = 5, w = 1920, h = 2150 }
 
 # Крест: колонки по краям, центр разбит на верх, середину (главная) и низ.
 [templates.cross]
 main = "center"
 [templates.cross.cells]
-left   = { x = 335,  y = 5,    w = 700,  h = 2150 }
-top    = { x = 1035, y = 5,    w = 2100, h = 600 }
-center = { x = 1035, y = 605,  w = 2100, h = 950 }
+left = { x = 335, y = 5, w = 700, h = 2150 }
+top = { x = 1035, y = 5, w = 2100, h = 600 }
+center = { x = 1035, y = 605, w = 2100, h = 950 }
 bottom = { x = 1035, y = 1555, w = 2100, h = 600 }
-right  = { x = 3135, y = 5,    w = 700,  h = 2150 }
+right = { x = 3135, y = 5, w = 700, h = 2150 }
 
 # ---- Приложения ---------------------------------------------------------
 # Одно приложение — одно окно: workspace, ссылающиеся на одно имя, делят окно.
@@ -56,88 +56,89 @@ right  = { x = 3135, y = 5,    w = 700,  h = 2150 }
 
 [apps.firefox]
 chain = "SUPER+A b"
-cmd   = "firefox"
+cmd = "firefox"
 
 [apps.telegram]
 chain = "SUPER+A m"
-cmd   = "Telegram"
+cmd = "Telegram"
 
 # Редактор и терминал для dotfiles.
 [apps.editor-dots]
 chain = "SUPER+A e"
-cmd   = "neovide"
-args  = ["--", "$ROOT"]
-cwd   = "$ROOT"
+cmd = "neovide"
+args = ["--", "$ROOT"]
+cwd = "$ROOT"
 
 [apps.terminal-dots]
 chain = "SUPER+A t"
-cmd   = "wezterm-gui"
-args  = ["start", "--always-new-process", "--cwd", "$ROOT"]
-cwd   = "$ROOT"
+cmd = "wezterm-gui"
+args = ["start", "--always-new-process", "--cwd", "$ROOT"]
+cwd = "$ROOT"
 
 # Редактор и терминал для проекта демона.
 [apps.editor-workspaced]
 chain = "SUPER+A e"
-cmd   = "neovide"
-args  = ["--", "$ROOT"]
-cwd   = "$ROOT"
+cmd = "neovide"
+args = ["--", "$ROOT"]
+cwd = "$ROOT"
 
 [apps.terminal-workspaced]
 chain = "SUPER+A t"
-cmd   = "wezterm-gui"
-args  = ["start", "--always-new-process", "--cwd", "$ROOT"]
-cwd   = "$ROOT"
+cmd = "wezterm-gui"
+args = ["start", "--always-new-process", "--cwd", "$ROOT"]
+cwd = "$ROOT"
 
 # ---- Workspace ----------------------------------------------------------
 
 [workspaces.dots]
-chain    = "SUPER+W d"
+chain = "SUPER+W d"
 template = "thirds"
-main     = "editor-dots"
-icon     = "folder-templates"
-env      = { ROOT = "~/.local/share/chezmoi" }
+main = "editor-dots"
+icon = "folder-templates"
+env = { ROOT = "~/.local/share/chezmoi" }
 [workspaces.dots.apps]
-editor-dots   = "center"
+editor-dots = "center"
 terminal-dots = "left"
-firefox       = "right"
+firefox = "right"
 
 [workspaces.workspaced]
-chain    = "SUPER+W w"
+chain = "SUPER+W w"
 template = "thirds"
-main     = "editor-workspaced"
-icon     = "folder-development"
-env      = { ROOT = "~/work/pets/workspaced" }
+main = "editor-workspaced"
+icon = "folder-development"
+env = { ROOT = "~/work/pets/workspaced" }
 [workspaces.workspaced.apps]
-editor-workspaced   = "center"
+editor-workspaced = "center"
 terminal-workspaced = "left"
-firefox             = "right"
+firefox = "right"
 
 [workspaces.chat]
-chain    = "SUPER+W c"
+chain = "SUPER+W c"
 template = "halves"
-main     = "telegram"
-icon     = "dialog-messages"
+main = "telegram"
+icon = "dialog-messages"
 [workspaces.chat.apps]
 telegram = "right"
-firefox  = "left"
+firefox = "left"
 
 # ---- Привязки со столом -------------------------------------------------
 # Полная форма для цепочек, включающих стол: перейти и поднять там.
 
 [[binds]]
-chain  = "SUPER+W 1 d"
+chain = "SUPER+W 1 d"
 action = { desktop = 1, workspace = "dots" }
 
 [[binds]]
-chain  = "SUPER+W 2 w"
+chain = "SUPER+W 2 w"
 action = { desktop = 2, workspace = "workspaced" }
 
 [[binds]]
-chain  = "SUPER+W 3 c"
+chain = "SUPER+W 3 c"
 action = { desktop = 3, workspace = "chat" }
 
 # Приложение без workspace: по цепочке открывается плавающим в центре экрана
 # поверх остальных окон и остаётся на текущем workspace до закрытия.
 [apps.thunar]
 chain = "SUPER+A f"
-cmd   = "thunar"
+cmd = "thunar"
+
