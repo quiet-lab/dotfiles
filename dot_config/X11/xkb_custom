@@ -9,8 +9,10 @@ xkb_keymap {
     xkb_types     {
         include "complete"
         // Тип клавиши для Alt+буква: уровни Base, Shift/Caps, Alt.
-        // На третьем уровне повторяется базовый символ: wezterm (xkbcommon)
-        // при NoSymbol на любом уровне подставляет латиницу вместо русской буквы.
+        // На третьем уровне стоит VoidSymbol (не NoSymbol: при NoSymbol wezterm под
+        // X11 подставлял латиницу вместо русской буквы): под Wayland клиент получает
+        // Alt+буква как текст, и с базовым символом на третьем уровне при
+        // переключении раскладки печаталась буква.
         type "ALT_GROUP_SELECT" {
             modifiers = Shift+Lock+Mod1;
             map[Shift] = Level2;
@@ -31,17 +33,17 @@ xkb_keymap {
         // Alt+E — фиксировать US; в обеих группах символы клавиши сохранены
         key <AD03> {
             type = "ALT_GROUP_SELECT",
-            symbols[Group1] = [ e, E, e ],
+            symbols[Group1] = [ e, E, VoidSymbol ],
             actions[Group1] = [ NoAction(), NoAction(), LockGroup(group=1) ],
-            symbols[Group2] = [ Cyrillic_u, Cyrillic_U, Cyrillic_u ],
+            symbols[Group2] = [ Cyrillic_u, Cyrillic_U, VoidSymbol ],
             actions[Group2] = [ NoAction(), NoAction(), LockGroup(group=1) ]
         };
         // Alt+R — фиксировать RU
         key <AD04> {
             type = "ALT_GROUP_SELECT",
-            symbols[Group1] = [ r, R, r ],
+            symbols[Group1] = [ r, R, VoidSymbol ],
             actions[Group1] = [ NoAction(), NoAction(), LockGroup(group=2) ],
-            symbols[Group2] = [ Cyrillic_ka, Cyrillic_KA, Cyrillic_ka ],
+            symbols[Group2] = [ Cyrillic_ka, Cyrillic_KA, VoidSymbol ],
             actions[Group2] = [ NoAction(), NoAction(), LockGroup(group=2) ]
         };
 
