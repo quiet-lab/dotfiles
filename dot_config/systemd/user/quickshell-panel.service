@@ -1,0 +1,17 @@
+# Панель Quickshell сессии Hyprland (спецификация qs-shell, design D13 изменения
+# quickshell-panel): одна копия на сессию, перезапуск при аварийном завершении,
+# остановка вместе с hyprland-session.target. В сессии Openbox цель не поднимается,
+# и юнит не стартует. WAYLAND_DISPLAY и HYPRLAND_INSTANCE_SIGNATURE приходят из
+# окружения пользовательского systemd, куда их импортирует Hyprland.
+[Unit]
+Description=Панель Quickshell (конфигурация panel)
+PartOf=hyprland-session.target
+After=hyprland-session.target
+
+[Service]
+ExecStart=/usr/bin/qs -c panel
+Restart=on-failure
+RestartSec=1
+
+[Install]
+WantedBy=hyprland-session.target

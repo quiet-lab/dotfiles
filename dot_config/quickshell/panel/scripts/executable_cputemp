@@ -1,0 +1,6 @@
+#!/bin/sh
+# Температура CPU (AMD k10temp, датчик Tctl) в °C; при ошибке — 0 и класс t-low.
+v=$(sensors -u k10temp-pci-00c3 2>/dev/null | awk '/temp1_input/ {print int($2); exit}')
+case "$v" in ''|*[!0-9]*) v=0 ;; esac
+if [ "$v" -lt 50 ]; then c=t-low; elif [ "$v" -lt 75 ]; then c=t-mid; elif [ "$v" -lt 90 ]; then c=t-high; else c=t-crit; fi
+printf '{"value":%d,"class":"%s"}\n' "$v" "$c"

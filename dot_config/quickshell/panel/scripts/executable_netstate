@@ -1,0 +1,20 @@
+#!/bin/sh
+# Состояние сети для плитки (спецификация qs-network): один объект JSON
+# {"eth":{"connected":bool,"device":…,"ip":…},"wifi":{…},"vpn":имя|""}.
+# Запускается панелью только в ответ на события NetworkManager (nmcli monitor).
+ip_of() { nmcli -t -f IP4.ADDRESS dev show "$1" 2>/dev/null | head -n1 | cut -d: -f2 | cut -d/ -f1; }
+status=$(nmcli -t -f DEVICE,TYPE,STATE device status 2>/dev/null)
+
+eth=$(printf '%s\n' "$status" | awk -F: '$2=="ethernet" && $3=="connected" {print $1; exit}')
+ethip=""; [ -n "$eth" ] && ethip=$(ip_of "$eth")
+
+wdev=$(printf '%s\n' "$status" | awk -F: '$2=="wifi" && $1 !~ /^p2p/ {print $1; exit}')
+wst=$(printf '%s\n' "$status" | awk -F: '$2=="wifi" && $1 !~ /^p2p/ {print $3; exit}')
+wifiip=""; wconn=false
+if [ "$wst" = "connected" ]; then wconn=true; wifiip=$(ip_of "$wdev"); fi
+
+vpn=$(nmcli -t -f NAME,TYPE con show --active 2>/dev/null | awk -F: '$2=="vpn" || $2=="wireguard" {print $1; exit}')
+
+jq -cn --arg eth "$eth" --arg ethip "$ethip" --argjson ethc "$([ -n "$eth" ] && echo true || echo false)" \
+	--arg wdev "$wdev" --arg wifiip "$wifiip" --argjson wconn "$wconn" --arg vpn "$vpn" \
+	'{eth:{connected:$ethc,device:$eth,ip:$ethip},wifi:{connected:$wconn,device:$wdev,ip:$wifiip},vpn:$vpn}'

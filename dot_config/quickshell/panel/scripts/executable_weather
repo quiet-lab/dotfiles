@@ -1,0 +1,41 @@
+#!/bin/sh
+# Погода wttr.in → один объект JSON для плитки погоды (спецификация qs-weather):
+# {"city":…,"temp":N,"code":WWO,"days":[{"name":"Пн","parts":[{"temp":N,"code":C}|null ×4]}×3]}.
+# Части суток: ночь 0–6, утро 6–12, день 12–18, вечер 18–24; температура — округлённая
+# средняя почасовых записей, код — первой записи периода; null — нет записей.
+# Кэш последнего удачного ответа: $XDG_CACHE_HOME/quickshell-weather.json (запись атомарная);
+# при обрыве связи выводится кэш, при его отсутствии — {"error":"нет данных"}.
+CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/quickshell-weather.json"
+CITY=""   # пусто — автоопределение по IP; пример: CITY="Minsk"
+
+fallback() {
+	if [ -f "$CACHE" ]; then
+		cat "$CACHE"
+	else
+		echo '{"error":"нет данных"}'
+	fi
+}
+
+json=$(curl -sf --max-time 10 "https://wttr.in/${CITY:+$CITY}?format=j1") || { fallback; exit 0; }
+[ -n "$json" ] || { fallback; exit 0; }
+
+out=$(printf '%s' "$json" | jq -c '
+	def part(a; b): ([.[] | select((.time | tonumber) >= a and (.time | tonumber) < b)]) as $h
+		| if ($h | length) > 0
+		  then { temp: ($h | map(.tempC | tonumber) | add / length | round), code: ($h[0].weatherCode | tonumber) }
+		  else null end;
+	def dayname: (. | strptime("%Y-%m-%d") | mktime | strftime("%u") | tonumber) as $n
+		| ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"][$n - 1];
+	select(.current_condition[0].temp_C != null)
+	| {
+		city: (.nearest_area[0].areaName[0].value // ""),
+		temp: (.current_condition[0].temp_C | tonumber),
+		code: (.current_condition[0].weatherCode | tonumber),
+		days: [ .weather[0:3][] | { name: (.date | dayname),
+			parts: (.hourly | [part(0; 600), part(600; 1200), part(1200; 1800), part(1800; 2400)]) } ]
+	  }' 2>/dev/null)
+[ -n "$out" ] || { fallback; exit 0; }
+
+mkdir -p "$(dirname "$CACHE")"
+printf '%s\n' "$out" > "$CACHE.new" && mv "$CACHE.new" "$CACHE"
+printf '%s\n' "$out"

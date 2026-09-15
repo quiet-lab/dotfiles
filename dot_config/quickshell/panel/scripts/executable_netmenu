@@ -1,0 +1,11 @@
+#!/bin/sh
+# Содержимое меню сети (спецификация qs-network) по текущему состоянию NetworkManager:
+# {"wifi":bool,"vpns":[{"name":…,"active":bool}],"eth":устройство|""}.
+wifi=false; nmcli radio wifi 2>/dev/null | grep -q enabled && wifi=true
+active=$(nmcli -t -f NAME,TYPE con show --active 2>/dev/null | awk -F: '$2=="vpn" || $2=="wireguard" {print $1}')
+vpns=$(nmcli -t -f NAME,TYPE con show 2>/dev/null | awk -F: '$2=="vpn" || $2=="wireguard" {print $1}' | while IFS= read -r n; do
+	a=false; printf '%s\n' "$active" | grep -Fqx "$n" && a=true
+	jq -cn --arg n "$n" --argjson a "$a" '{name:$n,active:$a}'
+done | jq -cs '.')
+eth=$(nmcli -t -f DEVICE,TYPE,STATE device status 2>/dev/null | awk -F: '$2=="ethernet" && $3=="connected" {print $1; exit}')
+jq -cn --argjson wifi "$wifi" --argjson vpns "${vpns:-[]}" --arg eth "$eth" '{wifi:$wifi,vpns:$vpns,eth:$eth}'

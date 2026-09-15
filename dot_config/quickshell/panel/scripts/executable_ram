@@ -1,0 +1,12 @@
+#!/bin/sh
+# Использование RAM в % по /proc/meminfo: (MemTotal − MemAvailable) / MemTotal.
+# Вывод: {"value":N,"class":"t-…","total":G} — total в ГиБ для заголовка шкалы.
+awk '
+/MemTotal:/  { total = $2 }
+/MemAvailable:/ { avail = $2 }
+END {
+    v = 0
+    if (total > 0) v = int((total - avail) * 100 / total)
+    c = v < 50 ? "t-low" : v < 75 ? "t-mid" : v < 90 ? "t-high" : "t-crit"
+    printf "{\"value\":%d,\"class\":\"%s\",\"total\":%d}\n", v, c, total / 1048576
+}' /proc/meminfo

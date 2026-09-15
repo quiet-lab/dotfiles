@@ -1,0 +1,20 @@
+#!/bin/sh
+# Загрузка CPU в % по разности двух чтений /proc/stat с промежутком 1 с
+# (спецификация qs-monitors). Вывод: одна строка JSON {"value":N,"class":"t-…"}.
+sample() {
+	read -r _ user nice system idle iowait irq softirq steal _ < /proc/stat
+	echo $((user + nice + system + idle + iowait + irq + softirq + steal)) $((idle + iowait))
+}
+set -- $(sample)
+t1=$1 i1=$2
+sleep 1
+set -- $(sample)
+t2=$1 i2=$2
+v=0
+if [ "${t2:-0}" -gt "${t1:-0}" ] 2>/dev/null; then
+	busy=$((t2 - t1 - (i2 - i1)))
+	[ "$busy" -lt 0 ] && busy=0
+	v=$((100 * busy / (t2 - t1)))
+fi
+if [ "$v" -lt 50 ]; then c=t-low; elif [ "$v" -lt 75 ]; then c=t-mid; elif [ "$v" -lt 90 ]; then c=t-high; else c=t-crit; fi
+printf '{"value":%d,"class":"%s"}\n' "$v" "$c"

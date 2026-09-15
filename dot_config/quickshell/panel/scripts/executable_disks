@@ -1,0 +1,26 @@
+#!/bin/sh
+# Диски системы (спецификация qs-monitors): блочные устройства с файловой системой,
+# кроме loop*, zram*, ram* и swap. Вывод: одна строка JSON — массив записей
+# {name, mounted, percent, free, fstype}; для смонтированных percent и free из df -Ph,
+# при отказе df — percent 0 и free "?".
+lsblk -J -o NAME,FSTYPE,LABEL,MOUNTPOINT 2>/dev/null | jq -r '
+  .. | objects
+  | select(.fstype != null and .fstype != "" and .fstype != "swap")
+  | select(.name | test("^(loop|zram|ram)") | not)
+  | [(.name // ""), .fstype, (.label // ""),
+     (if (.mountpoint|type) == "array" then (.mountpoint[0] // "") else (.mountpoint // "") end)]
+  | @tsv' | while IFS='	' read -r dev fst label mnt; do
+	[ -n "$dev" ] || continue
+	name=${label:-$dev}
+	if [ -n "$mnt" ]; then
+		line=$(df -Ph "/dev/$dev" 2>/dev/null | tail -n1)
+		free=$(printf '%s' "$line" | awk '{print $4}')
+		p=$(printf '%s' "$line" | awk '{print $5}' | tr -d '%')
+		case "$p" in ''|*[!0-9]*) p=0; free='?' ;; esac
+		[ "$p" -gt 100 ] && p=100
+		jq -cn --arg n "$name" --arg f "$free" --arg t "$fst" --argjson p "$p" \
+			'{name:$n,mounted:true,percent:$p,free:$f,fstype:$t}'
+	else
+		jq -cn --arg n "$name" --arg t "$fst" '{name:$n,mounted:false,percent:0,free:"",fstype:$t}'
+	fi
+done | jq -cs '.'

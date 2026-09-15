@@ -1,0 +1,11 @@
+# Модуль конфигурации панели: синглтоны и общие компоненты.
+singleton Theme 1.0 Theme.qml
+singleton Popups 1.0 Popups.qml
+singleton Run 1.0 Run.qml
+Tile 1.0 Tile.qml
+PanelPopup 1.0 PanelPopup.qml
+TooltipPopup 1.0 TooltipPopup.qml
+MenuPopup 1.0 MenuPopup.qml
+HoverInfoPopup 1.0 HoverInfoPopup.qml
+TrayMenuPopup 1.0 TrayMenuPopup.qml
+AppIcon 1.0 AppIcon.qml
