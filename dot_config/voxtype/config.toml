@@ -202,7 +202,8 @@ on_recording_start = false
 on_recording_stop = false
 
 # Show notification with transcribed text after transcription completes
-on_transcription = true
+# Уведомление с распознанным текстом не нужно: текст и так печатается в окно.
+on_transcription = false
 
 # [output.post_process]
 # Pipe transcribed text through an external command for cleanup before output.
