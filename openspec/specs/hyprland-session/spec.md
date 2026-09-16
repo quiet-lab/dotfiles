@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Сессия Hyprland на этой машине: условия со стороны драйвера NVIDIA, запуск из lightdm рядом с сессией Openbox, обязательное окружение для клиентов и критерии, которым сессия обязана соответствовать, чтобы считаться пригодной для переезда с Openbox.
+Сессия Hyprland на этой машине: условия со стороны драйвера NVIDIA, запуск из lightdm, обязательное окружение для клиентов и критерии совместимости с оборудованием.
 
 ## Requirements
 
@@ -16,21 +16,6 @@
 #### Scenario: Modeset выключен
 - **WHEN** атомарный modeset `nvidia_drm` выключен
 - **THEN** сессия не считается пригодной, и до повторной проверки modeset включается через `/etc/modprobe.d`
-
-### Requirement: Запуск сессии из lightdm
-Сессия Hyprland MUST запускаться из lightdm записью `hyprland.desktop` из пакета (`/usr/bin/start-hyprland`), выбранной в greeter. Конфигурация lightdm (`user-session=openbox`) и сессия Openbox MUST NOT изменяться: обе сессии остаются доступными в меню greeter, а выбранная сессия запоминается lightdm для следующего входа. Две графические сессии одного пользователя MUST NOT работать одновременно: выход из Hyprland останавливает `graphical-session.target`. uwsm MUST NOT использоваться для запуска; запись `hyprland-uwsm.desktop` остаётся в меню как неиспользуемая.
-
-#### Scenario: Вход в Hyprland через greeter
-- **WHEN** в greeter lightdm выбрана сессия «Hyprland» и введён пароль
-- **THEN** запускается Hyprland с конфигом из `~/.config/hypr/hyprland.lua`, `loginctl show-session` показывает `Type=wayland`, а `echo $XDG_SESSION_DESKTOP` в терминале сессии даёт `Hyprland`
-
-#### Scenario: Выход в greeter
-- **WHEN** пользователь завершает сессию Hyprland
-- **THEN** lightdm показывает greeter, и вход в сессию Openbox выполняется как прежде, с дашбордом eww
-
-#### Scenario: Возврат в Openbox
-- **WHEN** в greeter выбрана сессия Openbox после работы в Hyprland
-- **THEN** сессия Openbox запускается с автозапуском без изменений, `chezmoi status` не показывает расхождений
 
 ### Requirement: Окружение клиентов для NVIDIA
 Сессия MUST передавать всем запускаемым из неё клиентам переменные окружения `LIBVA_DRIVER_NAME=nvidia`, `__GLX_VENDOR_LIBRARY_NAME=nvidia`, `NVD_BACKEND=direct` и `ELECTRON_OZONE_PLATFORM_HINT=auto`; они задаются в управляемом chezmoi конфиге `dot_config/hypr/hyprland.lua`. Аппаратное декодирование видео через VA-API MUST работать в браузере, запущенном из сессии. Для Firefox это условие выполняется только при настройках профиля `media.hardware-video-decoding.force-enabled`, `media.rdd-ffmpeg.enabled`, `gfx.x11-egl.force-enabled`, `widget.dmabuf.force-enabled`, `media.av1.enabled=false` (Turing не декодирует AV1) и переменной окружения `MOZ_DISABLE_RDD_SANDBOX=1`; без них Firefox на NVIDIA VA-API не включает.
@@ -61,3 +46,14 @@
 #### Scenario: Провал критерия
 - **WHEN** любой из критериев не выполнен и обходной настройки не найдено
 - **THEN** результат фиксируется в изменении, а переезд на Hyprland не продолжается без отдельного решения
+
+### Requirement: Запуск сессии
+Сессия Hyprland MUST запускаться из lightdm записью `hyprland.desktop` из пакета (`/usr/bin/start-hyprland`), выбранной в greeter. Выбранная сессия запоминается lightdm для следующего входа (`~/.dmrc`). Выход из Hyprland MUST останавливать `graphical-session.target`, чтобы пользовательские юниты сессии не пережили её. uwsm MUST NOT использоваться для запуска; запись `hyprland-uwsm.desktop` остаётся в меню как неиспользуемая.
+
+#### Scenario: Вход в Hyprland через greeter
+- **WHEN** в greeter lightdm выбрана сессия «Hyprland» и введён пароль
+- **THEN** запускается Hyprland с конфигом из `~/.config/hypr/hyprland.lua`, `loginctl show-session` показывает `Type=wayland`, а `echo $XDG_SESSION_DESKTOP` в терминале сессии даёт `Hyprland`
+
+#### Scenario: Выход в greeter
+- **WHEN** пользователь завершает сессию Hyprland
+- **THEN** lightdm показывает greeter, повторный вход запускает Hyprland с автозапуском, `chezmoi status` не показывает расхождений

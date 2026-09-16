@@ -2,12 +2,12 @@
 
 ## Purpose
 
-Программы, которые сессия Hyprland запускает при старте, замены X11-компонентов из автозапуска Openbox, сетевые соединения и защита от повторного запуска.
+Программы, которые сессия Hyprland запускает при старте, сетевые соединения и защита от повторного запуска.
 
 ## Requirements
 
 ### Requirement: Состав автозапуска
-При старте сессии Hyprland MUST запускаться: обои (hyprpaper с тем же файлом, что сохранён для nitrogen), уведомления dunst, агент polkit `hyprpolkitagent`, апплет NetworkManager `nm-applet` в режиме StatusNotifier, менеджер буфера обмена cliphist с наблюдателем `wl-paste --watch` для текста и изображений, демон voxtype, hypridle, демон workspaced, панель Quickshell (конфигурация `panel`), терминал wezterm и браузер firefox. Панель MUST запускаться пользовательским юнитом systemd `quickshell-panel.service`, а демон workspaced — юнитом `workspaced.service`; оба привязаны к цели `hyprland-session.target`: одна копия на сессию, перезапуск при аварийном завершении, остановка вместе с целью; панель запускается после демона, но не зависит от него. Программы X11-сессии picom, xembedsniproxy, pasystray, clipcatd, kb_listener, xkbcomp, setxkbmap, xset и Handy.AppImage, а также дашборд eww, `eww-daemon` и пробная панель `nvcheck` MUST NOT запускаться в сессии Hyprland.
+При старте сессии Hyprland MUST запускаться: обои (hyprpaper), уведомления dunst, агент polkit `hyprpolkitagent`, апплет NetworkManager `nm-applet` в режиме StatusNotifier, менеджер буфера обмена cliphist с наблюдателем `wl-paste --watch` для текста и изображений, демон voxtype, hypridle, демон workspaced, панель Quickshell (конфигурация `panel`), терминал wezterm и браузер firefox. Панель MUST запускаться пользовательским юнитом systemd `quickshell-panel.service`, а демон workspaced — юнитом `workspaced.service`; оба привязаны к цели `hyprland-session.target`: одна копия на сессию, перезапуск при аварийном завершении, остановка вместе с целью; панель запускается после демона, но не зависит от него.
 
 #### Scenario: Сессия запущена
 - **WHEN** прошло 10 секунд после входа в сессию
@@ -41,7 +41,7 @@
 - **THEN** сессия не выполняет повторное подключение и не разрывает соединение
 
 ### Requirement: Блокировка экрана
-Сессия MUST блокироваться командой `loginctl lock-session`: hypridle слушает сигнал logind и запускает hyprlock. Автоматическая блокировка по бездействию и выключение монитора MUST NOT включаться без отдельного решения, как и в сессии Openbox.
+Сессия MUST блокироваться командой `loginctl lock-session`: hypridle слушает сигнал logind и запускает hyprlock. Автоматическая блокировка по бездействию и выключение монитора MUST NOT включаться без отдельного решения.
 
 #### Scenario: Блокировка по сигналу logind
 - **WHEN** выполнена `loginctl lock-session`
