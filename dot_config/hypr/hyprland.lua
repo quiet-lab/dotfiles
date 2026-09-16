@@ -125,8 +125,7 @@ hl.config({
         enabled = true,
     },
     cursor = {
-        -- Аппаратный курсор проверен без артефактов. Переключение на программный
-        -- на лету: Super+Shift+C (привязка ниже).
+        -- Аппаратный курсор проверен без артефактов.
         no_hardware_cursors = false,
     },
     misc = {
@@ -365,8 +364,8 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("wl-paste --type image --watch cliphist store")
     -- VPN axata; kozloff-de только вручную.
     hl.exec_cmd(scripts .. "vpn-up")
-    hl.exec_cmd("wezterm-gui")
-    hl.exec_cmd("firefox")
+    -- Окна для работы открывает демон workspaced, поднимая стартовый
+    -- workspace из своего конфига ([startup]); терминал и браузер здесь не нужны.
 end)
 
 hl.on("hyprland.shutdown", function()

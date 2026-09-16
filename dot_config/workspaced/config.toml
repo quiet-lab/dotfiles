@@ -1,5 +1,5 @@
 # Конфиг демона workspaced (спецификация ws-config).
-# Демон пишет сюда только по команде сохранения workspace (SUPER+TAB s).
+# Демон пишет сюда только по команде сохранения workspace (SUPER+TAB SUPER+s).
 # Координаты — от левого верхнего угла экрана 3840×2160; панель занимает
 # 330 px слева, поэтому ячейки начинаются с x = 335. Число — пиксели, строка
 # с процентом — доля монитора. Координаты могут быть отрицательными, а размеры
@@ -24,19 +24,17 @@ EDITOR = "neovide"
 # всех действий с workspace (после него Super отпускается): d/w/c — поднять,
 # 1…8 + буква — на столе, s — сохранить, Tab — следующий workspace стола.
 [keys]
-save_workspace = "SUPER+TAB s"
+save_workspace = "SUPER+TAB SUPER+s"
 sessions = "SUPER+S"
 next_workspace = "SUPER+TAB Tab"
 # Сочетания, которые не может занять ни одна привязка; `workspaced check`
 # отклоняет конфиг с такой привязкой (спецификация hyprland-binds).
 # Карта XKB (~/.config/X11/xkb_custom): Super+Пробел, Alt+E, Alt+R — иначе
 # композитор перехватит их раньше XKB.
-# Сочетания Openbox, не перенесённые намеренно: Alt+Пробел (меню окна),
-# Alt+Super+Пробел (корневое меню), Super+T (рамки окна), Super+D (показать
-# рабочий стол).
+# Намеренно свободное: Alt+Super+Пробел.
 reserved = [
   "SUPER+space", "ALT+E", "ALT+R",
-  "ALT+space", "ALT+SUPER+space", "SUPER+T", "SUPER+D",
+  "ALT+SUPER+space",
 ]
 
 # ---- Шаблоны геометрии --------------------------------------------------
@@ -48,13 +46,16 @@ main = "right"
 left = { x = 335, y = 5, w = 1750, h = 2150 }
 right = { x = 2085, y = 5, w = 1750, h = 2150 }
 
-# Три колонки: узкие по краям, широкая главная в центре.
+# Три окна по 1920 px на всю высоту: главное по центру рабочей области
+# (330…3840, центр 2085), боковые слева и справа от него с обычным отступом
+# 10 px и уходят за края экрана на 805 px. Ячейка на gap шире окна с каждой
+# стороны: окна 1125…3045, −805…1115 и 3055…4975.
 [templates.thirds]
 main = "center"
 [templates.thirds.cells]
-left = { x = 335, y = 5, w = 1920, h = 2150 }
-center = { x = 1135, y = 5, w = 1920, h = 2150 }
-right = { x = 3035, y = 5, w = 1920, h = 2150 }
+left = { x = -810, y = 5, w = 1930, h = 2150 }
+center = { x = 1120, y = 5, w = 1930, h = 2150 }
+right = { x = 3050, y = 5, w = 1930, h = 2150 }
 
 # Крест: колонки по краям, центр разбит на верх, середину (главная) и низ.
 [templates.cross]
@@ -67,98 +68,79 @@ bottom = { x = 1035, y = 1555, w = 2100, h = 600 }
 right = { x = 3135, y = 5, w = 700, h = 2150 }
 
 # ---- Приложения ---------------------------------------------------------
-# Одно приложение — одно окно: workspace, ссылающиеся на одно имя, делят окно.
-# Firefox с одним профилем не умеет второй экземпляр, поэтому браузер с
-# основным профилем описан один раз; для отдельного профиля нужно своё
-# приложение с `--no-remote -P <профиль>` (профиль должен существовать).
+# Одно приложение — одно окно. class и title — регулярные выражения: если окна
+# с тегом приложения нет, демон захватывает уже открытое окно с таким классом
+# (целиком) и заголовком, где бы оно ни было, вместо запуска нового.
+# Цепочка из одного сочетания — прямая привязка Super+буква.
 
-[apps.firefox]
-chain = "SUPER+A b"
-cmd = "firefox"
-
-[apps.telegram]
-chain = "SUPER+A m"
-cmd = "Telegram"
-
-# Редактор и терминал для dotfiles.
-[apps.editor-dots]
-chain = "SUPER+A e"
-cmd = "neovide"
-args = ["--", "$ROOT"]
-cwd = "$ROOT"
-
-[apps.terminal-dots]
-chain = "SUPER+A t"
+# Терминал wezterm с herdr; заголовок окна начинается с «herdr · », что
+# отличает его от других окон wezterm. --always-new-process: отдельный процесс,
+# иначе окно откроется внутри уже работающего wezterm.
+[apps.herdr]
+chain = "SUPER+T"
 cmd = "wezterm-gui"
-args = ["start", "--always-new-process", "--cwd", "$ROOT"]
-cwd = "$ROOT"
+args = ["start", "--always-new-process", "--", "herdr"]
+cwd = "~"
+class = "^org\\.wezfurlong\\.wezterm$"
+title = "^herdr · "
 
-# Редактор и терминал для проекта демона.
-[apps.editor-workspaced]
-chain = "SUPER+A e"
+# Chromium: под Xwayland класс Chromium-browser, нативно chromium.
+[apps.chromium]
+chain = "SUPER+C"
+cmd = "chromium"
+class = "(?i)^chromium(-browser)?$"
+
+[apps.neovide]
+chain = "SUPER+E"
 cmd = "neovide"
-args = ["--", "$ROOT"]
-cwd = "$ROOT"
+class = "^neovide$"
 
-[apps.terminal-workspaced]
-chain = "SUPER+A t"
-cmd = "wezterm-gui"
-args = ["start", "--always-new-process", "--cwd", "$ROOT"]
-cwd = "$ROOT"
+# Google Chrome из контейнера distrobox ubuntu-box, два профиля одного
+# процесса: chrome — профиль Default (Alexandr), chrome-ai — Profile 1
+# (AI.dev2026). Окна профилей несут один класс Google-chrome и ничем не
+# отличаются, поэтому захват по классу берёт первое свободное окно; пока окна
+# живут, их различают теги демона. Запуск открывает окно нужного профиля в уже
+# работающем Chrome.
+[apps.chrome]
+chain = "SUPER+B"
+cmd = "distrobox-enter"
+args = ["-n", "ubuntu-box", "--", "/usr/bin/google-chrome-stable", "--ozone-platform=x11", "--profile-directory=Default"]
+class = "^Google-chrome$"
+
+[apps.chrome-ai]
+chain = "SUPER+V"
+cmd = "distrobox-enter"
+args = ["-n", "ubuntu-box", "--", "/usr/bin/google-chrome-stable", "--ozone-platform=x11", "--profile-directory=Profile 1"]
+class = "^Google-chrome$"
 
 # ---- Workspace ----------------------------------------------------------
 
-[workspaces.dots]
-chain = "SUPER+TAB d"
-template = "thirds"
-main = "editor-dots"
-icon = "folder-templates"
-env = { ROOT = "~/.local/share/chezmoi" }
-[workspaces.dots.apps]
-editor-dots = "center"
-terminal-dots = "left"
-firefox = "right"
-
-[workspaces.workspaced]
+# Рабочий workspace: herdr по центру (главный), Chromium слева, neovide
+# справа на шаблоне thirds.
+[workspaces.work]
 chain = "SUPER+TAB w"
 template = "thirds"
-main = "editor-workspaced"
+main = "herdr"
 icon = "folder-development"
-env = { ROOT = "~/work/pets/workspaced" }
-[workspaces.workspaced.apps]
-editor-workspaced = "center"
-terminal-workspaced = "left"
-firefox = "right"
+[workspaces.work.apps]
+herdr = "center"
+chromium = "left"
+neovide = "right"
 
-[workspaces.chat]
-chain = "SUPER+TAB c"
+# Два окна Chrome на шаблоне halves: профиль Default справа (главный),
+# AI.dev2026 слева. Живёт на столе 2.
+[workspaces.surf]
+chain = "SUPER+TAB s"
 template = "halves"
-main = "telegram"
-icon = "dialog-messages"
-[workspaces.chat.apps]
-telegram = "right"
-firefox = "left"
+main = "chrome"
+icon = "google-chrome"
+[workspaces.surf.apps]
+chrome-ai = "left"
+chrome = "right"
 
-# ---- Привязки со столом -------------------------------------------------
-# Полная форма для цепочек, включающих стол: перейти и поднять там.
-
-[[binds]]
-chain = "SUPER+TAB 1 d"
-action = { desktop = 1, workspace = "dots" }
-
-[[binds]]
-chain = "SUPER+TAB 2 w"
-action = { desktop = 2, workspace = "workspaced" }
-
-[[binds]]
-chain = "SUPER+TAB 3 c"
-action = { desktop = 3, workspace = "chat" }
-
-# Приложение без workspace: по цепочке открывается плавающим в центре экрана
-# поверх остальных окон и остаётся на текущем workspace до закрытия.
-[apps.thunar]
-chain = "SUPER+A f"
-cmd = "thunar"
+# Поднимается при старте демона после восстановления сессии (стол 1).
+[startup]
+workspace = "work"
 
 # ---- Горячие клавиши сессии ---------------------------------------------
 # Все привязки Hyprland живут здесь (спецификация hyprland-binds): hyprland.lua
@@ -173,41 +155,19 @@ cmd = "thunar"
 
 # Программы.
 [[binds]]
-chain = "SUPER+Return"
-exec = "wezterm-gui"
-
-[[binds]]
 chain = "SUPER+R"
 exec = "rofi -show drun"
 
+# Меню буфера обмена: история cliphist через rofi. Super+V отдан Chrome,
+# Insert — клавиша вставки.
 [[binds]]
-chain = "SUPER+E"
-exec = "thunar"
-
-# Меню буфера обмена: история cliphist через rofi.
-[[binds]]
-chain = "SUPER+V"
+chain = "SUPER+Insert"
 exec = "~/.config/hypr/scripts/clipboard-menu"
 
-# Окно.
+# Окно. Закрытие — Super+Delete: Super+C занят Chromium.
 [[binds]]
-chain = "SUPER+C"
+chain = "SUPER+Delete"
 dispatch = "window.close()"
-
-[[binds]]
-chain = "SUPER+F"
-dispatch = "window.fullscreen({ mode = \"fullscreen\", action = \"toggle\" })"
-
-# Развёртывание — командой демона, а не режимом maximized композитора: Hyprland
-# ставит плавающее окно вплотную к панели и краям, демон оставляет те же 10 px,
-# что у половин и ячеек (2·gap). Повторное нажатие возвращает прежнюю геометрию.
-[[binds]]
-chain = "SUPER+X"
-action = "maximize"
-
-[[binds]]
-chain = "SUPER+SHIFT+V"
-dispatch = "window.float({ action = \"toggle\" })"
 
 # Замена сворачивания: Super+Z прячет окно в специальный стол «hidden»,
 # Super+Shift+Z показывает и скрывает этот стол.
@@ -293,7 +253,8 @@ action = { half = "down" }
 # Позиции окна: команда демона `place`, те же отступы. Верхний ряд (окно в
 # половину ширины и высоты): Home — слева, PageDown — по центру, End — справа.
 # Нижний ряд с Ctrl: Z — слева, X — по центру, V — справа. C с Ctrl — по центру
-# на всю высоту, PageUp — вся рабочая область, Menu — полноэкранный режим.
+# на всю высоту, PageUp — развернуть с возвратом (maximize), Enter — окно 1920×1080 по центру
+# рабочей области (размер Full HD), Menu — полноэкранный режим.
 [[binds]]
 chain = "ALT+SUPER+Home"
 action = { place = "top-left" }
@@ -322,9 +283,20 @@ action = { place = "bottom-right" }
 chain = "CTRL+ALT+SUPER+C"
 action = { place = "center" }
 
+# Развёртывание — командой демона, а не режимом maximized композитора: Hyprland
+# ставит плавающее окно вплотную к панели и краям, демон оставляет те же 10 px,
+# что у половин и ячеек (2·gap). Повторное нажатие возвращает прежнюю геометрию.
 [[binds]]
 chain = "ALT+SUPER+Page_Up"
-action = { place = "full" }
+action = "maximize"
+
+[[binds]]
+chain = "ALT+SUPER+Return"
+dispatch = [
+  "window.float({ action = \"on\" })",
+  "window.resize({ x = 1920, y = 1080, relative = false })",
+  "window.center()",
+]
 
 [[binds]]
 chain = "ALT+SUPER+Menu"
@@ -438,20 +410,8 @@ exec = "playerctl next"
 locked = true
 
 # Служебные привязки, которых в Openbox не было.
-# Выход из сессии, пока нет плитки питания.
+# Выход из сессии, пока нет плитки питания: сочетание с тремя модификаторами,
+# чтобы не нажать случайно.
 [[binds]]
-chain = "SUPER+M"
+chain = "CTRL+ALT+SUPER+Escape"
 dispatch = "exit()"
-
-# Переключение аппаратного и программного курсора на лету.
-[[binds]]
-chain = "SUPER+SHIFT+C"
-lua = """
-local soft = hl.get_config("cursor.no_hardware_cursors")
-hl.config({ ["cursor.no_hardware_cursors"] = not soft })
-hl.notification.create({
-  text    = soft and "Курсор: аппаратный" or "Курсор: программный",
-  timeout = 3000,
-  icon    = "ok",
-})
-"""

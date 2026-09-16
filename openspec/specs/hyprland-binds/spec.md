@@ -60,13 +60,13 @@
 | Ctrl+Alt+Super+Z / X / V | то же в нижнем ряду слева / по центру / справа |
 | Ctrl+Alt+Super+C | активное окно в половину ширины на всю высоту по центру |
 | Alt+Super+PageUp | активное окно на всю рабочую область с отступами (без возврата прежней геометрии) |
+| Alt+Super+Enter | активное окно становится плавающим, получает размер 1920×1080 (Full HD) и ставится по центру рабочей области диспетчерами композитора `window.resize` и `window.center` |
 | Alt+Super+Menu | переключить полноэкранный режим, как Super+F |
 | Super+1…8 | перейти на рабочий стол 1…8 |
 | Super+Shift+1…8 | перенести активное окно на стол 1…8 и перейти вслед за ним |
 | Alt+Tab, Alt+Shift+Tab | переключить фокус на следующее / предыдущее окно текущего стола с подъёмом окна наверх |
 | Super+L | заблокировать сессию командой `loginctl lock-session` |
-| Super+M | выход из сессии |
-| Super+Shift+C | переключение аппаратного и программного курсора |
+| Ctrl+Alt+Super+Escape | выход из сессии |
 | Print, Ctrl+Print, Shift+Print | скриншот экрана, с обратным отсчётом, области |
 | Ctrl+Escape, Ctrl+Return, Ctrl+Пробел, Ctrl+Shift+Пробел | dunstctl history-pop, context, close, close-all |
 | XF86AudioRaiseVolume / LowerVolume / Mute | `~/.scripts/change-volume.sh` с аргументами `+`, `-`, `0` |
