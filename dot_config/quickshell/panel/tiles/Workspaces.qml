@@ -1,9 +1,10 @@
 // Плитки рабочих столов (спецификация qs-workspaces): восемь одинаковых плиток
 // 274×36, иконки окон слева, номер справа. Состояние — из модуля Hyprland
 // (события сокета), окна на special:hidden показываются приглушёнными в плитке
-// стола, с которого были скрыты (design D5). После иконок окон идут иконки
-// workspace демона workspaced из списка стола (синглтон Wsd): активный первым
-// с подсветкой, остальные приглушённые; клик поднимает workspace на этом столе.
+// стола, с которого были скрыты (design D5). Иконки workspace демона
+// workspaced (синглтон Wsd) стоят перед иконками своих окон: активный
+// workspace с подсветкой, за ним его окна, затем свободные окна стола и
+// приглушённые припаркованные workspace; клик поднимает workspace на этом столе.
 import Quickshell
 import Quickshell.Hyprland
 import QtQuick
@@ -193,9 +194,26 @@ Item {
         const list = d.workspaces.map(w => ({ kind: "ws", name: w.name, icon: candidates([w.icon || "folder"]), active: !!w.active, apps: w.apps || [], windows: w.windows || [], desktop: Number(wsName) }));
         return list.filter(w => w.active).concat(list.filter(w => !w.active));
     }
-    // Общий ряд плитки: окна, затем workspace; лимит 10 и «+N» считаются по сумме.
+    // Общий ряд плитки: активный workspace и за ним его окна (по списку адресов
+    // от демона), затем свободные окна стола, затем припаркованные workspace;
+    // лимит 10 и «+N» считаются по сумме.
     function itemsFor(wins, wsList) {
-        return wins.map(w => Object.assign({ kind: "win" }, w)).concat(wsList);
+        const norm = a => String(a || "").toLowerCase().replace(/^0x/, "");
+        const items = [];
+        const used = {};
+        for (const ws of wsList.filter(w => w.active)) {
+            items.push(ws);
+            const own = {};
+            ws.windows.forEach(a => { own[norm(a)] = true; });
+            for (const w of wins) {
+                if (own[norm(w.address)] && !used[w.address]) {
+                    used[w.address] = true;
+                    items.push(Object.assign({ kind: "win" }, w));
+                }
+            }
+        }
+        for (const w of wins) if (!used[w.address]) items.push(Object.assign({ kind: "win" }, w));
+        return items.concat(wsList.filter(w => !w.active));
     }
     function wsMenuFor(w) {
         return [
