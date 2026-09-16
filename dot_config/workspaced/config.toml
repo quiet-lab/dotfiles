@@ -1,5 +1,5 @@
 # Конфиг демона workspaced (спецификация ws-config).
-# Демон пишет сюда только по команде сохранения workspace (SUPER+W s).
+# Демон пишет сюда только по команде сохранения workspace (SUPER+TAB s).
 # Координаты — от левого верхнего угла экрана 3840×2160; панель занимает
 # 330 px слева, поэтому ячейки начинаются с x = 335. Число — пиксели, строка
 # с процентом — доля монитора. Координаты могут быть отрицательными, а размеры
@@ -11,7 +11,8 @@
 # плитками панели — одно число, 2·gap = 10 px. Поэтому ячейки отодвинуты на
 # gap от границ рабочей области (x от 335, y от 5, до 3835 и 2155), а панель
 # держит те же 10 px (Theme.margin и Theme.gap в quickshell/panel/Theme.qml).
-# Команда `half` (Super+Shift+стрелки) считает половины по тому же правилу.
+# Команды `half` (Alt+Super+стрелки), `place` и `maximize` считают половины,
+# позиции и развёрнутую область по тому же правилу.
 gap = 5
 
 # Общее окружение для всех приложений; переопределяется в workspace и приложении.
@@ -19,11 +20,13 @@ gap = 5
 EDITOR = "neovide"
 
 # Служебные цепочки: сохранить активный workspace в этот файл, окно выбора
-# сессии, следующий workspace из списка текущего стола.
+# сессии, следующий workspace из списка текущего стола. Super+Tab — префикс
+# всех действий с workspace (после него Super отпускается): d/w/c — поднять,
+# 1…8 + буква — на столе, s — сохранить, Tab — следующий workspace стола.
 [keys]
-save_workspace = "SUPER+W s"
+save_workspace = "SUPER+TAB s"
 sessions = "SUPER+S"
-next_workspace = "SUPER+TAB"
+next_workspace = "SUPER+TAB Tab"
 # Сочетания, которые не может занять ни одна привязка; `workspaced check`
 # отклоняет конфиг с такой привязкой (спецификация hyprland-binds).
 # Карта XKB (~/.config/X11/xkb_custom): Super+Пробел, Alt+E, Alt+R — иначе
@@ -106,7 +109,7 @@ cwd = "$ROOT"
 # ---- Workspace ----------------------------------------------------------
 
 [workspaces.dots]
-chain = "SUPER+W d"
+chain = "SUPER+TAB d"
 template = "thirds"
 main = "editor-dots"
 icon = "folder-templates"
@@ -117,7 +120,7 @@ terminal-dots = "left"
 firefox = "right"
 
 [workspaces.workspaced]
-chain = "SUPER+W w"
+chain = "SUPER+TAB w"
 template = "thirds"
 main = "editor-workspaced"
 icon = "folder-development"
@@ -128,7 +131,7 @@ terminal-workspaced = "left"
 firefox = "right"
 
 [workspaces.chat]
-chain = "SUPER+W c"
+chain = "SUPER+TAB c"
 template = "halves"
 main = "telegram"
 icon = "dialog-messages"
@@ -140,15 +143,15 @@ firefox = "left"
 # Полная форма для цепочек, включающих стол: перейти и поднять там.
 
 [[binds]]
-chain = "SUPER+W 1 d"
+chain = "SUPER+TAB 1 d"
 action = { desktop = 1, workspace = "dots" }
 
 [[binds]]
-chain = "SUPER+W 2 w"
+chain = "SUPER+TAB 2 w"
 action = { desktop = 2, workspace = "workspaced" }
 
 [[binds]]
-chain = "SUPER+W 3 c"
+chain = "SUPER+TAB 3 c"
 action = { desktop = 3, workspace = "chat" }
 
 # Приложение без workspace: по цепочке открывается плавающим в центре экрана
@@ -166,7 +169,7 @@ cmd = "thunar"
 # Флаги: locked (и при заблокированном экране), repeating (повтор при
 # удержании), mouse (кнопка мыши с удержанием), release (по отпусканию).
 # range = [от, до] разворачивает запись, $n заменяется числом.
-# Соответствие rc.xml Openbox сохранено; список привязок — `workspaced keys --list`.
+# Список привязок — `workspaced keys --list`.
 
 # Программы.
 [[binds]]
@@ -269,23 +272,63 @@ hl.dispatch(hl.dsp.focus({ window = list[(idx - 2) % #list + 1] }))
 hl.dispatch(hl.dsp.window.bring_to_top())
 """
 
-# Половины рабочей области (MoveResizeTo из rc.xml): команда демона `half`,
-# отступы по правилу gap выше.
+# Геометрия окна — слой Alt+Super. Половины рабочей области: команда демона
+# `half`, отступы по правилу gap выше. Super+Shift+стрелки намеренно свободны.
 [[binds]]
-chain = "SUPER+SHIFT+left"
+chain = "ALT+SUPER+left"
 action = { half = "left" }
 
 [[binds]]
-chain = "SUPER+SHIFT+right"
+chain = "ALT+SUPER+right"
 action = { half = "right" }
 
 [[binds]]
-chain = "SUPER+SHIFT+up"
+chain = "ALT+SUPER+up"
 action = { half = "up" }
 
 [[binds]]
-chain = "SUPER+SHIFT+down"
+chain = "ALT+SUPER+down"
 action = { half = "down" }
+
+# Позиции окна: команда демона `place`, те же отступы. Верхний ряд (окно в
+# половину ширины и высоты): Home — слева, PageDown — по центру, End — справа.
+# Нижний ряд с Ctrl: Z — слева, X — по центру, V — справа. C с Ctrl — по центру
+# на всю высоту, PageUp — вся рабочая область, Menu — полноэкранный режим.
+[[binds]]
+chain = "ALT+SUPER+Home"
+action = { place = "top-left" }
+
+[[binds]]
+chain = "ALT+SUPER+Page_Down"
+action = { place = "top-center" }
+
+[[binds]]
+chain = "ALT+SUPER+End"
+action = { place = "top-right" }
+
+[[binds]]
+chain = "CTRL+ALT+SUPER+Z"
+action = { place = "bottom-left" }
+
+[[binds]]
+chain = "CTRL+ALT+SUPER+X"
+action = { place = "bottom-center" }
+
+[[binds]]
+chain = "CTRL+ALT+SUPER+V"
+action = { place = "bottom-right" }
+
+[[binds]]
+chain = "CTRL+ALT+SUPER+C"
+action = { place = "center" }
+
+[[binds]]
+chain = "ALT+SUPER+Page_Up"
+action = { place = "full" }
+
+[[binds]]
+chain = "ALT+SUPER+Menu"
+dispatch = "window.fullscreen({ mode = \"fullscreen\", action = \"toggle\" })"
 
 # Рабочие столы: переход и перенос окна с переходом за ним (SendToDesktop).
 [[binds]]
