@@ -82,10 +82,10 @@ hl.config({
         -- Рамка 1 px, как у плиток панели (Tile.qml, border.width).
         border_size = 1,
         -- Рамка активного окна того же цвета, что рамки плиток панели (yellow
-        -- Tokyo Night, $tile-border в eww.scss); неактивная — приглушённая.
+        -- Tokyo Night, Theme.tileBorder); неактивная — тёмно-зелёная.
         col = {
             active_border   = "rgba(e0af68ee)",
-            inactive_border = "rgba(414868aa)",
+            inactive_border = "rgba(2d6a4fee)",
         },
         -- Мозаика dwindle доступна через Super+Shift+V; по умолчанию окна
         -- плавающие (правило ниже), как в Openbox.
@@ -210,11 +210,22 @@ hl.window_rule({
     match   = { class = "^(org\\.wezfurlong\\.wezterm|termfilechooser|neovide)$", focus = true },
     no_blur = false,
 })
--- Браузеры, видео и игры в фокусе непрозрачные; без фокуса общие 0.7.
+-- Браузеры и видеоплееры непрозрачные и без размытия всегда, в фокусе и без него:
+-- страница и видео не должны просвечивать. Chromium под Xwayland отдаёт класс
+-- Chromium-browser, приложения Chrome — crx_<id>.
 hl.window_rule({
-    name    = "opaque-media-focused",
+    name    = "opaque-media",
     match   = {
-        class = "(?i)^(firefox|yandex-browser|google-chrome|chromium|mpv|vlc|smplayer|mplayer|gamescope)$|^steam_app_|[.]exe$",
+        class = "(?i)^(firefox|zen|cachy-browser|yandex-browser|google-chrome|chromium(-browser)?|crx_.*|mpv|vlc|smplayer|mplayer|gnome-mplayer)$",
+    },
+    opacity = "1.0 override",
+    no_blur = true,
+})
+-- Игры непрозрачные в фокусе; без фокуса общие 0.7.
+hl.window_rule({
+    name    = "opaque-games-focused",
+    match   = {
+        class = "(?i)^gamescope$|^steam_app_|[.]exe$",
         focus = true,
     },
     opacity = "1.0 override",
