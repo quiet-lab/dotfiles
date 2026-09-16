@@ -6,7 +6,7 @@
 | Сочетание | Действие |
 |---|---|
 | Super+Tab w | поднять workspace work на текущем столе (цепочка workspace) |
-| Super+Tab s | поднять workspace surf (два окна Google Chrome из контейнера ubuntu-box: профиль Default справа, главный, профиль AI.dev2026 слева) на текущем столе |
+| Super+Tab s | поднять workspace surf (браузеры из контейнера ubuntu-box на шаблоне overlay: Яндекс.Браузер по центру, главный, Chrome профиля Default слева, профиля AI.dev2026 справа) на текущем столе |
 | Super+Tab Super+S | сохранить активный workspace в конфиг |
 | Super+Tab Tab | поднять следующий workspace из списка текущего стола |
 | Super+T / C / E | сделать главным приложение herdr (wezterm с herdr) / Chromium / neovide (цепочки приложений из одного сочетания) |
@@ -15,6 +15,7 @@
 | Super+Delete | закрыть активное окно |
 | Super+B | окно Google Chrome профиля Default (приложение `chrome`): поднять surf и сделать окно главным |
 | Super+V | окно Google Chrome профиля AI.dev2026 (приложение `chrome-ai`), так же |
+| Super+Y | окно Яндекс.Браузера из контейнера ubuntu-box (приложение `yandex-browser`), так же |
 | Super+Insert | меню буфера обмена (история cliphist через rofi, выбранная запись вставляется в буфер) |
 | Super+Z | спрятать активное окно в специальный рабочий стол без перехода за ним |
 | Super+Shift+Z | показать или скрыть специальный рабочий стол со спрятанными окнами |

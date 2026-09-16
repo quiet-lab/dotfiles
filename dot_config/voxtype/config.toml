@@ -169,7 +169,8 @@ type_delay_ms = 0
 # best results come from not binding Escape in the submap. Some users have
 # had success with Escape bound by increasing this delay, but the most
 # consistent fix is to use F12 or another key instead.
-pre_type_delay_ms = 0
+# 150 мс: без задержки первая буква фразы терялась (проверено в Chrome под Wayland).
+pre_type_delay_ms = 150
 
 # Keystroke for paste mode (when mode = "paste")
 # Default is "ctrl+v". Change for environments with different paste shortcuts.

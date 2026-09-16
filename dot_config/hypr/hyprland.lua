@@ -214,8 +214,9 @@ hl.window_rule({
     no_blur = false,
 })
 -- Браузеры и видеоплееры непрозрачные и без размытия всегда, в фокусе и без него:
--- страница и видео не должны просвечивать. Chromium под Xwayland отдаёт класс
--- Chromium-browser, приложения Chrome — crx_<id>.
+-- страница и видео не должны просвечивать. Браузеры работают нативно под
+-- Wayland (класс chromium, google-chrome, yandex-browser), приложения Chrome —
+-- crx_<id>; под Xwayland Chromium отдавал класс Chromium-browser.
 hl.window_rule({
     name    = "opaque-media",
     match   = {

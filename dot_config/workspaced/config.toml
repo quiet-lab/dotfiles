@@ -32,10 +32,7 @@ next_workspace = "SUPER+TAB Tab"
 # Карта XKB (~/.config/X11/xkb_custom): Super+Пробел, Alt+E, Alt+R — иначе
 # композитор перехватит их раньше XKB.
 # Намеренно свободное: Alt+Super+Пробел.
-reserved = [
-  "SUPER+space", "ALT+E", "ALT+R",
-  "ALT+SUPER+space",
-]
+reserved = ["SUPER+space", "ALT+E", "ALT+R", "ALT+SUPER+space"]
 
 # ---- Шаблоны геометрии --------------------------------------------------
 
@@ -56,6 +53,15 @@ main = "center"
 left = { x = -810, y = 5, w = 1930, h = 2150 }
 center = { x = 1120, y = 5, w = 1930, h = 2150 }
 right = { x = 3050, y = 5, w = 1930, h = 2150 }
+
+# Две половины и главное окно той же ширины по центру поверх них: центр
+# рабочей области 2085, окно 1215…2955 перекрывает обе половины.
+[templates.overlay]
+main = "center"
+[templates.overlay.cells]
+left = { x = 335, y = 5, w = 1750, h = 2150 }
+center = { x = 1210, y = 5, w = 1750, h = 2150 }
+right = { x = 2085, y = 5, w = 1750, h = 2150 }
 
 # Крест: колонки по краям, центр разбит на верх, середину (главная) и низ.
 [templates.cross]
@@ -84,7 +90,8 @@ cwd = "~"
 class = "^org\\.wezfurlong\\.wezterm$"
 title = "^herdr · "
 
-# Chromium: под Xwayland класс Chromium-browser, нативно chromium.
+# Chromium нативно под Wayland (~/.config/chromium-flags.conf), класс chromium;
+# под Xwayland был Chromium-browser.
 [apps.chromium]
 chain = "SUPER+C"
 cmd = "chromium"
@@ -95,23 +102,54 @@ chain = "SUPER+E"
 cmd = "neovide"
 class = "^neovide$"
 
-# Google Chrome из контейнера distrobox ubuntu-box, два профиля одного
-# процесса: chrome — профиль Default (Alexandr), chrome-ai — Profile 1
-# (AI.dev2026). Окна профилей несут один класс Google-chrome и ничем не
-# отличаются, поэтому захват по классу берёт первое свободное окно; пока окна
-# живут, их различают теги демона. Запуск открывает окно нужного профиля в уже
-# работающем Chrome.
+# Google Chrome из контейнера distrobox ubuntu-box, нативно под Wayland
+# (под Xwayland voxtype печатал в него цифры вместо текста), два профиля
+# одного процесса: chrome — профиль Default (Alexandr), chrome-ai — Profile 1
+# (AI.dev2026). Окна профилей несут один класс google-chrome (под Xwayland
+# было Google-chrome) и ничем не отличаются, поэтому захват по классу берёт
+# первое свободное окно; пока окна живут, их различают теги демона. Запуск
+# открывает окно нужного профиля в уже работающем Chrome.
 [apps.chrome]
 chain = "SUPER+B"
 cmd = "distrobox-enter"
-args = ["-n", "ubuntu-box", "--", "/usr/bin/google-chrome-stable", "--ozone-platform=x11", "--profile-directory=Default"]
-class = "^Google-chrome$"
+args = [
+  "-n",
+  "ubuntu-box",
+  "--",
+  "/usr/bin/google-chrome-stable",
+  "--ozone-platform=wayland",
+  "--profile-directory=Default",
+]
+class = "(?i)^google-chrome$"
 
 [apps.chrome-ai]
 chain = "SUPER+V"
 cmd = "distrobox-enter"
-args = ["-n", "ubuntu-box", "--", "/usr/bin/google-chrome-stable", "--ozone-platform=x11", "--profile-directory=Profile 1"]
-class = "^Google-chrome$"
+args = [
+  "-n",
+  "ubuntu-box",
+  "--",
+  "/usr/bin/google-chrome-stable",
+  "--ozone-platform=wayland",
+  "--profile-directory=Profile 1",
+]
+class = "(?i)^google-chrome$"
+
+# Яндекс.Браузер из того же контейнера, профиль Default; попал в surf командой
+# сохранения. Команда записана вручную: демон взял её из /proc процесса в
+# контейнере (/opt/yandex/browser/yandex_browser), на хосте такого пути нет.
+[apps.yandex-browser]
+chain = "SUPER+Y"
+cmd = "distrobox-enter"
+args = [
+  "-n",
+  "ubuntu-box",
+  "--",
+  "/usr/bin/yandex-browser-stable",
+  "--ozone-platform=wayland",
+  "--profile-directory=Default",
+]
+class = "(?i)^yandex-browser$"
 
 # ---- Workspace ----------------------------------------------------------
 
@@ -127,16 +165,17 @@ herdr = "center"
 chromium = "left"
 neovide = "right"
 
-# Два окна Chrome на шаблоне halves: профиль Default справа (главный),
-# AI.dev2026 слева. Живёт на столе 2.
+# Браузеры на шаблоне overlay: Яндекс.Браузер по центру (главный), Chrome
+# профиля Default слева, AI.dev2026 справа. Живёт на столе 2.
 [workspaces.surf]
 chain = "SUPER+TAB s"
-template = "halves"
-main = "chrome"
-icon = "google-chrome"
+template = "overlay"
+main = "yandex-browser"
+icon = "yandex-browser"
 [workspaces.surf.apps]
-chrome-ai = "left"
-chrome = "right"
+chrome = "left"
+yandex-browser = "center"
+chrome-ai = "right"
 
 # Поднимается при старте демона после восстановления сессии (стол 1).
 [startup]
