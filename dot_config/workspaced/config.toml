@@ -195,9 +195,12 @@ dispatch = "window.close()"
 chain = "SUPER+F"
 dispatch = "window.fullscreen({ mode = \"fullscreen\", action = \"toggle\" })"
 
+# Развёртывание — командой демона, а не режимом maximized композитора: Hyprland
+# ставит плавающее окно вплотную к панели и краям, демон оставляет те же 10 px,
+# что у половин и ячеек (2·gap). Повторное нажатие возвращает прежнюю геометрию.
 [[binds]]
 chain = "SUPER+X"
-dispatch = "window.fullscreen({ mode = \"maximized\", action = \"toggle\" })"
+action = "maximize"
 
 [[binds]]
 chain = "SUPER+SHIFT+V"

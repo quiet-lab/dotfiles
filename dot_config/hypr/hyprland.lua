@@ -79,7 +79,8 @@ hl.config({
     general = {
         gaps_in     = 6,
         gaps_out    = 12,
-        border_size = 2,
+        -- Рамка 1 px, как у плиток панели (Tile.qml, border.width).
+        border_size = 1,
         -- Рамка активного окна того же цвета, что рамки плиток панели (yellow
         -- Tokyo Night, $tile-border в eww.scss); неактивная — приглушённая.
         col = {
