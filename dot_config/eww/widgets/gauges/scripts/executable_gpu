@@ -1,3 +1,0 @@
-#!/bin/sh
-# Загрузка GPU в % — nvidia-smi.
-nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits | tr -d ' '

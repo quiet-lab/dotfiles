@@ -2,7 +2,7 @@
 
 ## Что это за репозиторий
 
-Исходный каталог chezmoi (`~/.local/share/chezmoi`) с dotfiles для CachyOS + Openbox/X11. Файлы здесь — **источник**, реальные конфиги живут в `$HOME`. Правки в `$HOME` напрямую не сохраняются в git, пока их не забрать обратно через chezmoi.
+Исходный каталог chezmoi (`~/.local/share/chezmoi`) с dotfiles для CachyOS с сессией Hyprland (Wayland). Файлы здесь — **источник**, реальные конфиги живут в `$HOME`. Правки в `$HOME` напрямую не сохраняются в git, пока их не забрать обратно через chezmoi.
 
 ## Язык
 
@@ -13,12 +13,12 @@
   (proposal, design, tasks, спецификации) — на русском. Для OpenSpec то же задано
   полем `context` в `openspec/config.yaml`.
 - Структурные заголовки OpenSpec и ключевые слова SHALL/MUST/MAY — на английском.
-- Код и идентификаторы — на английском: имена виджетов и переменных eww
-  (`defwidget`, `defpoll`, `deflisten`), CSS-классы, функции и переменные в
-  shell- и Lua-скриптах, ключи конфигурации, имена файлов.
-- Комментарии в yuck, scss, shell- и Lua-файлах — на русском языке во всех
-  каталогах проекта. Технические термины (chezmoi, eww, poll, strut, LazyVim,
-  Openbox и т. п.) остаются в оригинальном написании.
+- Код и идентификаторы — на английском: имена компонентов и свойств QML,
+  функции и переменные в shell- и Lua-скриптах, ключи конфигурации, имена
+  файлов.
+- Комментарии в QML, TOML, shell- и Lua-файлах — на русском языке во всех
+  каталогах проекта. Технические термины (chezmoi, Hyprland, Quickshell,
+  workspace, LazyVim и т. п.) остаются в оригинальном написании.
 
 ## Качество русского языка
 
@@ -38,14 +38,14 @@
   («плитки разъезжаются», «упрёмся в производительность», «демон не остаётся
   висеть») — нужна нейтральная формулировка.
 - Исключение — технические термины и идентификаторы, перечисленные в разделе
-  «Язык»: они сохраняют оригинальное написание (dashboard, tile, poll,
-  strut, daemon как имена сущностей eww и Openbox).
+  «Язык»: они сохраняют оригинальное написание (panel, tile, workspace,
+  daemon как имена сущностей Quickshell и workspaced).
 - После написания длинного документа делать отдельный проход по
   формулировкам, а не ограничиваться проверкой фактов.
 
 ## Работа с chezmoi
 
-Соглашения имён: `dot_foo` → `~/.foo`, `executable_bar` → файл `bar` с битом исполнения. В рантайме префикс `executable_` отсутствует, поэтому пути внутри конфигов пишутся без него (`widgets/clock/scripts/calendar`, не `executable_calendar`).
+Соглашения имён: `dot_foo` → `~/.foo`, `executable_bar` → файл `bar` с битом исполнения. В рантайме префикс `executable_` отсутствует, поэтому пути внутри конфигов пишутся без него (`scripts/vpn-up`, не `executable_vpn-up`).
 
 ```bash
 chezmoi status          # расхождения источник ↔ $HOME (первая колонка — apply, вторая — re-add)
@@ -66,32 +66,11 @@ chezmoi add ~/путь      # взять под управление новый 
 - После каждого коммита сразу выполнять `git push` в `origin`, не спрашивая
   подтверждения. Коммит без push считается незавершённой работой.
 - Логически разные изменения (например, синхронизация dotfiles и
-  переработка виджетов EWW) оформлять отдельными коммитами.
+  переработка плиток панели Quickshell) оформлять отдельными коммитами.
 
 ## OpenSpec
 
-Изменения ведутся по схеме spec-driven: `openspec/specs/<capability>/spec.md` — актуальные требования, `openspec/changes/<name>/` — активное изменение (proposal, design, tasks, изменения спецификаций), `openspec/changes/archive/<дата>-<name>/` — завершённые. Команды рабочего процесса лежат в `.opencode/commands/opsx-*.md` (new, apply, verify, archive, sync и т.д.) и опираются на CLI `openspec` (`openspec list --json`, `openspec status --change <name> --json`, `openspec validate`, `openspec archive`). Перед изменением поведения EWW сверяйтесь со спецификацией соответствующей capability и обновляйте её.
-
-## Архитектура EWW-дашборда (`dot_config/eww`)
-
-Вертикальная колонка плиток у левого края экрана (жёстко под 3840×2160, монитор 0), стиль Tokyo Night.
-
-- `eww.yuck` — только композиция: `(include "./widgets/<name>/<name>.yuck")` для каждого виджета и по одному `defwindow tile-<name>` на плитку с фиксированными координатами (каждая плитка — отдельное окно, иначе picom размывает промежутки между ними). `eww.scss` — глобальные переменные цветов, базовый `.tile` и `@import` scss каждого виджета.
-- `widgets/<name>/` — самодостаточный модуль: `<name>.yuck` (poll/listen + defwidget), `<name>.scss`, `scripts/` с его скриптами. Окно `netmenu` объявлено в `widgets/network/`.
-- `scripts/` в корне — общие: `popup` (диспетчер действий по клику: audio, netmenu, vpn-up/down, wifi-toggle…), `appicon` (резолвер иконок для оставшихся shell-скриптов), `wifi`.
-- Все пути в yuck и скриптах относительны `~/.config/eww` (eww запускает команды из каталога конфига).
-
-Важные ограничения, зафиксированные в спецификациях:
-
-- Окна плиток — тип `utility`, не `dock`: Openbox лишает dock-окна фокуса клавиатуры, и поле фильтра лаунчера перестаёт принимать ввод. Страту слева 330px резервирует каждое окно плитки: окно без собственной страты Openbox выталкивает из зоны страты в рабочую область.
-- Состояние рабочих столов и сетку лаунчера поставляет демон `eww-daemon` (подкоманды `workspaces`, `launcher`, `window`, `window-menu`, `hover`, `hover-hide`, `tray-menu`, `calendar`; запуск приложений и фильтр — через сокет: `eww-daemon launch <id>`, `eww-daemon launcher-query <текст>`) (Rust, проект `~/work/pets/eww-daemon`, ссылка `~/.local/bin/eww-daemon`, сборка `cargo build --release`); туда же переезжает остальная логика скриптов. Иконки консольных программ берутся из заголовка окна wezterm `<программа> · …` (`format-window-title` в `dot_config/wezterm/wezterm.lua`).
-- Размеры шрифтов в scss задаются только в пикселях: глобальное правило `* { font-size: 14px }` в `eww.scss` выставляет размер каждому узлу, поэтому em на контейнере (button, box, menu) подписью не наследуется. Если класс стоит на кнопке или контейнере, размер вкладывается в правило для `label`.
-- eww выполняет `defpoll` только если его переменная используется в открытом окне. Служебные poll (например `network-sync`) должны иметь скрытую ссылку `(label :visible false ...)` внутри плитки.
-- Демон и окна плиток запускаются из `dot_config/openbox/autostart.sh` (последняя строка, `eww open-many`) с защитой от дублей через `pidof`.
-- Автозапуск Openbox (`dot_config/openbox/autostart.sh`) запускает dunst, nitrogen, nm-applet и pasystray напрямую; механизма режимов joyful-desktop из dotfiles owl4ce (`~/.joyfuld`, темы mechanical/eyecandy, панель tint2) в системе больше нет. Скрипты горячих клавиш (скриншоты, громкость, яркость) лежат в `dot_scripts/` и хранят настройки внутри себя; лаунчер по Win+R — `rofi -show drun` с единственным конфигом `dot_config/rofi/config.rasi`.
-- eww собран из исходников в `~/builds/eww` (симлинк `~/.local/bin/eww`), рабочая ветка `fix-systray-x11-click-coords`: в ней исправлены клики по иконкам трея на X11 (экранные координаты, отправка вызова по отпусканию кнопки для элементов без DBusMenu, передача колеса методом Scroll) и меню DBusMenu (RGBA-визуал окна для прозрачности, атрибуты `:menu-anchor`/`:menu-gap` виджета systray для размещения меню, `:hide` для скрытия элементов трея), а у виджета calendar добавлено свойство `:mark-day` и разрешён `:day 0` (сейчас не используются: календарь плитки часов строит демон). Без этого меню трея через xembedsniproxy не открываются, колесо не работает, а меню чёрные и прижаты к колонке. При обновлении eww из upstream ветку нужно перебазировать и пересобрать (`cargo build --release`).
-
-Проверка после правок: `chezmoi apply`, затем `eww reload` (или `eww close-all && eww open-many tile-…`, полный список окон — в autostart.sh), ошибки смотреть в `eww logs` (команда следит за журналом бесконечно, для разового просмотра запускать через `timeout`); для шелл-скриптов — `sh -n <файл>`. Виджеты обновляются через `xprop -spy`/`nmcli monitor` (deflisten) либо poll с интервалом; при добавлении нового виджета нужно подключить и yuck (`include`), и scss (`@import`), объявить окно `tile-<name>` в `eww.yuck`, добавить его в `eww open-many` в autostart.sh и пересчитать координаты окон ниже.
+Изменения ведутся по схеме spec-driven: `openspec/specs/<capability>/spec.md` — актуальные требования, `openspec/changes/<name>/` — активное изменение (proposal, design, tasks, изменения спецификаций), `openspec/changes/archive/<дата>-<name>/` — завершённые. Команды рабочего процесса лежат в `.opencode/commands/opsx-*.md` (new, apply, verify, archive, sync и т.д.) и опираются на CLI `openspec` (`openspec list --json`, `openspec status --change <name> --json`, `openspec validate`, `openspec archive`). Перед изменением поведения панели, демона или сессии Hyprland сверяйтесь со спецификацией соответствующей capability и обновляйте её.
 
 ## Neovim (`dot_config/nvim`)
 
@@ -99,9 +78,10 @@ LazyVim-конфиг: `lua/config/*` — options/keymaps/autocmds, `lua/plugins/
 
 ## Сессия Hyprland (`dot_config/hypr`, `dot_config/workspaced`, `dot_config/quickshell`)
 
-Рабочая сессия — Hyprland с Lua-конфигом `dot_config/hypr/hyprland.lua`; Openbox остался запасной. Панель — Quickshell (`dot_config/quickshell/panel`), состояние workspace и сессий — демон `workspaced` (Rust, проект `~/work/pets/workspaced`, ссылка `~/.local/bin/workspaced`, сборка `cargo build --release`, юнит `workspaced.service`).
+Единственная сессия — Hyprland с Lua-конфигом `dot_config/hypr/hyprland.lua`. Openbox, дашборд eww и демон eww-daemon удалены из системы 16.09.2026; спецификации `eww-*` и архивы изменений описывают их как историю, резервные копии кода лежат в `~/work/archive`. Панель — Quickshell (`dot_config/quickshell/panel`), состояние workspace и сессий — демон `workspaced` (Rust, проект `~/work/pets/workspaced`, ссылка `~/.local/bin/workspaced`, сборка `cargo build --release`, юнит `workspaced.service`).
 
 - Все привязки и цепочки клавиш сессии живут в одном файле `dot_config/workspaced/config.toml`, раздел `[[binds]]` (спецификации hyprland-binds и ws-config). В `hyprland.lua` собственных `hl.bind` нет: он выполняет код, который печатает `workspaced keys --lua`, а при ошибке загружает копию `~/.local/state/workspaced/keys.lua` и показывает уведомление. Новую привязку добавлять в конфиг демона, проверять `workspaced check` и смотреть `workspaced keys --list`; демон сам вызывает `hyprctl reload config-only` после удачного перечитывания.
 - Сочетания из списка `reserved` в `[keys]` (карта XKB Super+Пробел, Alt+E, Alt+R и намеренно свободные Super+T, Super+D, Alt+Пробел, Alt+Super+Пробел) занимать нельзя, проверка конфига их отклоняет.
 - Правило геометрии: расстояние от края экрана и панели до окна, между окнами и между плитками панели — одно число, 10 px. У панели это `Theme.margin` и `Theme.gap`, у демона `gap = 5` при ячейках, отодвинутых на 5 px от границ рабочей области; команда `workspaced half` (Super+Shift+стрелки) считает половины по тому же правилу.
+- Скрипты громкости и яркости, унаследованные от X11-сессии, лежат в `dot_scripts/` и вызываются из `[[binds]]`; скриншоты и меню буфера обмена — `dot_config/hypr/scripts/`. Лаунчер по Super+R — `rofi -show drun` с конфигом `dot_config/rofi/config.rasi`, уведомления — dunst (`dunst.service`).
 - `hyprctl keyword` и `hyprctl dispatch` с Lua-конфигом не работают: диспетчеры вызываются через `hyprctl eval 'hl.dispatch(hl.dsp.…)'`. Виртуальная клавиатура `wtype` привязки композитора не запускает, проверки нажатиями делает пользователь.

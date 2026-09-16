@@ -32,13 +32,13 @@ hl.env("NVD_BACKEND", "direct")
 hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
 -- Без этого Firefox на NVIDIA не включает VA-API (вместе с настройками профиля).
 hl.env("MOZ_DISABLE_RDD_SANDBOX", "1")
--- То, что X11-сессия берёт из ~/.config/openbox/environment и ~/.xprofile.
+-- Тема Qt (раньше задавалась в ~/.xprofile сессии X11).
 hl.env("QT_QPA_PLATFORMTHEME", "qt6ct")
 -- GTK-приложения и Firefox (режим «auto») выбирают файлы через портал, а портал
 -- FileChooser отдан yazi (~/.config/xdg-desktop-portal/hyprland-portals.conf).
 hl.env("GTK_USE_PORTAL", "1")
 hl.env("LESSHISTFILE", "/dev/null")
--- ~/.local/bin (wezterm, eww) и ~/.bun/bin: неизвестно, применяет ли lightdm
+-- ~/.local/bin (wezterm, workspaced) и ~/.bun/bin: неизвестно, применяет ли lightdm
 -- login-оболочку к Wayland-сессии, поэтому PATH дополняется здесь.
 hl.env("PATH", HOME .. "/.bun/bin:" .. HOME .. "/.local/bin:" .. (os.getenv("PATH") or "/usr/local/bin:/usr/bin"))
 
@@ -90,8 +90,8 @@ hl.config({
         -- плавающие (правило ниже), как в Openbox.
         layout = "dwindle",
     },
-    -- Прозрачность, размытие и тени повторяют правила picom из X11-сессии
-    -- (dot_config/picom.conf): окно в фокусе 0.9, без фокуса 0.7, полноэкранное
+    -- Прозрачность, размытие и тени повторяют прежние правила picom из
+    -- X11-сессии (удалена): окно в фокусе 0.9, без фокуса 0.7, полноэкранное
     -- непрозрачное; скругление 8; тень радиусом 40, плотностью 0.5 со смещением
     -- −27; размытие лёгкое (dual_kawase 1.3) и только у терминалов в фокусе,
     -- см. правила окон ниже.
