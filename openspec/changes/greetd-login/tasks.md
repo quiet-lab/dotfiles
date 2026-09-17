@@ -6,7 +6,7 @@
 
 ## 2. Переключение (интерактивный sudo, из текущей сессии)
 
-- [ ] 2.1 `sudo system/greetd/migrate.sh prepare`: установлены `greetd` и `greetd-tuigreet`, удалены `sxhkd` и `dmenu`, конфиг в `/etc/greetd/config.toml`, `systemctl is-enabled greetd` даёт `enabled`, `lightdm` — `disabled`
+- [x] 2.1 `sudo system/greetd/migrate.sh prepare`: установлены `greetd` и `greetd-tuigreet`, удалены `sxhkd` и `dmenu`, конфиг в `/etc/greetd/config.toml`, `systemctl is-enabled greetd` даёт `enabled`, `lightdm` — `disabled`
 - [ ] 2.2 Перезагрузка. Сценарий «Автовход при загрузке»: Hyprland поднимается без экрана входа, `systemctl is-active greetd` даёт `active`
 - [ ] 2.3 В терминале сессии: `echo $XDG_SESSION_TYPE $XDG_CURRENT_DESKTOP` даёт `wayland Hyprland`, `echo $PATH` содержит `~/.local/bin`, workspaced и панель Quickshell запущены
 - [ ] 2.4 Выход из Hyprland. Сценарии «Выход в greeter» и «Вход в Hyprland через greeter»: tuigreet показывает имя пользователя, после пароля запускается Hyprland; `chezmoi status` без расхождений
