@@ -1,6 +1,10 @@
 // Переключатель раскладки (спецификация qs-tray-lang): код активной раскладки
-// основной клавиатуры по событиям Hyprland activelayout, начальное состояние из
-// `hyprctl devices -j`, клик переключает раскладку по кругу.
+// по событиям Hyprland activelayout от любой физической клавиатуры (у каждой
+// клавиатуры в Hyprland своя раскладка, а признак main переходит между ними,
+// поэтому имя клавиатуры при старте запоминать нельзя); виртуальные клавиатуры
+// wtype (hl-virtual-keyboard-*) не учитываются. Начальное состояние из
+// `hyprctl devices -j` по главной клавиатуре, клик переключает раскладку той
+// клавиатуры, от которой пришло последнее событие.
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
@@ -45,7 +49,9 @@ Tile {
             if (ev.name !== "activelayout") return;
             const i = ev.data.indexOf(",");
             const kb = ev.data.substring(0, i);
-            if (tile.keyboard === "" || kb === tile.keyboard) tile.layout = tile.code(ev.data.substring(i + 1));
+            if (kb.startsWith("hl-virtual-keyboard")) return;
+            tile.keyboard = kb;
+            tile.layout = tile.code(ev.data.substring(i + 1));
         }
     }
 
