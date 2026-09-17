@@ -1,7 +1,8 @@
 -- Рабочий конфиг Hyprland (изменение OpenSpec hyprland-config).
 -- Источник: ~/.local/share/chezmoi/dot_config/hypr/hyprland.lua, в $HOME
--- попадает через `chezmoi apply`. Запуск: lightdm, запись «Hyprland»
--- (hyprland.desktop → /usr/bin/start-hyprland). Перезагрузка: `hyprctl reload`.
+-- попадает через `chezmoi apply`. Запуск: greetd с tuigreet (изменение
+-- greetd-login, конфиг system/greetd/config.toml, команда start-hyprland).
+-- Перезагрузка: `hyprctl reload`.
 -- Разделы: монитор, окружение, ввод, вид, рабочие столы, правила окон,
 -- привязки, автозапуск.
 
@@ -38,9 +39,23 @@ hl.env("QT_QPA_PLATFORMTHEME", "qt6ct")
 -- FileChooser отдан yazi (~/.config/xdg-desktop-portal/hyprland-portals.conf).
 hl.env("GTK_USE_PORTAL", "1")
 hl.env("LESSHISTFILE", "/dev/null")
--- ~/.local/bin (wezterm, workspaced) и ~/.bun/bin: неизвестно, применяет ли lightdm
--- login-оболочку к Wayland-сессии, поэтому PATH дополняется здесь.
-hl.env("PATH", HOME .. "/.bun/bin:" .. HOME .. "/.local/bin:" .. HOME .. "/.local/bin/handmade-scripts:" .. (os.getenv("PATH") or "/usr/local/bin:/usr/bin"))
+-- greetd не задаёт тип сессии, а Hyprland 0.56 эту переменную не выставляет;
+-- по ней клиенты (Qt, Electron, портал) отличают Wayland-сессию.
+hl.env("XDG_SESSION_TYPE", "wayland")
+-- ~/.local/bin (wezterm, workspaced), ~/.bun/bin и shims mise (herdr, nvim для
+-- neovide, jq для панели, yazi для портала): greetd запускает сессию без
+-- login-оболочки, ~/.profile он читает, а .bashrc с `mise activate` — нет,
+-- поэтому PATH дополняется здесь.
+-- Каталог добавляется только если его ещё нет: hl.env меняет окружение самого
+-- Hyprland, и без проверки каждый `hyprctl reload` удлинял бы PATH повторами.
+local path = os.getenv("PATH") or "/usr/local/bin:/usr/bin"
+local extra_dirs = { HOME .. "/.bun/bin", HOME .. "/.local/bin", HOME .. "/.local/bin/handmade-scripts", HOME .. "/.local/share/mise/shims" }
+for i = #extra_dirs, 1, -1 do
+    if not (":" .. path .. ":"):find(":" .. extra_dirs[i] .. ":", 1, true) then
+        path = extra_dirs[i] .. ":" .. path
+    end
+end
+hl.env("PATH", path)
 
 ---------------
 ---- ВВОД ----
@@ -356,6 +371,10 @@ end
 local scripts = HOME .. "/.local/bin/handmade-scripts/"
 
 hl.on("hyprland.start", function()
+    -- XDG_SESSION_TYPE задан выше через hl.env, но в окружение пользовательского
+    -- systemd Hyprland его не передаёт; без этого клиенты, которые запускает
+    -- демон workspaced, не видят, что сессия — Wayland.
+    hl.exec_cmd("systemctl --user import-environment XDG_SESSION_TYPE")
     hl.exec_cmd("systemctl --user start hyprland-session.target")
     -- Апплет NetworkManager как StatusNotifier: значок появится с панелью,
     -- агент секретов работает и без неё.
