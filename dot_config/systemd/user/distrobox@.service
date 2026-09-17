@@ -1,0 +1,17 @@
+[Unit]
+Description=Контейнер distrobox %i (прогрев для ярлыков и демона workspaced)
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Контейнер получает GPU через CDI, а узел /dev/nvidia-modeset появляется
+# на несколько секунд позже старта пользовательского systemd; без ожидания
+# podman start завершался ошибкой, и контейнер поднимался только по первому
+# запуску браузера, что не укладывалось в 30 с ожидания демона workspaced.
+ExecStartPre=/bin/sh -c 'for i in $(seq 1 60); do [ -e /dev/nvidia-modeset ] && exit 0; sleep 1; done; echo "/dev/nvidia-modeset не появился за 60 с" >&2; exit 1'
+# «-»: уже запущенный контейнер не считается ошибкой
+ExecStart=-/usr/bin/podman start %i
+ExecStop=/usr/bin/podman stop %i
+
+[Install]
+WantedBy=default.target

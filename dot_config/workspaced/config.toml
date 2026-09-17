@@ -103,8 +103,13 @@ chain = "SUPER+E"
 cmd = "neovide"
 class = "^neovide$"
 
-# Google Chrome из контейнера distrobox ubuntu-box, нативно под Wayland
-# (под Xwayland voxtype печатал в него цифры вместо текста), два профиля
+# Google Chrome из контейнера distrobox fedora-box (Fedora, флаг --nvidia: GPU,
+# драйвер VA-API NVIDIA и звук проброшены с хоста), нативно под Wayland
+# (под Xwayland voxtype печатал в него цифры вместо текста). Аппаратное
+# декодирование видео Chromium под Wayland включает только по флагу
+# --enable-features (AcceleratedVideoDecodeLinuxGL, VaapiOnNvidiaGPUs), без него
+# 4K на YouTube идёт рывками; переменные NVIDIA приходят из окружения сессии.
+# Два профиля
 # одного процесса: chrome — профиль Default (Alexandr), chrome-ai — Profile 1
 # (AI.dev2026). Окна профилей несут один класс google-chrome (под Xwayland
 # было Google-chrome) и ничем не отличаются, поэтому захват по классу берёт
@@ -115,10 +120,11 @@ chain = "SUPER+B"
 cmd = "distrobox-enter"
 args = [
   "-n",
-  "ubuntu-box",
+  "fedora-box",
   "--",
   "/usr/bin/google-chrome-stable",
   "--ozone-platform=wayland",
+  "--enable-features=AcceleratedVideoDecodeLinuxGL,VaapiOnNvidiaGPUs,VaapiIgnoreDriverChecks",
   "--profile-directory=Default",
 ]
 class = "(?i)^google-chrome$"
@@ -128,15 +134,16 @@ chain = "SUPER+V"
 cmd = "distrobox-enter"
 args = [
   "-n",
-  "ubuntu-box",
+  "fedora-box",
   "--",
   "/usr/bin/google-chrome-stable",
   "--ozone-platform=wayland",
+  "--enable-features=AcceleratedVideoDecodeLinuxGL,VaapiOnNvidiaGPUs,VaapiIgnoreDriverChecks",
   "--profile-directory=Profile 1",
 ]
 class = "(?i)^google-chrome$"
 
-# Яндекс.Браузер из того же контейнера, профиль Default; попал в surf командой
+# Яндекс.Браузер из того же контейнера с теми же флагами, профиль Default; попал в surf командой
 # сохранения. Команда записана вручную: демон взял её из /proc процесса в
 # контейнере (/opt/yandex/browser/yandex_browser), на хосте такого пути нет.
 [apps.yandex-browser]
@@ -144,10 +151,11 @@ chain = "SUPER+Y"
 cmd = "distrobox-enter"
 args = [
   "-n",
-  "ubuntu-box",
+  "fedora-box",
   "--",
   "/usr/bin/yandex-browser-stable",
   "--ozone-platform=wayland",
+  "--enable-features=AcceleratedVideoDecodeLinuxGL,VaapiOnNvidiaGPUs,VaapiIgnoreDriverChecks",
   "--profile-directory=Default",
 ]
 class = "(?i)^yandex-browser$"
