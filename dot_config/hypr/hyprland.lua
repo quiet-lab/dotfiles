@@ -371,10 +371,12 @@ end
 local scripts = HOME .. "/.local/bin/handmade-scripts/"
 
 hl.on("hyprland.start", function()
-    -- XDG_SESSION_TYPE задан выше через hl.env, но в окружение пользовательского
-    -- systemd Hyprland его не передаёт; без этого клиенты, которые запускает
-    -- демон workspaced, не видят, что сессия — Wayland.
-    hl.exec_cmd("systemctl --user import-environment XDG_SESSION_TYPE")
+    -- Переменные, заданные выше через hl.env, Hyprland в окружение пользовательского
+    -- systemd не передаёт (сам он передаёт только WAYLAND_DISPLAY, DISPLAY и
+    -- XDG_CURRENT_DESKTOP). Демон workspaced и его приложения (браузеры, neovide)
+    -- живут в этом окружении, поэтому без передачи они не видели ни типа сессии,
+    -- ни переменных NVIDIA, ни настроек Qt и портала.
+    hl.exec_cmd("systemctl --user import-environment XDG_SESSION_TYPE LIBVA_DRIVER_NAME __GLX_VENDOR_LIBRARY_NAME NVD_BACKEND ELECTRON_OZONE_PLATFORM_HINT MOZ_DISABLE_RDD_SANDBOX QT_QPA_PLATFORMTHEME GTK_USE_PORTAL")
     hl.exec_cmd("systemctl --user start hyprland-session.target")
     -- Апплет NetworkManager как StatusNotifier: значок появится с панелью,
     -- агент секретов работает и без неё.
