@@ -282,6 +282,28 @@ hl.window_rule({
     no_focus = true,
 })
 
+----------------
+---- ОБХОДЫ ----
+----------------
+
+-- Браузеры на Chromium при выходе из полноэкранного видео шлют композитору
+-- два запроса подряд: снять fullscreen и тут же развернуть окно (maximized),
+-- и плавающее окно остаётся на весь экран через раз (обсуждение Hyprland
+-- #13322; на 0.56.2 события fullscreen 0 и 1 приходят в одну миллисекунду).
+-- Переход в maximized в первые 50 мс после выхода из fullscreen отменяется,
+-- и окно возвращается к прежним положению и размеру.
+local fullscreen_just_left = false
+hl.on("window.fullscreen", function(w)
+    local mode = w.fullscreen
+    if mode == 0 then
+        fullscreen_just_left = true
+        hl.timer(function() fullscreen_just_left = false end, { timeout = 50, type = "oneshot" })
+    elseif mode == 1 and fullscreen_just_left then
+        fullscreen_just_left = false
+        hl.dispatch(hl.dsp.window.fullscreen_state({ internal = 0, client = 0, action = "set", window = w }))
+    end
+end)
+
 -----------------------
 ---- ПРАВИЛА СЛОЁВ ----
 -----------------------
