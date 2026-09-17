@@ -1,0 +1,27 @@
+# Конфиг greetd: экран входа tuigreet и сессия Hyprland.
+# Источник: ~/.local/share/chezmoi/system/greetd/config.toml, в систему
+# копируется сценарием system/greetd/migrate.sh (файл вне $HOME, chezmoi его
+# не применяет). Целевой путь: /etc/greetd/config.toml.
+
+[terminal]
+# Виртуальная консоль для экрана входа и сессии.
+vt = 1
+
+[general]
+# Перед запуском сессии выполнить /etc/profile и ~/.profile: greetd запускает
+# команду через /bin/sh -c без login-оболочки, а PATH и переменные Qt
+# hyprland.lua задаёт сам, так что это только страховка.
+source_profile = true
+
+[default_session]
+# Экран входа: имя пользователя запоминается, показываются дата и время,
+# после пароля запускается Hyprland записью hyprland.desktop из пакета.
+command = "tuigreet --cmd start-hyprland --time --remember"
+user = "greeter"
+
+[initial_session]
+# Автовход при загрузке: ранее lightdm пускал пользователя без пароля
+# (группа nopasswdlogin). После выхода из сессии показывается tuigreet.
+# Чтобы пароль спрашивался и при загрузке, удалите этот раздел.
+command = "start-hyprland"
+user = "mne"
