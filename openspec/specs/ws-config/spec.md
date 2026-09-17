@@ -60,7 +60,7 @@
 - **THEN** `workspaced check` завершается с ошибкой, называющей обе записи
 
 #### Scenario: Запуск команды с флагами
-- **WHEN** в `[[binds]]` есть `chain = "XF86AudioRaiseVolume"`, `exec = "~/.scripts/change-volume.sh +"`, `locked = true`, `repeating = true`
+- **WHEN** в `[[binds]]` есть `chain = "XF86AudioRaiseVolume"`, `exec = "~/.local/bin/handmade-scripts/change-volume.sh +"`, `locked = true`, `repeating = true`
 - **THEN** после `hyprctl reload` удержание клавиши повышает громкость несколько раз подряд, в том числе при экране, закрытом hyprlock
 
 #### Scenario: Серия по диапазону

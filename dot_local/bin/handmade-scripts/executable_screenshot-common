@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 # Общая часть скриптов скриншотов для Wayland (grim, wl-copy, dunstify).
-# Подключается через `. ~/.config/hypr/scripts/screenshot-common`.
+# Подключается через `. ~/.local/bin/handmade-scripts/screenshot-common`.
 # Поведение и именование повторяют прежние X11-скрипты на scrot (удалены):
 # каталог ~/Pictures/Screenshots, имя <дата>_<ШxВ>_grim.png, копия в буфер,
 # уведомление dunst с тем же оформлением.

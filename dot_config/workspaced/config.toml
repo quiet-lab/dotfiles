@@ -202,7 +202,7 @@ exec = "rofi -show drun"
 # Insert — клавиша вставки.
 [[binds]]
 chain = "SUPER+Insert"
-exec = "~/.config/hypr/scripts/clipboard-menu"
+exec = "~/.local/bin/handmade-scripts/clipboard-menu"
 
 # Окно. Закрытие — Super+Delete: Super+C занят Chromium.
 [[binds]]
@@ -369,18 +369,18 @@ dispatch = "window.resize()"
 chain = "SUPER+L"
 exec = "loginctl --no-ask-password lock-session"
 
-# Скриншоты (grim и slurp, см. ~/.config/hypr/scripts).
+# Скриншоты (grim и slurp, см. ~/.local/bin/handmade-scripts).
 [[binds]]
 chain = "Print"
-exec = "~/.config/hypr/scripts/screenshot-screen"
+exec = "~/.local/bin/handmade-scripts/screenshot-screen"
 
 [[binds]]
 chain = "CTRL+Print"
-exec = "~/.config/hypr/scripts/screenshot-countdown"
+exec = "~/.local/bin/handmade-scripts/screenshot-countdown"
 
 [[binds]]
 chain = "SHIFT+Print"
-exec = "~/.config/hypr/scripts/screenshot-selection"
+exec = "~/.local/bin/handmade-scripts/screenshot-selection"
 
 # Уведомления dunst.
 [[binds]]
@@ -402,30 +402,30 @@ exec = "dunstctl close-all"
 # Мультимедиа: работают и при заблокированном экране.
 [[binds]]
 chain = "XF86AudioRaiseVolume"
-exec = "~/.scripts/change-volume.sh +"
+exec = "~/.local/bin/handmade-scripts/change-volume.sh +"
 locked = true
 repeating = true
 
 [[binds]]
 chain = "XF86AudioLowerVolume"
-exec = "~/.scripts/change-volume.sh -"
+exec = "~/.local/bin/handmade-scripts/change-volume.sh -"
 locked = true
 repeating = true
 
 [[binds]]
 chain = "XF86AudioMute"
-exec = "~/.scripts/change-volume.sh 0"
+exec = "~/.local/bin/handmade-scripts/change-volume.sh 0"
 locked = true
 
 [[binds]]
 chain = "XF86MonBrightnessUp"
-exec = "~/.scripts/change-brightness.sh +"
+exec = "~/.local/bin/handmade-scripts/change-brightness.sh +"
 locked = true
 repeating = true
 
 [[binds]]
 chain = "XF86MonBrightnessDown"
-exec = "~/.scripts/change-brightness.sh -"
+exec = "~/.local/bin/handmade-scripts/change-brightness.sh -"
 locked = true
 repeating = true
 

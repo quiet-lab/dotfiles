@@ -40,7 +40,7 @@ hl.env("GTK_USE_PORTAL", "1")
 hl.env("LESSHISTFILE", "/dev/null")
 -- ~/.local/bin (wezterm, workspaced) и ~/.bun/bin: неизвестно, применяет ли lightdm
 -- login-оболочку к Wayland-сессии, поэтому PATH дополняется здесь.
-hl.env("PATH", HOME .. "/.bun/bin:" .. HOME .. "/.local/bin:" .. (os.getenv("PATH") or "/usr/local/bin:/usr/bin"))
+hl.env("PATH", HOME .. "/.bun/bin:" .. HOME .. "/.local/bin:" .. HOME .. "/.local/bin/handmade-scripts:" .. (os.getenv("PATH") or "/usr/local/bin:/usr/bin"))
 
 ---------------
 ---- ВВОД ----
@@ -353,7 +353,7 @@ end
 -- «Systemd startup»), цель удаляется командой
 -- `systemctl --user revert hyprland-session.target`, а два обработчика ниже
 -- (start и stop) убираются.
-local scripts = HOME .. "/.config/hypr/scripts/"
+local scripts = HOME .. "/.local/bin/handmade-scripts/"
 
 hl.on("hyprland.start", function()
     hl.exec_cmd("systemctl --user start hyprland-session.target")

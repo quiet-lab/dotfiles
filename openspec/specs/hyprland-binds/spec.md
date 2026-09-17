@@ -69,8 +69,8 @@
 | Ctrl+Alt+Super+Escape | выход из сессии |
 | Print, Ctrl+Print, Shift+Print | скриншот экрана, с обратным отсчётом, области |
 | Ctrl+Escape, Ctrl+Return, Ctrl+Пробел, Ctrl+Shift+Пробел | dunstctl history-pop, context, close, close-all |
-| XF86AudioRaiseVolume / LowerVolume / Mute | `~/.scripts/change-volume.sh` с аргументами `+`, `-`, `0` |
-| XF86MonBrightnessUp / Down | `~/.scripts/change-brightness.sh` с аргументами `+`, `-` |
+| XF86AudioRaiseVolume / LowerVolume / Mute | `~/.local/bin/handmade-scripts/change-volume.sh` с аргументами `+`, `-`, `0` |
+| XF86MonBrightnessUp / Down | `~/.local/bin/handmade-scripts/change-brightness.sh` с аргументами `+`, `-` |
 | XF86AudioPlay / Stop / Prev / Next | playerctl play-pause, stop, previous, next |
 | Super+левая кнопка мыши | перемещение окна перетаскиванием |
 | Super+правая кнопка мыши | изменение размера перетаскиванием |

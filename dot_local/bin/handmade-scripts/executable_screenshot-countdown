@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 # Снимок экрана с обратным отсчётом (Ctrl+Print), версия для Hyprland.
-. "${HOME}/.config/hypr/scripts/screenshot-common"
+. "${HOME}/.local/bin/handmade-scripts/screenshot-common"
 SS_COUNTDOWN_SECONDS=5
 dunstify '' "Taken in ${SS_COUNTDOWN_SECONDS}s .." -h string:synchronous:screenshot-countdown \
     -a hotkeys -i camera-photo -t 1000

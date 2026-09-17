@@ -1,0 +1,13 @@
+#!/bin/sh
+# Графический запрос пароля для sudo (SUDO_ASKPASS). Нужен агентам и
+# сценариям без терминала: sudo -A вызывает эту обёртку с подсказкой в
+# первом аргументе и читает пароль из её stdout.
+# Диалог — pinentry-gtk: у поля ввода есть кнопка показа набранного пароля,
+# у zenity --password такой возможности нет. pinentry общается по протоколу
+# Assuan: пароль приходит строкой «D …», спецсимволы в ней закодированы как %XX.
+# Использование: SUDO_ASKPASS=~/.local/bin/handmade-scripts/sudo-askpass sudo -A команда
+prompt="${1:-Пароль sudo}"
+pin=$(printf 'SETTITLE sudo\nSETDESC %s\nSETPROMPT Пароль:\nGETPIN\nBYE\n' "$prompt" \
+    | pinentry-gtk 2>/dev/null | sed -n 's/^D //p')
+[ -n "$pin" ] || exit 1
+printf '%b\n' "$(printf '%s' "$pin" | sed 's/\\/\\\\/g; s/%\([0-9A-Fa-f][0-9A-Fa-f]\)/\\x\1/g')"

@@ -2,7 +2,7 @@
 # ~/.bash_profile
 #
 
-export PATH="$HOME/.bun/bin:$HOME/.local/bin:$PATH"
+export PATH="$HOME/.bun/bin:$HOME/.local/bin:$HOME/.local/bin/handmade-scripts:$PATH"
 export EDITOR=nvim
 [[ -f ~/.bashrc ]] && . ~/.bashrc
 
