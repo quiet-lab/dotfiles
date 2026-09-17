@@ -14,9 +14,9 @@
 
 ## 3. Проверка вживую (пользователь)
 
-- [ ] 3.1 Super+T, Super+C, Super+E делают главным herdr, Chromium, neovide (обмен ячеек), Super+Delete закрывает активное окно, Super+Tab w поднимает work
+- [x] 3.1 Super+T, Super+C, Super+E делают главным herdr, Chromium, neovide (обмен ячеек), Super+Delete закрывает активное окно, Super+Tab w поднимает work
 - [x] 3.2 Перезаход в сессию: без терминала и Firefox из автозапуска, work поднят на столе 1 с тремя окнами по ячейкам
-- [ ] 3.3 Super+B и Super+V делают главным окно нужного профиля Chrome, Super+Tab s поднимает surf, Super+Tab Super+S сохраняет workspace, Super+Insert открывает меню буфера обмена
+- [x] 3.3 Super+B и Super+V делают главным окно нужного профиля Chrome, Super+Tab s поднимает surf, Super+Tab Super+S сохраняет workspace, Super+Insert открывает меню буфера обмена
 
 ## 4. Спецификации и документация
 

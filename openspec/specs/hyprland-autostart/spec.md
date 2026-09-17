@@ -7,11 +7,11 @@
 ## Requirements
 
 ### Requirement: Состав автозапуска
-При старте сессии Hyprland MUST запускаться: обои (hyprpaper), уведомления dunst, агент polkit `hyprpolkitagent`, апплет NetworkManager `nm-applet` в режиме StatusNotifier, менеджер буфера обмена cliphist с наблюдателем `wl-paste --watch` для текста и изображений, демон voxtype, hypridle, демон workspaced, панель Quickshell (конфигурация `panel`), терминал wezterm и браузер firefox. Панель MUST запускаться пользовательским юнитом systemd `quickshell-panel.service`, а демон workspaced — юнитом `workspaced.service`; оба привязаны к цели `hyprland-session.target`: одна копия на сессию, перезапуск при аварийном завершении, остановка вместе с целью; панель запускается после демона, но не зависит от него.
+При старте сессии Hyprland MUST запускаться: обои (hyprpaper), уведомления dunst, агент polkit `hyprpolkitagent`, апплет NetworkManager `nm-applet` в режиме StatusNotifier, менеджер буфера обмена cliphist с наблюдателем `wl-paste --watch` для текста и изображений, демон voxtype, hypridle, демон workspaced и панель Quickshell (конфигурация `panel`). Окна для работы открывает демон, поднимая стартовый workspace из своего конфига (спецификация ws-sessions); конфиг Hyprland MUST NOT запускать терминал и браузер сам. Панель MUST запускаться пользовательским юнитом systemd `quickshell-panel.service`, а демон workspaced — юнитом `workspaced.service`; оба привязаны к цели `hyprland-session.target`: одна копия на сессию, перезапуск при аварийном завершении, остановка вместе с целью; панель запускается после демона, но не зависит от него.
 
 #### Scenario: Сессия запущена
 - **WHEN** прошло 10 секунд после входа в сессию
-- **THEN** `pgrep` находит по одному процессу hyprpaper, dunst, hyprpolkitagent, nm-applet, voxtype, hypridle, workspaced, quickshell и два наблюдателя wl-paste, панель видна у левого края экрана, а на экране открыты окна wezterm и firefox
+- **THEN** `pgrep` находит по одному процессу hyprpaper, dunst, hyprpolkitagent, nm-applet, voxtype, hypridle, workspaced, quickshell и два наблюдателя wl-paste, панель видна у левого края экрана, а на экране открыты окна стартового workspace демона
 
 #### Scenario: Конфиг перезагружен
 - **WHEN** выполнена `hyprctl reload`
