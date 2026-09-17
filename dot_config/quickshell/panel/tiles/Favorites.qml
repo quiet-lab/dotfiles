@@ -11,7 +11,7 @@ Tile {
 
     readonly property var entries: [
         { label: "󰉋 ~",          dir: Quickshell.env("HOME") },
-        { label: "󰉋 ~/Загрузки", dir: Quickshell.env("HOME") + "/Загрузки" },
+        { label: "󰉋 ~/Downloads", dir: Quickshell.env("HOME") + "/Downloads" },
         { label: "󰉋 ~/.config",  dir: Quickshell.env("HOME") + "/.config" }
     ]
 
