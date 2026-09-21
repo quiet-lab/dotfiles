@@ -109,12 +109,13 @@ class = "^neovide$"
 # декодирование видео Chromium под Wayland включает только по флагу
 # --enable-features (AcceleratedVideoDecodeLinuxGL, VaapiOnNvidiaGPUs), без него
 # 4K на YouTube идёт рывками; переменные NVIDIA приходят из окружения сессии.
-# Два профиля
-# одного процесса: chrome — профиль Default (Alexandr), chrome-ai — Profile 1
-# (AI.dev2026). Окна профилей несут один класс google-chrome (под Xwayland
-# было Google-chrome) и ничем не отличаются, поэтому захват по классу берёт
-# первое свободное окно; пока окна живут, их различают теги демона. Запуск
-# открывает окно нужного профиля в уже работающем Chrome.
+# Два профиля — два отдельных экземпляра Chrome: chrome работает с каталогом
+# данных по умолчанию ~/.config/google-chrome (профиль Default, Alexandr),
+# chrome-ai — с каталогом ~/.config/google-chrome-ai (профиль AI.dev2026)
+# и собственным классом окна google-chrome-ai. Класс задаёт ключ --class,
+# его получают и окна, открытые по Ctrl+N, поэтому окна профилей различаются
+# по классу. Каталог в аргументе пишется через $HOME: `~` демон подставляет
+# только в начале строки.
 [apps.chrome]
 chain = "SUPER+B"
 cmd = "distrobox-enter"
@@ -139,9 +140,11 @@ args = [
   "/usr/bin/google-chrome-stable",
   "--ozone-platform=wayland",
   "--enable-features=AcceleratedVideoDecodeLinuxGL,VaapiOnNvidiaGPUs,VaapiIgnoreDriverChecks",
-  "--profile-directory=Profile 1",
+  "--user-data-dir=$HOME/.config/google-chrome-ai",
+  "--profile-directory=Default",
+  "--class=google-chrome-ai",
 ]
-class = "(?i)^google-chrome$"
+class = "(?i)^google-chrome-ai$"
 
 # Яндекс.Браузер из того же контейнера с теми же флагами, профиль Default; попал в surf командой
 # сохранения. Команда записана вручную: демон взял её из /proc процесса в
