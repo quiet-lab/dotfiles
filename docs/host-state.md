@@ -39,6 +39,18 @@ VA-API для Firefox на NVIDIA: без них аппаратный декод
 в [`media-and-portals.md`](media-and-portals.md). Обратите внимание:
 профиль лежит в `~/.config/mozilla/firefox/`, а не в `~/.mozilla`.
 
+**`~/.local/share/TelegramDesktop/tdata`** — настройки Telegram Desktop
+в закрытом виде, под chezmoi не берутся. Одна из них важна для сессии:
+переключатель «Привлекать внимание к окну» («Уведомления и звуки»;
+в английском интерфейсе «Draw attention to the window», в поиске настроек
+находится по словам flash, bounce, taskbar) выключен. Включённым он при каждом сообщении просит у композитора
+активацию окна, и Hyprland с общей настройкой `misc.focus_on_activate`
+поднимает окно, отдаёт ему фокус и уходит на его стол (изменение
+`../openspec/changes/telegram-no-focus-steal/`). После переустановки
+системы или сброса `tdata` переключатель надо выключить заново; признак
+того, что он включён, — окно Telegram, которое при сообщении само
+поднимается и забирает фокус.
+
 **`~/.config/git-credentials` и `~/.config/gh/hosts.yml`** — пароль к git
 и токен `gh` в открытом виде. Под chezmoi не берутся намеренно.
 Восстановление — новый вход: `gh auth login --with-token`, пароль git
