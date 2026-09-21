@@ -1,0 +1,121 @@
+# Мультимедиа, аппаратное декодирование и порталы
+
+Как проверить, что видео декодируется картой, чем это настроено в каждом
+браузере и как проверяются порталы XDG. Конфигурация браузеров и контейнера
+`fedora-box` описана в `AGENTS.md`, раздел «Сессия Hyprland»; здесь —
+проверки и подробности, которые в правила не поместились.
+
+Проверено 2026-09-21, если у пункта не сказано иное.
+
+## Как посмотреть загрузку декодера
+
+```bash
+nvidia-smi dmon -s u        # столбец dec — декодер, enc — кодировщик
+```
+
+Запрос `nvidia-smi --query-gpu=utilization.decoder --format=csv` тоже
+работает и отдаёт число в процентах (на драйвере 615.71.09; в сентябре
+2026 на драйвере 610.57 он отвечал, что не поддерживается).
+
+При AV1 декодер простаивает всегда: Turing (RTX 2080 Ti) AV1 не декодирует.
+На H.264 в Firefox замеряли 5–6 % (2026-09-10, после этого не повторялось).
+
+## Firefox
+
+Аппаратный декодер включается только набором настроек профиля; они лежат
+в `~/.config/mozilla/firefox/3e5c3xuj.default-release/user.js` вне chezmoi
+(см. [`host-state.md`](host-state.md)):
+`media.hardware-video-decoding.force-enabled`,
+`media.ffmpeg.vaapi.enabled`, `media.rdd-ffmpeg.enabled`,
+`gfx.x11-egl.force-enabled`, `widget.dmabuf.force-enabled`
+и `media.av1.enabled=false`. Без файла декодер показывает 0 %.
+
+`media.av1.enabled=false` нужен именно потому, что карта не декодирует AV1:
+с ним YouTube переходит на VP9 или H.264. Файл применяется при каждом
+старте Firefox, откат — удалить его.
+
+Выбор файла Firefox отдаёт порталу в режиме «auto» благодаря
+`GTK_USE_PORTAL=1` из `hl.env`.
+
+## Браузеры на Chromium
+
+Chrome и Яндекс.Браузер работают из контейнера distrobox `fedora-box`
+с ключами `--ozone-platform=wayland` и
+`--enable-features=AcceleratedVideoDecodeLinuxGL,VaapiOnNvidiaGPUs,VaapiIgnoreDriverChecks`;
+Chromium с хоста — с `--ozone-platform=wayland` из
+`dot_config/chromium-flags.conf`.
+
+**AV1 ключами не отключается.** Проверено 2026-09-16:
+`--disable-features=Dav1dVideoDecoder` не мешает YouTube отдавать AV1.
+Запасной путь, если на 4K нужен аппаратный декодер, — расширение
+enhanced-h264ify (идентификатор `omkfmpieigblcllmkgbflkikinpkodlk`),
+которое прячет от сайта поддержку VP9 и AV1. Расширение после 2026-09-16
+не проверялось и в контейнер `fedora-box` не ставилось.
+
+**Яндекс.Браузер остаётся в фоне после закрытия окна** (наблюдалось
+до 2026-09-16, после переезда в `fedora-box` заново не проверялось). Для
+полного перезапуска нужен `pkill -x yandex_browser`. Контейнер делит
+с хостом пространство PID (`podman inspect fedora-box` показывает
+`PidMode=host`), поэтому процесс виден с хоста и команда работает без входа
+в контейнер.
+
+**Падения вспомогательных процессов медиа** (`ExternalMediaService`,
+`demuxer`), которые наблюдались в сентябре 2026, сейчас не подтверждаются:
+`coredumpctl list` отвечает «No coredumps found», а собственная база
+crashpad `~/.config/yandex-browser/Crash Reports/` пуста (каталоги
+`pending` и `completed` без файлов). Важно помнить: в systemd-coredump
+падения браузеров на Chromium не попадают вообще — их перехватывает
+`chrome_crashpad_handler`, поэтому смотреть надо именно базу crashpad
+в каталоге профиля, а не `coredumpctl`.
+
+## Опции Hyprland, которых больше нет
+
+Опции `misc:vfr` и `render:explicit_sync` в Hyprland 0.56 удалены.
+В заглушках Lua-API есть `debug.vfr` (то есть настройка переехала
+в отладочный раздел) и нет ничего похожего на `explicit_sync`.
+`opengl.nvidia_anti_flicker` на месте; он выключался на лету для опыта,
+в конфиге не менялся.
+
+## voxtype
+
+`dot_config/voxtype/config.toml`: `device = "pipewire"` — прямой путь ALSA
+`sysdefault` отказывает, когда карту Scarlett держит PipeWire (открыт
+pavucontrol или кто-то ещё пишет с карты). Языки диктовки — `["en", "ru"]`,
+чтобы распознавание выбирало из двух, а не из всех языков модели.
+`pre_type_delay_ms = 150`: без задержки первая буква фразы теряется.
+Уведомление о распознанном тексте выключено.
+
+Под Xwayland voxtype печатает в поля браузера цифры вместо текста: `wtype`
+подаёт символы виртуальной клавиатурой с собственной раскладкой, а Xwayland
+толкует их по обычной. Это одна из причин, по которой браузеры работают
+нативно под Wayland.
+
+## Порталы XDG
+
+Выбор бэкендов задают два файла: `dot_config/xdg-desktop-portal/hyprland-portals.conf`
+(скриншоты, захват экрана и глобальные сочетания — hyprland, остальное —
+gtk, FileChooser — termfilechooser) и
+`dot_config/xdg-desktop-portal-termfilechooser/config` (yazi из mise в окне
+wezterm класса `termfilechooser`, `open_mode` и `save_mode` — `suggested`,
+`create_help_file=1`). Пакет `xdg-desktop-portal-termfilechooser` 1.4.3
+из AUR.
+
+Как работает сохранение через termfilechooser: портал создаёт в стартовом
+каталоге файл с предложенным именем и инструкцией внутри. В yazi его можно
+перенести (`x`, затем `p`) или переименовать (`r`), а затем «открыть»
+клавишей Enter — этот путь уходит приложению, и оно перезаписывает файл.
+Выход по `q` отменяет сохранение, файл удаляется. Без файла-подсказки
+выбирать при сохранении было бы нечего.
+
+Проверки портала из оболочки (обе открывают окно, поэтому запускать их
+стоит, когда пользователь готов его закрыть):
+
+```bash
+# открытие файла
+gdbus call --session --dest org.freedesktop.portal.Desktop \
+  --object-path /org/freedesktop/portal/desktop \
+  --method org.freedesktop.portal.FileChooser.OpenFile "" "Заголовок" '{}'
+
+# сохранение файла
+GTK_USE_PORTAL=1 zenity --file-selection --save --filename=/tmp/проба.txt
+```
