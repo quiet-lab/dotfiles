@@ -270,6 +270,16 @@ hl.window_rule({
     size   = { 1100, 700 },
 })
 
+-- Postman открывается окном 1920×1080 по центру экрана: сам он восстанавливает
+-- размер прошлого сеанса, а с масштабом интерфейса 1.5 окно выходит слишком большим.
+hl.window_rule({
+    name   = "postman-centered",
+    match  = { class = "^Postman$" },
+    float  = true,
+    center = true,
+    size   = { 1920, 1080 },
+})
+
 -- Из примера Hyprland: убирает проблемы с перетаскиванием пустых окон Xwayland.
 hl.window_rule({
     name  = "fix-xwayland-drags",

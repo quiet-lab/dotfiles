@@ -1,0 +1,14 @@
+[Desktop Entry]
+Name=Postman
+# Копия ярлыка flatpak с масштабом интерфейса 1.5: под Wayland Electron берёт масштаб
+# только у монитора (в Hyprland он равен 1), и на экране 4K интерфейс слишком мелкий.
+Exec=/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=Postman --file-forwarding com.getpostman.Postman --force-device-scale-factor=1.5 @@u %U @@
+Terminal=false
+Type=Application
+Icon=com.getpostman.Postman
+Categories=Development;WebDevelopment;
+MimeType=x-scheme-handler/postman;
+StartupNotify=true
+StartupWMClass=Postman
+X-Flatpak-Tags=proprietary;
+X-Flatpak=com.getpostman.Postman
