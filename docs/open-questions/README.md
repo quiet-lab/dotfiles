@@ -90,5 +90,5 @@
 
 | Файл | Вопрос | Условие пересмотра |
 |---|---|---|
-| [`nvidia-conceal-vrr-caps.md`](nvidia-conceal-vrr-caps.md) | Нужен ли ещё параметр драйвера `conceal_vrr_caps=1` после обновления NVIDIA | Пользователь готов перезагрузиться без файла и сравнить картинку при 120 и 60 Гц |
+| [`nvidia-conceal-vrr-caps.md`](nvidia-conceal-vrr-caps.md) | Нужен ли ещё параметр драйвера `conceal_vrr_caps=1` после обновления NVIDIA | После ближайшей перезагрузки |
 | [`hyprland-systemd-integration.md`](hyprland-systemd-integration.md) | Когда убирать `hyprland-session.target` и обработчики `hyprland.start`/`hyprland.shutdown` | В выпуске Hyprland появилась встроенная интеграция с systemd |

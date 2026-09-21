@@ -11,11 +11,15 @@
 
 **`/etc/modprobe.d/nvidia-vrr.conf`** — `options nvidia_modeset
 conceal_vrr_caps=1`: скрывает от драйвера возможности VRR монитора, иначе
-при 120 и 98 Гц картинка темнее и шрифты хуже. Содержимое файла вместе
-с подробным комментарием восстанавливается из решения D14
-`../openspec/changes/archive/2026-09-10-hyprland-config/design.md`; после
-записи нужна пересборка initramfs (`limine-mkinitcpio`). Судьба параметра —
-открытый вопрос [`open-questions/nvidia-conceal-vrr-caps.md`](open-questions/nvidia-conceal-vrr-caps.md).
+при 120 и 98 Гц картинка темнее и шрифты хуже. Копия файла лежит
+в репозитории (`system/modprobe.d/nvidia-vrr.conf`), но chezmoi каталог
+`system/` не применяет: в `/etc` файл кладёт, а оттуда убирает сценарий
+`system/modprobe.d/nvidia-vrr.sh` (`restore` и `remove`), он же пересобирает
+initramfs, без которой параметр не действует. С 2026-09-21 файла в `/etc`
+нет: состояние подготовлено к проверке, нужен ли параметр ещё — открытый
+вопрос [`open-questions/nvidia-conceal-vrr-caps.md`](open-questions/nvidia-conceal-vrr-caps.md).
+История параметра описана в решении D14
+`../openspec/changes/archive/2026-09-10-hyprland-config/design.md`.
 
 **`/etc/greetd/config.toml`** — конфиг менеджера входа. Источник лежит
 в репозитории (`system/greetd/config.toml`), но chezmoi каталог `system/`
