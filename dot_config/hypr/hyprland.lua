@@ -240,15 +240,17 @@ hl.window_rule({
     opacity = "1.0 override",
     no_blur = true,
 })
--- Игры непрозрачные в фокусе; без фокуса общие 0.7.
+-- Игры непрозрачные и без размытия всегда, в фокусе и без него. force_rgbx
+-- отключает альфа-канал буфера: игры под Xwayland (Manor Lords) рисуют с альфой,
+-- и без этого окно просвечивает. Выражение класса должно покрывать строку
+-- целиком: Hyprland сравнивает класс с ним полностью, и `^steam_app_` без
+-- хвоста `.*` не совпадает.
 hl.window_rule({
-    name    = "opaque-games-focused",
-    match   = {
-        class = "(?i)^gamescope$|^steam_app_|[.]exe$",
-        focus = true,
-    },
-    opacity = "1.0 override",
-    no_blur = true,
+    name       = "opaque-games",
+    match      = { class = "(?i)^(gamescope|steam_app_.*|.*[.]exe)$" },
+    opacity    = "1.0 override",
+    force_rgbx = true,
+    no_blur    = true,
 })
 -- Диалоги («Вы уверены?») непрозрачные, как tooltip, menu и dialog в picom.
 hl.window_rule({
