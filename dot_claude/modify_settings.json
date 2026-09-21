@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Подключение хуков передачи работы в ~/.claude/settings.json.
+#
+# Файл целиком под chezmoi не берётся: в нём лежит состояние машины, которое
+# меняет сам Claude Code, — модель, плагины, разрешения, окружение
+# авто-режима. Поэтому chezmoi отдаёт сюда текущее содержимое, а скрипт
+# добавляет две записи — SessionStart и SessionEnd — и больше ничего
+# не трогает.
+
+set -euo pipefail
+
+hook='bash "$HOME/.claude/hooks/session-handoff.sh"'
+
+current=$(mktemp)
+trap 'rm -f "$current"' EXIT
+cat > "$current"
+
+# Без jq файл возвращается как есть: сломанный apply хуже неподключённого
+# хука, а предупреждение подскажет, чего не хватает.
+if ! command -v jq > /dev/null; then
+    echo 'modify_settings.json: jq не найден, хуки session-handoff не подключены' >&2
+    cat "$current"
+    exit 0
+fi
+
+# На новой машине файла ещё нет, и на вход приходит пустота.
+[ -s "$current" ] || echo '{}' > "$current"
+
+# Обе записи уже есть — содержимое возвращается байт в байт. Прогон через jq
+# поменял бы оформление, и chezmoi показывал бы расхождение после каждой
+# правки файла самим Claude Code.
+if jq -e '
+    def has_mode($event; $mode):
+        [.hooks[$event][]?.hooks[]?.command // empty]
+        | any(contains("session-handoff.sh") and endswith($mode));
+    has_mode("SessionStart"; "start") and has_mode("SessionEnd"; "end")
+' "$current" > /dev/null; then
+    cat "$current"
+    exit 0
+fi
+
+jq --arg hook "$hook" '
+    def add($event; $mode; $timeout):
+        if [.hooks[$event][]?.hooks[]?.command // empty]
+            | any(contains("session-handoff.sh") and endswith($mode))
+        then .
+        else .hooks[$event] = ((.hooks[$event] // []) + [{
+            hooks: [{
+                type: "command",
+                command: ($hook + " " + $mode),
+                timeout: $timeout
+            }]
+        }])
+        end;
+    add("SessionStart"; "start"; 20) | add("SessionEnd"; "end"; 10)
+' "$current"
