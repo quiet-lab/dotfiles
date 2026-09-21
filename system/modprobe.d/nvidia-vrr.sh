@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Параметр драйвера NVIDIA conceal_vrr_caps=1: снятие, возврат и проверка
-# состояния (открытый вопрос docs/open-questions/nvidia-conceal-vrr-caps.md).
+# состояния (запись решения docs/decisions/0006-nvidia-conceal-vrr-caps.md).
 #
 # Файл /etc/modprobe.d/nvidia-vrr.conf читается при загрузке модуля
 # nvidia_modeset, а модуль загружается из initramfs, поэтому любое изменение
