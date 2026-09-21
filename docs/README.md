@@ -37,7 +37,6 @@
 | [`agent-session-tips.md`](agent-session-tips.md) | Приёмы работы агента в живой сессии Hyprland: что можно проверить самому, что делает только пользователь |
 | [`host-state.md`](host-state.md) | Что в системе и в `$HOME` не лежит под chezmoi и потеряется при переустановке |
 | [`media-and-portals.md`](media-and-portals.md) | Проверки мультимедиа, аппаратного декодирования видео и порталов XDG |
-| [`workspaced-code-notes.md`](workspaced-code-notes.md) | Заметки к коду демона workspaced; временно, до переноса в README его проекта |
 
 ## Как вести документы
 
