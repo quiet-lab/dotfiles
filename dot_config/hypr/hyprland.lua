@@ -12,10 +12,23 @@ local HOME = os.getenv("HOME")
 ---- МОНИТОР ----
 ------------------
 
--- DP-2, 3840×2160, родная частота 120 Гц.
+-- DP-2, 3840×2160, родная частота 120 Гц. Она годится, только пока драйверу
+-- NVIDIA скрыты возможности VRR монитора (conceal_vrr_caps=1): без параметра
+-- панель при 120 Гц уходит в Adaptive-Sync и портит изображение, поэтому
+-- тогда выбирается 60 Гц. См. docs/decisions/0006-nvidia-conceal-vrr-caps.md.
+local function vrr_concealed()
+    local f = io.open("/sys/module/nvidia_modeset/parameters/conceal_vrr_caps")
+    if not f then
+        return false
+    end
+    local value = f:read("*l")
+    f:close()
+    return value == "Y"
+end
+
 hl.monitor({
     output   = "DP-2",
-    mode     = "3840x2160@120",
+    mode     = vrr_concealed() and "3840x2160@120" or "3840x2160@60",
     position = "0x0",
     scale    = 1,
 })
