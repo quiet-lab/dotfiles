@@ -1,8 +1,12 @@
 // Пользовательская карта клавиатуры: две раскладки (US, RU) и переключение
 // раскладки средствами XKB, без горячих клавиш сессии:
-//   Win + Пробел     — циклическое переключение (опция group(win_space_toggle));
+//   Win + Пробел     — циклическое переключение (собственный тип клавиши
+//                      SUPER_SPACE_GROUP_TOGGLE: только Win без других
+//                      модификаторов, см. комментарий у типа);
 //   Win + Alt + E    — фиксировать US (группа 1);
 //   Win + Alt + R    — фиксировать RU (группа 2).
+// Сочетания Win+Пробел с Ctrl, Alt, Shift и с включённым Caps Lock раскладку
+// не переключают и достаются приложению или привязке композитора.
 // Загружается настройкой input.kb_file в ~/.config/hypr/hyprland.lua.
 // После правки файла композитор карту сам не перечитывает: см. раздел
 // «Перезагрузка конфига» в docs/agent-session-tips.md репозитория chezmoi.
@@ -47,11 +51,77 @@ xkb_keymap {
             level_name[Level2] = "Shift";
             level_name[Level3] = "Super+Alt";
         };
+        // Тип клавиши для Super+Пробел: второй уровень — переключение раскладки,
+        // и только при одном Mod4 без других модификаторов. Тип из поставки
+        // (PC_SUPER_LEVEL2, опция group(win_space_toggle)) берёт в маску один
+        // Super, а модификаторы вне маски на выбор уровня не влияют, поэтому
+        // раскладку переключали и Ctrl+Super+Пробел, и Alt+Super+Пробел,
+        // и Shift+Super+Пробел. Здесь в маске все пять модификаторов, второй
+        // уровень отдан ровно сочетанию Mod4, а прочие сочетания остаются
+        // на первом уровне и через preserve достаются приложению вместе
+        // со своими модификаторами: без preserve xkbcommon считает модификатор
+        // истраченным на выбор уровня, и композитор не увидел бы, например,
+        // Ctrl+Super+Пробел как сочетание своей привязки.
+        type "SUPER_SPACE_GROUP_TOGGLE" {
+            modifiers = Shift+Lock+Control+Mod1+Mod4;
+            map[Mod4] = Level2;
+            preserve[Shift] = Shift;
+            preserve[Lock] = Lock;
+            preserve[Shift+Lock] = Shift+Lock;
+            preserve[Control] = Control;
+            preserve[Shift+Control] = Shift+Control;
+            preserve[Lock+Control] = Lock+Control;
+            preserve[Shift+Lock+Control] = Shift+Lock+Control;
+            preserve[Mod1] = Mod1;
+            preserve[Shift+Mod1] = Shift+Mod1;
+            preserve[Lock+Mod1] = Lock+Mod1;
+            preserve[Shift+Lock+Mod1] = Shift+Lock+Mod1;
+            preserve[Control+Mod1] = Control+Mod1;
+            preserve[Shift+Control+Mod1] = Shift+Control+Mod1;
+            preserve[Lock+Control+Mod1] = Lock+Control+Mod1;
+            preserve[Shift+Lock+Control+Mod1] = Shift+Lock+Control+Mod1;
+            preserve[Shift+Mod4] = Shift+Mod4;
+            preserve[Lock+Mod4] = Lock+Mod4;
+            preserve[Shift+Lock+Mod4] = Shift+Lock+Mod4;
+            preserve[Control+Mod4] = Control+Mod4;
+            preserve[Shift+Control+Mod4] = Shift+Control+Mod4;
+            preserve[Lock+Control+Mod4] = Lock+Control+Mod4;
+            preserve[Shift+Lock+Control+Mod4] = Shift+Lock+Control+Mod4;
+            preserve[Mod1+Mod4] = Mod1+Mod4;
+            preserve[Shift+Mod1+Mod4] = Shift+Mod1+Mod4;
+            preserve[Lock+Mod1+Mod4] = Lock+Mod1+Mod4;
+            preserve[Shift+Lock+Mod1+Mod4] = Shift+Lock+Mod1+Mod4;
+            preserve[Control+Mod1+Mod4] = Control+Mod1+Mod4;
+            preserve[Shift+Control+Mod1+Mod4] = Shift+Control+Mod1+Mod4;
+            preserve[Lock+Control+Mod1+Mod4] = Lock+Control+Mod1+Mod4;
+            preserve[Shift+Lock+Control+Mod1+Mod4] = Shift+Lock+Control+Mod1+Mod4;
+            level_name[Level1] = "Base";
+            level_name[Level2] = "Super";
+        };
     };
     xkb_compat    { include "complete" };
     xkb_symbols   {
-        // Базовая клавиатура США + русская второй группой + Win+Пробел для переключения
-        include "pc+us+ru:2+inet(evdev)+group(win_space_toggle)"
+        // Базовая клавиатура США + русская второй группой. Опции
+        // group(win_space_toggle) здесь нет: клавиша <SPCE> описана ниже
+        // собственным типом, иначе раскладку переключал бы и Super+Пробел
+        // с любым другим модификатором.
+        include "pc+us+ru:2+inet(evdev)"
+
+        // Win+Пробел — переключение раскладки по кругу, но только без других
+        // модификаторов: Ctrl+Super+Пробел занят расстановкой окон (команда
+        // `workspaced arrange`), Alt+Super+Пробел намеренно свободен, а
+        // Shift+Super+Пробел и Super+Пробел с включённым Caps Lock должны
+        // доставаться приложению. Действие то же, что у group(win_space_toggle):
+        // символ ISO_Next_Group даёт LockGroup(group=+1) через compat, здесь оно
+        // записано явно.
+        key <SPCE> {
+            type[Group1] = "SUPER_SPACE_GROUP_TOGGLE",
+            symbols[Group1] = [ space, ISO_Next_Group ],
+            actions[Group1] = [ NoAction(), LockGroup(group=+1) ],
+            type[Group2] = "SUPER_SPACE_GROUP_TOGGLE",
+            symbols[Group2] = [ space, ISO_Next_Group ],
+            actions[Group2] = [ NoAction(), LockGroup(group=+1) ]
+        };
 
         // Win+Alt+E — фиксировать US; в обеих группах символы клавиши сохранены
         key <AD03> {

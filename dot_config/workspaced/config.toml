@@ -37,7 +37,9 @@ next_workspace = "SUPER+TAB Tab"
 # Сочетания, которые не может занять ни одна привязка; `workspaced check`
 # отклоняет конфиг с такой привязкой (спецификация hyprland-binds).
 # Карта XKB (~/.config/X11/xkb_custom): Super+Пробел, Alt+Super+E,
-# Alt+Super+R — иначе композитор перехватит их раньше XKB.
+# Alt+Super+R — иначе композитор перехватит их раньше XKB. Раскладку карта
+# переключает только на Super+Пробел без других модификаторов, поэтому
+# Ctrl+Super+Пробел свободен для привязки и занят расстановкой окон.
 # Намеренно свободное: Alt+Super+Пробел.
 reserved = ["SUPER+space", "ALT+SUPER+E", "ALT+SUPER+R", "ALT+SUPER+space"]
 
@@ -366,6 +368,14 @@ action = { place = "center" }
 chain = "ALT+SUPER+Page_Up"
 action = "maximize"
 
+# Расстановка окон текущего стола по описанию активного workspace: окна
+# приложений возвращаются на свои места (ячейка или rect, свои или семейства),
+# окна без описания встают стопками по классу в центр экрана. Назначения ячеек
+# команда не меняет — она возвращает окна к тому, что записано сейчас.
+[[binds]]
+chain = "CTRL+SUPER+space"
+action = "arrange"
+
 [[binds]]
 chain = "ALT+SUPER+Return"
 dispatch = [
@@ -388,6 +398,16 @@ dispatch = "focus({ workspace = $n })"
 chain = "SUPER+SHIFT+$n"
 range = [1, 8]
 dispatch = "window.move({ workspace = $n, follow = true })"
+
+# Перенос активного workspace текущего стола на стол $n с переходом за ним:
+# окна всех его приложений едут вместе с ним, а workspace, активный на том
+# столе, сворачивается на special:pool. Цепочка workspace (Super+Tab s)
+# переносом не занимается: она переходит на стол, где workspace уже активен.
+# Номер стола в действии подставляется из range, как и в цепочке.
+[[binds]]
+chain = "CTRL+SUPER+$n"
+range = [1, 8]
+action = { move = "$n" }
 
 # Мышь: перемещение и изменение размера с удержанием Super.
 [[binds]]
