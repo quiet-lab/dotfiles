@@ -49,6 +49,14 @@ VA-API для Firefox на NVIDIA: без них аппаратный декод
 того, что он включён, — окно Telegram, которое при сообщении само
 поднимается и забирает фокус.
 
+**`~/.config/yandex-browser/Local State`** — настройки `browser://flags`
+Яндекс.Браузера, под chezmoi не берутся (профиль). Значимая одна: флаг
+`hardware-media-key-handling` должен стоять в «Default» — в «Disabled»
+браузер не регистрируется как MPRIS-плеер, и пауза VoxType с привязками
+`playerctl` его не видят (подробности в [`media-and-portals.md`](media-and-portals.md),
+раздел «Браузеры на Chromium»). Признак сбоя — `playerctl -l` не показывает
+`chromium.instance…` при играющем видео.
+
 **`~/.config/git-credentials` и `~/.config/gh/hosts.yml`** — пароль к git
 и токен `gh` в открытом виде. Под chezmoi не берутся намеренно.
 Восстановление — новый вход: `gh auth login --with-token`, пароль git
