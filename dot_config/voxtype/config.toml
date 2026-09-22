@@ -66,6 +66,13 @@ sample_rate = 16000
 # Maximum recording duration in seconds (safety limit)
 max_duration_secs = 60
 
+# Ставить MPRIS-плееры на паузу на время записи и возобновлять те из них,
+# которые играли, после распознавания. Требует playerctl. Ключ в справке
+# не описан, но принимается разделом [audio] (флаг --pause-media).
+# Остальной звук системы на это время выключает юнит
+# voxtype-mute-others.service (спецификация voxtype-dictation).
+pause_media = true
+
 # [audio.feedback]
 # Enable audio feedback sounds (beeps when recording starts/stops)
 # enabled = true

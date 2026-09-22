@@ -1,0 +1,32 @@
+# Наблюдатель за состоянием VoxType: выключает остальной звук системы на время
+# записи и распознавания и возвращает его после (спецификация
+# voxtype-dictation). Живёт и умирает вместе с демоном VoxType: BindsTo
+# останавливает наблюдателя, когда останавливается voxtype.service, а его
+# собственный обработчик сигнала при этом возвращает звук.
+# Сам voxtype.service — юнит пакета (/usr/lib/systemd/user/voxtype.service),
+# привязанный к graphical-session.target; PartOf повторяет эту привязку, чтобы
+# наблюдатель останавливался вместе с сессией и без остановки демона.
+[Unit]
+Description=Выключение остального звука на время диктовки VoxType
+PartOf=graphical-session.target
+BindsTo=voxtype.service
+After=voxtype.service
+
+[Service]
+ExecStart=%h/.local/bin/handmade-scripts/voxtype-mute-others
+# Политика перезапуска systemd, а не таймер в логике наблюдателя: пауза нужна
+# только на случай, когда скрипт падает сразу после запуска, чтобы systemd
+# не поднимал его по кругу без остановки.
+Restart=on-failure
+RestartSec=5
+# KillMode=mixed обязателен. При значении по умолчанию (control-group) systemd
+# шлёт SIGTERM сразу и оболочке, и её потомку `voxtype status --follow`; при
+# таком совпадении оболочка, ждущая строку в `read`, примерно в половине
+# случаев завершается, не выполнив обработчик сигнала, и звук остаётся
+# выключенным (проверено: 2 отказа из 4). С mixed сигнал получает только
+# оболочка, обработчик отрабатывает и возвращает звук, а потомка systemd
+# добивает сам, когда оболочка вышла.
+KillMode=mixed
+
+[Install]
+WantedBy=voxtype.service
