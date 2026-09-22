@@ -39,8 +39,9 @@ QtObject {
     signal historyToggleRequested()
     // Просьба закрыть уведомление: карточка растворяется и закрывает его,
     // когда анимация кончилась. action — действие, которое нужно выполнить
-    // вместо простого закрытия, или null.
-    signal closeRequested(var notification, var action)
+    // вместо простого закрытия, или null; expire — закрыть по истечении
+    // (уйдёт в историю), а не как закрытое пользователем.
+    signal closeRequested(var notification, var action, var expire)
 
     // --- Разбор уведомления ---
 
@@ -151,7 +152,9 @@ QtObject {
 
     // --- Команды ---
 
-    function requestClose(n, action) { svc.closeRequested(n, action || null); }
+    function requestClose(n, action) { svc.closeRequested(n, action || null, false); }
+    // Уведомление вытеснено с экрана: растворяется так же, но уходит в историю.
+    function requestExpire(n) { svc.closeRequested(n, null, true); }
     // Закрыть последнее пришедшее уведомление — самое нижнее в столбике.
     function closeNewest() {
         if (svc.shown.length > 0) svc.requestClose(svc.shown[svc.shown.length - 1], null);

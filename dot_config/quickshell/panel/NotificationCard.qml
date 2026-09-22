@@ -25,6 +25,19 @@ Rectangle {
     property bool closing: false
     // Действие, которое надо выполнить, когда растворение закончится.
     property var pendingAction: null
+    // Закрыть по истечении (уйдёт в историю), а не как закрытое пользователем.
+    property bool pendingExpire: false
+
+    // Смещение верхнего края карточки от нижнего края окна столбика.
+    // Расстановку задаёт столбик, а едет к ней карточка сама, поэтому
+    // появление снизу, подъём и опускание — одна и та же анимация положения.
+    property int moveDuration: 200
+    property real targetOffset: 0
+    property real offset: 0
+    Behavior on offset {
+        NumberAnimation { duration: card.moveDuration; easing.type: Easing.OutQuad }
+    }
+    onTargetOffsetChanged: card.offset = card.targetOffset
 
     implicitHeight: row.implicitHeight + 2 * card.pad
     color: Theme.tileBg
@@ -61,27 +74,33 @@ Rectangle {
 
     Connections {
         target: NotificationService
-        function onCloseRequested(n, action) { if (n === card.notification) card.beginClose(action); }
+        function onCloseRequested(n, action, expire) {
+            if (n === card.notification) card.beginClose(action, expire);
+        }
     }
 
-    function beginClose(action) {
+    function beginClose(action, expire) {
         if (card.closing) return;
         card.closing = true;
         card.pendingAction = action;
+        card.pendingExpire = expire === true;
         fade.start();
     }
 
     function finishClose() {
         const action = card.pendingAction;
+        const expire = card.pendingExpire;
         card.pendingAction = null;
         // invoke() сообщает клиенту о выборе действия и закрывает уведомление
         // само, если клиент не просил оставить его открытым.
         if (action) action.invoke();
+        else if (expire) card.notification.expire();
         else card.notification.dismiss();
         // Уведомление с признаком resident приложение просит оставить
         // открытым: после действия оно не закрывается, и карточка возвращается.
         if (NotificationService.shown.indexOf(card.notification) >= 0) {
             card.closing = false;
+            card.pendingExpire = false;
             card.opacity = 1;
         }
     }
