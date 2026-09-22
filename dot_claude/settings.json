@@ -1,0 +1,52 @@
+{
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "allow": [
+      "Bash",
+      "Read",
+      "Edit",
+      "Write",
+      "WebFetch",
+      "WebSearch",
+      "Agent"
+    ],
+    "additionalDirectories": ["~"]
+  },
+  "model": "claude-fable-5-1[1m]",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/session-handoff.sh\" start",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/session-handoff.sh\" end",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "context7@claude-plugins-official": true,
+    "playwright@claude-plugins-official": true,
+    "chrome-devtools-mcp@claude-plugins-official": true,
+    "browser-use@claude-plugins-official": true
+  },
+  "language": "Русский",
+  "theme": "dark",
+  "editorMode": "vim",
+  "switchModelsOnFlag": false,
+  "agentPushNotifEnabled": true,
+  "skipDangerousModePermissionPrompt": true
+}
