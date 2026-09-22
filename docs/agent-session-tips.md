@@ -136,8 +136,8 @@ hyprctl eval 'hl.dispatch(hl.dsp.send_shortcut({ mods = "CTRL", key = "code:57",
 Перед удалением осиротевших пакетов (`pacman -Qdtq`) список сверяется
 с темами значков и курсоров из конфигов. Один раз это уже стоило работы
 панели: вместе с сиротами ушёл `breeze-icons`, а тема `breeze-dark` задана
-в четырёх местах — `dot_config/gtk-3.0/settings.ini`, `dot_gtkrc-2.0`,
-`dot_config/dunst/dunstrc` и строка `//@ pragma IconTheme breeze-dark`
+в трёх местах — `dot_config/gtk-3.0/settings.ini`, `dot_gtkrc-2.0` и строка
+`//@ pragma IconTheme breeze-dark`
 в `dot_config/quickshell/panel/shell.qml`. Курсор задан темой
 `~/.icons/default`, которая наследует `capitaine-cursors`.
 

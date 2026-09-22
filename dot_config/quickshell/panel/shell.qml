@@ -1,7 +1,9 @@
-// Боковая панель сессии Hyprland (спецификация qs-shell): одно окно layer-shell
+// Боковая панель сессии Hyprland (спецификация qs-shell): окно layer-shell
 // у левого края DP-2 с зарезервированной зоной 330 px и колонкой плиток, повторяющей
-// геометрию дашборда eww. Здесь только окно и композиция колонки; плитки — в tiles/,
-// всплывающие окна — в popups/, общие цвета и размеры — в Theme.qml.
+// геометрию дашборда eww, и второе окно layer-shell — стопка уведомлений у нижнего
+// края (спецификация qs-notifications). Здесь только окна и композиция колонки;
+// плитки — в tiles/, всплывающие окна и карточки уведомлений — рядом, общие цвета
+// и размеры — в Theme.qml.
 // Запуск: `qs -c panel` (юнит quickshell-panel.service).
 // Тема значков задаётся явно: qt6ct её не сообщает, и без pragma проверка наличия
 // иконки в теме (hasThemeIcon) всегда отрицательна.
@@ -12,6 +14,15 @@ import QtQuick
 import qs.tiles
 
 ShellRoot {
+    // Стопка всплывающих уведомлений — второе окно layer-shell панели, у нижнего
+    // края монитора по центру (спецификация qs-notifications). Сервер уведомлений
+    // и история живут в синглтоне NotificationService, окно только рисует стопку.
+    Variants {
+        model: Quickshell.screens.filter(s => s.name === "DP-2")
+
+        NotificationStack {}
+    }
+
     // Окно создаётся через Variants по списку экранов: при пропадании и возврате
     // монитора (DPMS, переподключение, временный выход FALLBACK) Quickshell
     // уничтожает окно старого экрана и создаёт новое для вернувшегося.
@@ -51,11 +62,12 @@ ShellRoot {
             Clock { x: Theme.margin; y: 76 }
             Weather { x: Theme.margin; y: 325 }
 
-            // ---- Средняя группа: шкалы, сеть, диски, избранное (704…1299) ----
-            Gauges { x: Theme.margin; y: 704 }
-            Network { x: Theme.margin; y: 816 }
-            Disks { x: Theme.margin; y: 933 }
-            Favorites { x: Theme.margin; y: 1178 }
+            // ---- Средняя группа: шкалы, сеть, диски, избранное, уведомления (680…1323) ----
+            Gauges { x: Theme.margin; y: 680 }
+            Network { x: Theme.margin; y: 792 }
+            Disks { x: Theme.margin; y: 909 }
+            Favorites { x: Theme.margin; y: 1154 }
+            Notifications { x: Theme.margin; y: 1287 }
 
             // ---- Нижняя группа: столы с треем и раскладкой (1462…1820), лаунчер (1830…2150) ----
             Workspaces { id: workspacesTile; x: Theme.margin; y: 1462 }

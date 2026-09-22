@@ -438,22 +438,27 @@ exec = "~/.local/bin/handmade-scripts/screenshot-countdown"
 chain = "SHIFT+Print"
 exec = "~/.local/bin/handmade-scripts/screenshot-selection"
 
-# Уведомления dunst.
+# Уведомления панели Quickshell (спецификация qs-notifications). Сервер
+# уведомлений живёт в панели, dunstctl больше не используется; команды идут
+# по IPC Quickshell в конфигурацию panel.
 [[binds]]
 chain = "CTRL+Escape"
-exec = "dunstctl history-pop"
+exec = "qs -c panel ipc call notifications history"
 
+# Super+Enter закрывает самое старое видимое уведомление и выполняет его
+# действие по умолчанию — то же, что клик мышью по нему. Ctrl+Enter под это
+# не занят намеренно: он нужен приложениям (отправка сообщения, формы).
 [[binds]]
-chain = "CTRL+Return"
-exec = "dunstctl context"
+chain = "SUPER+Return"
+exec = "qs -c panel ipc call notifications dismissOldest"
 
 [[binds]]
 chain = "CTRL+space"
-exec = "dunstctl close"
+exec = "qs -c panel ipc call notifications close"
 
 [[binds]]
 chain = "CTRL+SHIFT+space"
-exec = "dunstctl close-all"
+exec = "qs -c panel ipc call notifications closeAll"
 
 # Мультимедиа: работают и при заблокированном экране.
 [[binds]]

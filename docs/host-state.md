@@ -64,7 +64,7 @@ VA-API для Firefox на NVIDIA: без них аппаратный декод
 - **`~/.themes/Fleon`** — тема GTK, задана в `dot_gtkrc-2.0`
   и `dot_config/gtk-3.0/settings.ini` (`gtk-theme-name=Fleon`).
 - **`~/.fonts/`** — `Comfortaa` и `IcoMoon-Custom` нужны rofi, `Cantarell` —
-  GTK и dunst; рядом лежат `Nerd-Patched` и `Unifont`.
+  программам GTK; рядом лежат `Nerd-Patched` и `Unifont`.
 - **`~/.wallpapers/mechanical/`** — обои сессии; `hyprpaper.conf` указывает
   на `okita-souji_FHD.jpg`, остальные файлы каталога запасные.
 - **`~/.icons/default/index.theme`** — тема курсора, наследует
