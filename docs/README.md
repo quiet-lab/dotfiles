@@ -34,6 +34,7 @@
 |---|---|
 | [`decisions/`](decisions/README.md) | Принятые решения: по одной записи на решение, `README.md` — указатель |
 | [`open-questions/`](open-questions/README.md) | Отложенные вопросы с условиями пересмотра |
+| [`upstream/`](upstream/README.md) | Черновики обращений в сторонние проекты (Hyprland, Chromium), не отправленные |
 | [`agent-session-tips.md`](agent-session-tips.md) | Приёмы работы агента в живой сессии Hyprland: что можно проверить самому, что делает только пользователь |
 | [`host-state.md`](host-state.md) | Что в системе и в `$HOME` не лежит под chezmoi и потеряется при переустановке |
 | [`media-and-portals.md`](media-and-portals.md) | Проверки мультимедиа, аппаратного декодирования видео и порталов XDG |

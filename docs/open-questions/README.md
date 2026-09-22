@@ -91,3 +91,4 @@
 | Файл | Вопрос | Условие пересмотра |
 |---|---|---|
 | [`hyprland-systemd-integration.md`](hyprland-systemd-integration.md) | Когда убирать `hyprland-session.target` и обработчики `hyprland.start`/`hyprland.shutdown` | В выпуске Hyprland появилась встроенная интеграция с systemd |
+| [`hyprland-window-parent.md`](hyprland-window-parent.md) | Как отличить диалог приложения от обычного окна | Hyprland выводит родителя окна и модальность в `hyprctl clients -j` (или присылает их событием), а Chromium начинает вызывать `xdg_toplevel.set_parent` для дочерних окон |
