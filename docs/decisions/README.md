@@ -39,3 +39,4 @@
 | 0004 | [Все привязки клавиш — в конфиге демона workspaced](0004-keys-in-daemon-config.md) |
 | 0005 | [Вход в сессию — greetd с tuigreet](0005-login-greetd.md) |
 | 0006 | [VRR отдан ради ровного изображения: `conceal_vrr_caps=1` остаётся](0006-nvidia-conceal-vrr-caps.md) |
+| 0007 | [Таймеры запрещены — состояние меняют события](0007-no-timers.md) |
