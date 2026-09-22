@@ -24,25 +24,18 @@ PanelPopup {
     }
     function close() { menu.visible = false; }
 
-    onVisibleChanged: if (!visible) { entered = false; leaveTimer.stop(); }
+    onVisibleChanged: if (!visible) entered = false
 
-    Timer {
-        id: leaveTimer
-        interval: 300
-        onTriggered: if (!hover.hovered) menu.close()
+    // Указатель считается ушедшим по наведению на всё окно целиком (свойство
+    // hovered из PanelPopup), поэтому проход у самой рамки меню не закрывает.
+    onHoveredChanged: {
+        if (menu.hovered) menu.entered = true;
+        else if (menu.entered) menu.close();
     }
 
     ColumnLayout {
         id: list
         spacing: 0
-
-        HoverHandler {
-            id: hover
-            onHoveredChanged: {
-                if (hovered) { menu.entered = true; leaveTimer.stop(); }
-                else if (menu.entered) leaveTimer.restart();
-            }
-        }
 
         Repeater {
             model: menu.items

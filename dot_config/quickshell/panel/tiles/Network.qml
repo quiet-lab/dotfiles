@@ -14,6 +14,17 @@ Tile {
 
     property var state: ({ eth: { connected: false, ip: "" }, wifi: { connected: false, ip: "" }, vpn: "" })
 
+    // Строка от nmcli monitor пришла во время чтения состояния: прочитать ещё раз,
+    // когда текущее чтение закончится, иначе последнее изменение будет потеряно.
+    property bool statePending: false
+    // Когда монитор запущен и сколько раз подряд он вышел сразу после запуска.
+    property double monitorStarted: 0
+    property int monitorFailures: 0
+    function readState() {
+        if (stateProc.running) { tile.statePending = true; return; }
+        stateProc.running = true;
+    }
+
     Process {
         id: stateProc
         command: [Quickshell.shellDir + "/scripts/netstate"]
@@ -23,20 +34,29 @@ Tile {
                 try { tile.state = JSON.parse(text); } catch (e) { console.warn("network: не JSON:", text); }
             }
         }
+        onExited: if (tile.statePending) { tile.statePending = false; stateProc.running = true; }
     }
-    // Поток событий NetworkManager: каждая строка — событие, чтение состояния
-    // откладывается на 300 мс, чтобы пачка событий дала один запуск.
+    // Поток событий NetworkManager: каждая строка — изменение, по ней состояние
+    // и перечитывается.
     Process {
         id: monitor
         command: ["nmcli", "monitor"]
         running: true
         stdout: SplitParser {
-            onRead: refresh.restart()
+            onRead: tile.readState()
         }
-        onExited: restart.start()
+        onRunningChanged: if (running) tile.monitorStarted = Date.now()
+        onExited: {
+            // Монитор заканчивается, когда перезапускается NetworkManager: тем же
+            // событием он и поднимается заново. Счёт подряд идущих мгновенных
+            // выходов нужен на случай, когда nmcli не запускается вовсе (нет
+            // NetworkManager, нет прав): иначе выход и запуск пошли бы по кругу.
+            if (Date.now() - tile.monitorStarted >= 1000) tile.monitorFailures = 0;
+            else tile.monitorFailures++;
+            if (tile.monitorFailures < 5) monitor.running = true;
+            else console.warn("network: nmcli monitor не запускается, состояние сети больше не обновляется");
+        }
     }
-    Timer { id: refresh; interval: 300; onTriggered: stateProc.running = true }
-    Timer { id: restart; interval: 3000; onTriggered: monitor.running = true }
 
     // --- Кнопка меню в заголовке ---
     Text {

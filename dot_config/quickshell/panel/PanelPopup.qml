@@ -17,6 +17,9 @@ PopupWindow {
     default property alias content: inner.data
     property int padX: 12
     property int padY: 8
+    // Указатель над окном: область сплошная и включает поля вокруг содержимого,
+    // поэтому проход указателя у самой рамки наведение не теряет.
+    readonly property alias hovered: frameHover.hovered
 
     anchor.window: target ? target.QsWindow.window : null
     anchor.rect: {
@@ -40,6 +43,8 @@ PopupWindow {
         border.color: Theme.tileBorder
         border.width: 1
         radius: Theme.popupRadius
+
+        HoverHandler { id: frameHover }
 
         Item {
             id: inner

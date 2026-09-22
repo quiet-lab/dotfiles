@@ -81,100 +81,108 @@ Tile {
     // Панель громкости выезжает снизу вверх над кнопкой: от верха плитки до
     // верхнего края кнопки динамика (277 px от верха), внутри рамки; фон
     // непрозрачный, чтобы перекрывать значки трея, но не динамик.
+    // Панель выдвигает наведение на кнопку динамика, а убирает уход указателя
+    // со всей плитки. Область наведения — плитка целиком, а не сама панель:
+    // она не движется, поэтому указатель, поднявшийся к ползунку раньше, чем
+    // панель доехала доверху, наведения не теряет. Выдвинутая панель занимает
+    // место значков трея, так что указатель над ними всё равно над панелью.
     property bool showPanel: false
-    Timer {
-        id: hideTimer
-        interval: 500
-        onTriggered: if (!panelHover.hovered && !btnMouse.containsMouse) tile.showPanel = false
-    }
-    function keepPanel() { hideTimer.stop(); tile.showPanel = true; }
-    function releasePanel() { hideTimer.restart(); }
 
+    // Плитка целиком: и панель, и кнопка лежат внутри, поэтому наведение на них
+    // считается наведением на эту область. Координаты внутри Tile отсчитываются
+    // от внутреннего отступа, и начало области сдвинуто на него назад; координаты
+    // внутри самой области — уже от края плитки.
     Item {
-        id: panelClip
-        x: -9; y: -9
-        width: 34; height: 276
-        clip: true
+        id: volArea
+        x: -Theme.tilePadding - 1
+        y: -(Theme.tilePadding + 1)
+        width: tile.width
+        height: tile.height
 
-        Rectangle {
-            id: volPanel
-            width: 34
-            height: 276
-            y: tile.showPanel ? 0 : height
-            Behavior on y { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
-            color: "#000000"
-            topLeftRadius: 11
-            topRightRadius: 11
-            bottomLeftRadius: 8
-            bottomRightRadius: 8
+        HoverHandler {
+            onHoveredChanged: if (!hovered) tile.showPanel = false
+        }
 
-            HoverHandler {
-                id: panelHover
-                onHoveredChanged: hovered ? tile.keepPanel() : tile.releasePanel()
-            }
+        Item {
+            id: panelClip
+            x: 1; y: 1
+            width: 34; height: 276
+            clip: true
 
-            // Ползунок 0…100 %: полоса 12 px шириной, заполнение снизу вверх.
-            Item {
-                id: slider
-                x: 11; y: 14
-                width: 12; height: 230
-                Rectangle {
-                    anchors.fill: parent
-                    radius: 6
-                    color: Theme.background
+            Rectangle {
+                id: volPanel
+                width: 34
+                height: 276
+                y: tile.showPanel ? 0 : height
+                Behavior on y { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
+                color: "#000000"
+                topLeftRadius: 11
+                topRightRadius: 11
+                bottomLeftRadius: 8
+                bottomRightRadius: 8
+
+                // Ползунок 0…100 %: полоса 12 px шириной, заполнение снизу вверх.
+                Item {
+                    id: slider
+                    x: 11; y: 14
+                    width: 12; height: 230
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: 6
+                        color: Theme.background
+                    }
+                    Rectangle {
+                        anchors.bottom: parent.bottom
+                        width: parent.width
+                        height: parent.height * tile.volume
+                        radius: 6
+                        color: Theme.yellow
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        anchors.margins: -6
+                        function apply(y) { tile.setVolume(1 - (y - 6) / slider.height); }
+                        onPressed: (m) => apply(m.y)
+                        onPositionChanged: (m) => { if (pressed) apply(m.y); }
+                        onWheel: (w) => tile.step(w.angleDelta.y > 0 ? 1 : -1)
+                    }
                 }
-                Rectangle {
-                    anchors.bottom: parent.bottom
-                    width: parent.width
-                    height: parent.height * tile.volume
-                    radius: 6
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    y: slider.y + slider.height + 8
+                    text: tile.percent
                     color: Theme.yellow
-                }
-                MouseArea {
-                    anchors.fill: parent
-                    anchors.margins: -6
-                    function apply(y) { tile.setVolume(1 - (y - 6) / slider.height); }
-                    onPressed: (m) => apply(m.y)
-                    onPositionChanged: (m) => { if (pressed) apply(m.y); }
-                    onWheel: (w) => tile.step(w.angleDelta.y > 0 ? 1 : -1)
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 13
+                    font.bold: true
                 }
             }
+        }
+
+        // Кнопка громкости: глиф 23 px, поле снизу 5 px, по центру плитки.
+        Item {
+            id: volBtn
+            x: 1; y: 312 - 1 - 5 - 28
+            width: 34; height: 28
             Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                y: slider.y + slider.height + 8
-                text: tile.percent
+                anchors.centerIn: parent
+                text: tile.glyph()
                 color: Theme.yellow
                 font.family: Theme.fontFamily
-                font.pixelSize: 13
-                font.bold: true
+                font.pixelSize: 23
             }
-        }
-    }
-
-    // Кнопка громкости: глиф 23 px, поле снизу 5 px, по центру плитки.
-    Item {
-        id: volBtn
-        x: -9; y: 312 - 1 - 5 - 28 - 10
-        width: 34; height: 28
-        Text {
-            anchors.centerIn: parent
-            text: tile.glyph()
-            color: Theme.yellow
-            font.family: Theme.fontFamily
-            font.pixelSize: 23
-        }
-        MouseArea {
-            id: btnMouse
-            anchors.fill: parent
-            hoverEnabled: true
-            acceptedButtons: Qt.LeftButton | Qt.RightButton
-            onEntered: tile.keepPanel()
-            onExited: tile.releasePanel()
-            onClicked: (m) => {
-                if (m.button === Qt.RightButton) { if (tile.sink && tile.sink.audio) tile.sink.audio.muted = !tile.muted; }
-                else Run.detached(["pavucontrol"]);
+            MouseArea {
+                id: btnMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                onEntered: tile.showPanel = true
+                onClicked: (m) => {
+                    if (m.button === Qt.RightButton) { if (tile.sink && tile.sink.audio) tile.sink.audio.muted = !tile.muted; }
+                    else Run.detached(["pavucontrol"]);
+                }
+                onWheel: (w) => tile.step(w.angleDelta.y > 0 ? 1 : -1)
             }
-            onWheel: (w) => tile.step(w.angleDelta.y > 0 ? 1 : -1)
         }
     }
 }

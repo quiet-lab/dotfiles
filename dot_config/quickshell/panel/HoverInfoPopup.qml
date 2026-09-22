@@ -13,21 +13,31 @@ PanelPopup {
     property var lines: []
     property string key: ""
 
+    // Скрытие выполняется не в самом обработчике ухода указателя, а сразу после
+    // того, как разобрано текущее событие мыши: значки в ряду стоят вплотную,
+    // уход с одного и наведение на соседний приходят одним событием, и подсказка
+    // не должна из-за этого пропадать и появляться заново. Отсрочки по времени
+    // здесь нет — Qt.callLater ждёт не срока, а конца разбора события.
+    property bool hidePending: false
+
     function show(item, list, groupKey) {
         info.lines = list;
-        hideTimer.stop();
+        info.hidePending = false;
         if (info.visible && groupKey !== "" && groupKey === info.key) return;
         info.key = groupKey;
         info.target = item;
         info.anchor.updateAnchor();
         info.visible = true;
     }
-    function hide() { hideTimer.restart(); }
-
-    Timer {
-        id: hideTimer
-        interval: 120
-        onTriggered: { info.visible = false; info.key = ""; }
+    function hide() {
+        info.hidePending = true;
+        Qt.callLater(info.applyHide);
+    }
+    function applyHide() {
+        if (!info.hidePending) return;
+        info.hidePending = false;
+        info.visible = false;
+        info.key = "";
     }
 
     ColumnLayout {

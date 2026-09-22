@@ -46,16 +46,16 @@ Tile {
         printErrors: false
         onLoaded: {
             try { tile.usage = JSON.parse(statsFile.text()) || {}; } catch (e) { tile.usage = {}; }
-            tile.schedule();
+            tile.rebuild();
         }
-        onLoadFailed: { tile.usage = {}; tile.schedule(); }
+        onLoadFailed: { tile.usage = {}; tile.rebuild(); }
     }
     function bump(id) {
         const u = usage;
         u[id] = (u[id] || 0) + 1;
         usage = u;
         statsFile.setText(JSON.stringify(u, null, 2) + "\n");
-        schedule();
+        rebuild();
     }
     function count(id) { return usage[id] || 0; }
 
@@ -107,18 +107,15 @@ Tile {
         }
         rows = out;
     }
-    Timer {
-        id: rebuildTimer
-        interval: 30
-        onTriggered: tile.rebuild()
-    }
-    function schedule() { rebuildTimer.restart(); }
-    onQueryChanged: schedule()
+    // Список строится прямо в обработчике события: смена строки поиска, загрузка
+    // счётчика запусков и пополнение списка записей .desktop приходят по одному,
+    // пачки из них не складывается.
+    onQueryChanged: rebuild()
     Connections {
         target: DesktopEntries.applications
-        function onValuesChanged() { tile.schedule(); }
+        function onValuesChanged() { tile.rebuild(); }
     }
-    Component.onCompleted: schedule()
+    Component.onCompleted: rebuild()
 
     // --- Запуск ---
     function launch(entry) {

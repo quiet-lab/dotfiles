@@ -109,36 +109,34 @@ Item {
         byWs = map;
     }
 
-    Timer {
-        id: rebuildTimer
-        interval: 0
-        onTriggered: root.rebuild()
-    }
-    function schedule() { rebuildTimer.restart(); }
-
+    // Список строится прямо в обработчике события: к моменту, когда обработчик
+    // получает событие композитора, Hyprland.toplevels уже обновлён (проверено
+    // 22.09.2026: на openwindow новое окно в списке есть, на closewindow его уже
+    // нет). Одно действие пользователя даёт два-три события и столько же проходов
+    // по списку окон — он короткий, и откладывать перестроение незачем.
     Connections {
         target: Hyprland
         function onRawEvent(ev) {
             switch (ev.name) {
             case "openwindow": case "closewindow": case "movewindowv2": case "windowtitlev2":
             case "activewindowv2": case "workspacev2": case "focusedmonv2":
-                root.schedule();
+                root.rebuild();
                 break;
             }
         }
     }
     Connections {
         target: Hyprland.toplevels
-        function onObjectInsertedPost() { root.schedule(); }
-        function onObjectRemovedPost() { root.schedule(); }
+        function onObjectInsertedPost() { root.rebuild(); }
+        function onObjectRemovedPost() { root.rebuild(); }
     }
     // Записи .desktop загружаются после старта панели: иконки и названия
     // пересчитываются, когда список приложений пополняется.
     Connections {
         target: DesktopEntries.applications
-        function onValuesChanged() { root.schedule(); }
+        function onValuesChanged() { root.rebuild(); }
     }
-    Component.onCompleted: { Hyprland.refreshToplevels(); schedule(); }
+    Component.onCompleted: { Hyprland.refreshToplevels(); rebuild(); }
 
     // --- Действия ---
     function dispatch(lua) { Hyprland.dispatch(lua); }

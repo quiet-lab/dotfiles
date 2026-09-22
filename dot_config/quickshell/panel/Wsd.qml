@@ -2,8 +2,8 @@
 // design D12 изменения workspace-daemon): подписка по сокету
 // $XDG_RUNTIME_DIR/workspaced/sock, строки JSON. Состояние столов приходит
 // целиком при подключении и после каждого изменения; событие show-sessions
-// открывает окно выбора сессии. Без демона панель показывает только окна и
-// пробует подключиться раз в 5 секунд.
+// открывает окно выбора сессии. Без демона панель показывает только окна
+// и подключается заново, как только демон снова заведёт сокет.
 pragma Singleton
 import Quickshell
 import Quickshell.Io
@@ -12,8 +12,11 @@ import QtQuick
 QtObject {
     id: wsd
 
-    readonly property string socketPath: Quickshell.env("XDG_RUNTIME_DIR") + "/workspaced/sock"
-    property bool connected: socket.connected
+    readonly property string runtimeDir: Quickshell.env("XDG_RUNTIME_DIR")
+    readonly property string socketPath: wsd.runtimeDir + "/workspaced/sock"
+    // Объект подключения пересоздаётся при каждой попытке (см. connect ниже).
+    property var socket: null
+    readonly property bool connected: wsd.socket ? wsd.socket.connected : false
     // Номер стола → { workspaces: [{ name, icon, active, apps, windows }], active }.
     property var desktops: ({})
     property int currentDesktop: 0
@@ -22,8 +25,8 @@ QtObject {
     signal showSessions(var list)
 
     function send(obj) {
-        if (!socket.connected) return;
-        socket.write(JSON.stringify(obj) + "\n");
+        if (!wsd.connected) return;
+        wsd.socket.write(JSON.stringify(obj) + "\n");
     }
     function raise(ws, desktop) { send({ cmd: "raise", workspace: ws, desktop: desktop }); }
     function remove(ws, desktop) { send({ cmd: "remove", workspace: ws, desktop: desktop }); }
@@ -47,23 +50,63 @@ QtObject {
         }
     }
 
-    property Socket socket: Socket {
+    // Попытка подключения. Socket из Quickshell.Io после неудачной попытки
+    // больше не подключается: ни повторное присваивание connected, ни смена path
+    // новой попытки не дают (проверено на живом демоне 22.09.2026), поэтому
+    // объект каждый раз создаётся заново.
+    function connect() {
+        const old = wsd.socket;
+        wsd.socket = null;
+        if (old) { old.connected = false; old.destroy(); }
+        wsd.socket = wsd.socketComponent.createObject(wsd);
+    }
+
+    property Component socketComponent: Component {
+        Socket {
+            path: wsd.socketPath
+            connected: true
+            parser: SplitParser {
+                splitMarker: "\n"
+                onRead: (data) => wsd.handle(data)
+            }
+            onConnectionStateChanged: {
+                if (connected) {
+                    write(JSON.stringify({ cmd: "subscribe" }) + "\n");
+                } else {
+                    // Демон закрыл соединение: сразу пробуем подключиться снова.
+                    // Если он остановлен совсем, попытка не удастся, и следующая
+                    // будет по событию от наблюдателя за сокетом.
+                    wsd.desktops = {};
+                    wsd.connect();
+                }
+            }
+        }
+    }
+
+    // Демон заводит файл сокета заново при каждом запуске, и это событие —
+    // повод подключиться. Прочитать сокет как файл нельзя, поэтому загрузка
+    // всегда кончается ошибкой; нужен здесь только сигнал об изменении.
+    property FileView socketWatcher: FileView {
         path: wsd.socketPath
-        connected: true
-        parser: SplitParser {
-            splitMarker: "\n"
-            onRead: (data) => wsd.handle(data)
-        }
-        onConnectedChanged: {
-            if (connected) socket.write(JSON.stringify({ cmd: "subscribe" }) + "\n");
-            else wsd.desktops = {};
+        watchChanges: true
+        printErrors: false
+        onFileChanged: wsd.connect()
+    }
+    // Каталог сокета заводит сам демон, а наблюдатель за файлом в несуществующем
+    // каталоге ничего не замечает. Если панель успела запуститься раньше демона,
+    // о появлении каталога сообщит наблюдатель за $XDG_RUNTIME_DIR; тогда
+    // наблюдатель за сокетом заводится заново вместе с попыткой подключиться.
+    property FileView runtimeWatcher: FileView {
+        path: wsd.runtimeDir
+        watchChanges: true
+        printErrors: false
+        onFileChanged: {
+            if (wsd.connected) return;
+            wsd.socketWatcher.path = "";
+            wsd.socketWatcher.path = wsd.socketPath;
+            wsd.connect();
         }
     }
-    // Переподключение, пока демона нет.
-    property Timer reconnect: Timer {
-        interval: 5000
-        repeat: true
-        running: !wsd.socket.connected
-        onTriggered: { wsd.socket.connected = false; wsd.socket.connected = true; }
-    }
+
+    Component.onCompleted: wsd.connect()
 }

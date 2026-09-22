@@ -1,6 +1,6 @@
 // Круговые шкалы CPU, RAM, GPU (спецификация qs-monitors): три плитки 100×100,
 // значения и температурные классы из скриптов scripts/cpu, ram, gpu, cputemp,
-// gputemp (JSON), обновление 3 с и 5 с, объём RAM раз в час.
+// gputemp (JSON), обновление 3 с и 5 с.
 import Quickshell
 import Quickshell.Io
 import QtQuick
@@ -38,15 +38,22 @@ Item {
                 }
             }
         }
+        // WARNING: опрос по таймеру, событий не существует. Нагрузку CPU и GPU,
+        // занятую память и температуру ядро отдаёт файлами /proc и /sys: они
+        // читаются по запросу и об изменении значения не уведомляют, а загрузка
+        // CPU к тому же считается разностью двух чтений /proc/stat, то есть
+        // мгновенного значения у неё нет. Опрашиваются скрипты scripts/cpu, ram,
+        // gpu раз в 3 с и cputemp, gputemp раз в 5 с: за это время шкалы не
+        // отстают от происходящего, а запуск скриптов остаётся редким.
+        // Решение записано в docs/decisions/0007-no-timers.md.
         Timer { interval: m.interval; running: true; repeat: true; onTriggered: proc.running = true }
     }
     Metric { script: "cpu";     interval: 3000; onResult: (d) => root.cpu = d }
-    Metric { script: "ram";     interval: 3000; onResult: (d) => { root.ram = d; if (root.ramTotal === 0) root.ramTotal = d.total || 0; } }
+    // Объём памяти приходит в каждом ответе скрипта ram, поэтому берётся оттуда же.
+    Metric { script: "ram";     interval: 3000; onResult: (d) => { root.ram = d; if (d.total) root.ramTotal = d.total; } }
     Metric { script: "gpu";     interval: 3000; onResult: (d) => root.gpu = d }
     Metric { script: "cputemp"; interval: 5000; onResult: (d) => root.cputemp = d }
     Metric { script: "gputemp"; interval: 5000; onResult: (d) => root.gputemp = d }
-    // Объём RAM обновляется раз в час из того же ответа скрипта ram.
-    Timer { interval: 3600000; running: true; repeat: true; onTriggered: root.ramTotal = root.ram.total || root.ramTotal }
 
     component Gauge: Tile {
         id: g
