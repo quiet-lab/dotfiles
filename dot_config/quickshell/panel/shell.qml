@@ -77,6 +77,10 @@ ShellRoot {
             Lang { x: 294; y: 1784 }
             Launcher { x: Theme.margin; y: 1830 }
 
+            // Перерисовка картинок уведомлений в файлы: элемент должен лежать
+            // в окне, иначе grabToImage не сработает (спецификация qs-notifications).
+            NotificationIconSaver { id: notificationIconSaver }
+
             // Общие всплывающие окна; плитки обращаются к ним через синглтон Popups.
             TooltipPopup { id: tooltip }
             MenuPopup { id: menu }
@@ -116,6 +120,7 @@ ShellRoot {
                 Popups.menu = menu;
                 Popups.hoverInfo = hoverInfo;
                 Popups.sessions = sessionsPopup;
+                NotificationService.iconSaver = notificationIconSaver;
             }
         }
     }

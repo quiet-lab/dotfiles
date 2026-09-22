@@ -24,8 +24,8 @@ Rectangle {
 
     // Карточка уже растворяется; повторные просьбы пропускаются.
     property bool closing: false
-    // Что сделать, когда растворение кончится: "seen", "act" или пусто —
-    // просто исчезнуть (карточку убрали не действием пользователя).
+    // Что сделать, когда растворение кончится: "seen", "seenAct", "act" или
+    // пусто — просто исчезнуть (карточку убрали не действием пользователя).
     property string pendingKind: ""
 
     // Смещение верхнего края карточки от нижнего края окна столбика.
@@ -53,7 +53,7 @@ Rectangle {
         onClicked: (ev) => {
             if (ev.button === Qt.MiddleButton) { NotificationService.markAllSeen(); return; }
             if (ev.button === Qt.RightButton) { NotificationService.requestAct(card.record); return; }
-            NotificationService.requestSeen(card.record);
+            NotificationService.requestSeenAction(card.record);
         }
     }
 
@@ -97,6 +97,7 @@ Rectangle {
         const kind = card.pendingKind;
         card.pendingKind = "";
         if (kind === "seen") NotificationService.markSeen(card.record);
+        else if (kind === "seenAct") NotificationService.seenWithAction(card.record);
         else if (kind === "act") NotificationService.act(card.record);
         else card.destroy();
         // После смены состояния запись уходит с экрана, и столбик уничтожит

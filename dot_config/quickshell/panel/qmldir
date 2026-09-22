@@ -12,6 +12,7 @@ HoverInfoPopup 1.0 HoverInfoPopup.qml
 SessionsPopup 1.0 SessionsPopup.qml
 TrayMenuPopup 1.0 TrayMenuPopup.qml
 NotificationCard 1.0 NotificationCard.qml
+NotificationIconSaver 1.0 NotificationIconSaver.qml
 NotificationStack 1.0 NotificationStack.qml
 NotificationHistoryPopup 1.0 NotificationHistoryPopup.qml
 AppIcon 1.0 AppIcon.qml

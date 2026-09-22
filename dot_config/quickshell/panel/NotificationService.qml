@@ -14,6 +14,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Notifications
 import QtQuick
+import qs
 
 QtObject {
     id: svc
@@ -38,6 +39,10 @@ QtObject {
     property int nextKey: 1
     // Состояние прочитано с диска: до этого записывать файл нельзя.
     property bool ready: false
+    // Элемент, перерисовывающий картинки уведомлений в файлы; его создаёт
+    // окно панели (shell.qml), потому что grabToImage работает только
+    // в окне.
+    property var iconSaver: null
 
     // Что показывается на экране: непросмотренные записи, а в режиме
     // «не беспокоить» — только критические.
@@ -51,7 +56,8 @@ QtObject {
     // Просьба открыть или закрыть окно истории: само окно живёт в плитке.
     signal historyToggleRequested()
     // Просьба карточке на экране растворяться и сделать после этого своё:
-    // kind — "seen" (пометить просмотренным) или "act" (действие по умолчанию
+    // kind — "seen" (просто пометить просмотренным), "seenAct" (действие
+    // по умолчанию и пометить просмотренным) или "act" (действие по умолчанию
     // и удаление из истории).
     signal cardActionRequested(var record, string kind)
 
@@ -67,15 +73,23 @@ QtObject {
         return "";
     }
 
-    // Источник значка: картинка из подсказок уведомления, иначе значок
-    // приложения (имя из темы значков, путь к файлу или готовый URL).
+    // Источник значка. Собственная картинка уведомления (аватар в Telegram)
+    // приходит подсказкой image-data и видна ссылкой поставщика изображений
+    // `image://qsimage/…` — она живёт ровно столько, сколько живёт объект
+    // уведомления, поэтому её перерисовывают в файл (captureIcon). Значок
+    // из темы модуль тоже отдаёт ссылкой поставщика, но её хранить можно:
+    // она разбирается по теме в момент показа и объекта уведомления не
+    // требует, поэтому имя значка приложения предпочтительнее.
     function iconSource(n) {
-        if (n.image) return n.image;
+        const image = n.image;
+        if (image && image.startsWith("image://qsimage/")) return image;
         const icon = n.appIcon;
-        if (!icon) return "";
-        if (icon.startsWith("/")) return "file://" + icon;
-        if (icon.indexOf("://") > 0) return icon;
-        return Quickshell.hasThemeIcon(icon) ? Quickshell.iconPath(icon) : "";
+        if (icon) {
+            if (icon.startsWith("/")) return "file://" + icon;
+            if (icon.indexOf("://") > 0) return icon;
+            return Quickshell.hasThemeIcon(icon) ? Quickshell.iconPath(icon) : "";
+        }
+        return image || "";
     }
 
     // Процент для полосы заполнения или −1, если подсказки value нет.
@@ -149,6 +163,7 @@ QtObject {
             time: Date.now(),
             tag: tag,
             appName: n.appName || "",
+            desktopEntry: n.desktopEntry || "",
             summary: n.summary || "",
             body: n.body || "",
             icon: svc.iconSource(n),
@@ -175,6 +190,24 @@ QtObject {
 
         svc.records = svc.records.concat([rec]);
         svc.save();
+        svc.captureIcon(rec, rec.icon);
+    }
+
+    // Картинка уведомления живёт ровно столько, сколько живёт его объект:
+    // модуль отдаёт её ссылкой своего поставщика изображений. Чтобы значок
+    // остался у записи и после перезапуска панели, картинка перерисовывается
+    // в файл каталога состояния, и запись начинает показывать этот файл.
+    function captureIcon(rec, url) {
+        // Перерисовывать нужно только картинку самого уведомления: путь
+        // к файлу и значок темы переживают перезапуск панели и так.
+        if (!svc.iconSaver || !url || !url.startsWith("image://qsimage/")) return;
+        const path = svc.iconsDir + "/" + rec.key + ".png";
+        svc.iconSaver.save(url, path, ok => {
+            if (!ok) return;
+            rec.iconFile = path;
+            rec.icon = "file://" + path;
+            svc.save();
+        });
     }
 
     function refresh(rec) {
@@ -187,6 +220,7 @@ QtObject {
         rec.urgency = n.urgency;
         rec.seen = false;
         svc.save();
+        svc.captureIcon(rec, rec.icon);
     }
 
     // --- Состояния записей ---
@@ -217,13 +251,93 @@ QtObject {
         }
     }
 
+    // Выполнить действие по умолчанию, если оно есть. invoke() сообщает
+    // клиенту о выборе действия и закрывает уведомление само, если клиент
+    // не просил оставить его открытым; у записи после этого остаётся только
+    // содержимое. Действия нет у уведомления, закрытого приложением, и
+    // у записи, восстановленной после перезапуска панели.
+    function invokeDefault(rec) {
+        const action = svc.defaultAction(rec ? rec.notification : null);
+        if (action) action.invoke();
+    }
+
+    // Левый клик и Super+Enter: открыть то, о чём уведомление, и пометить
+    // его просмотренным. Если действие по умолчанию есть, приложение само
+    // откроет нужное место (Telegram — топик сообщения); если действия нет,
+    // панель хотя бы переводит фокус на окно отправителя.
+    function seenWithAction(rec) {
+        if (!rec) return;
+        const action = svc.defaultAction(rec.notification);
+        if (action) action.invoke();
+        else svc.openSender(rec);
+        rec.seen = true;
+        svc.save();
+    }
+
+    // --- Переход к приложению-отправителю ---
+
+    // Слова, по которым ищется окно отправителя: идентификатор .desktop
+    // целиком и первое слово имени приложения («Telegram Desktop» → telegram).
+    function senderKeys(rec) {
+        const keys = [];
+        const entry = (rec.desktopEntry || "").toLowerCase().replace(/\.desktop$/, "");
+        if (entry.length >= 3) keys.push(entry);
+        const app = (rec.appName || "").toLowerCase().split(/\s+/)[0];
+        if (app && app.length >= 3 && keys.indexOf(app) < 0) keys.push(app);
+        return keys;
+    }
+
+    property var senderRec: null
+
+    function openSender(rec) {
+        if (svc.senderKeys(rec).length === 0) return;
+        svc.senderRec = rec;
+        svc.clientsProc.running = true;
+    }
+
+    // Окна композитора читаются по запросу: своего списка окон у панели нет,
+    // а нужен он только в этот момент.
+    property Process clientsProc: Process {
+        command: ["hyprctl", "clients", "-j"]
+        stdout: StdioCollector {
+            onStreamFinished: svc.focusSender(text)
+        }
+    }
+
+    function focusSender(text) {
+        const rec = svc.senderRec;
+        svc.senderRec = null;
+        if (!rec) return;
+        let list = [];
+        try { list = JSON.parse(text); } catch (e) { console.warn("уведомления: не разобран список окон:", e); return; }
+        const keys = svc.senderKeys(rec);
+        let best = null;
+        for (const w of list) {
+            const cls = (w.class || "").toLowerCase();
+            const init = (w.initialClass || "").toLowerCase();
+            let hit = false;
+            for (const k of keys) if (cls.indexOf(k) >= 0 || init.indexOf(k) >= 0) { hit = true; break; }
+            if (!hit) continue;
+            // Из нескольких окон приложения берётся то, в котором были
+            // последним: у него меньше номер в истории фокуса.
+            if (!best || w.focusHistoryID < best.focusHistoryID) best = w;
+        }
+        if (best) {
+            // С Lua-конфигом Hyprland диспетчеры вызываются только через eval.
+            Run.detached(["hyprctl", "eval",
+                          "hl.dispatch(hl.dsp.focus({ window = \"address:" + best.address + "\" }))"]);
+            return;
+        }
+        // Окна нет: приложение запускается по своему .desktop, если он назван.
+        const entry = rec.desktopEntry;
+        if (!entry) return;
+        Run.detached(["gtk-launch", entry.endsWith(".desktop") ? entry : entry + ".desktop"]);
+    }
+
     // Действие по умолчанию и удаление записи из истории.
     function act(rec) {
         if (!rec) return;
-        const action = svc.defaultAction(rec.notification);
-        // invoke() сообщает клиенту о выборе действия и закрывает уведомление
-        // само, если клиент не просил оставить его открытым.
-        if (action) action.invoke();
+        svc.invokeDefault(rec);
         svc.forget(rec);
     }
 
@@ -234,6 +348,11 @@ QtObject {
         if (!rec) return;
         if (svc.onScreen.indexOf(rec) >= 0) svc.cardActionRequested(rec, "seen");
         else svc.markSeen(rec);
+    }
+    function requestSeenAction(rec) {
+        if (!rec) return;
+        if (svc.onScreen.indexOf(rec) >= 0) svc.cardActionRequested(rec, "seenAct");
+        else svc.seenWithAction(rec);
     }
     function requestAct(rec) {
         if (!rec) return;
@@ -262,6 +381,8 @@ QtObject {
         const n = rec.notification;
         rec.notification = null;
         if (n) n.dismiss();
+        // Файл значка живёт вместе с записью.
+        if (rec.iconFile) Quickshell.execDetached(["rm", "-f", rec.iconFile]);
         rec.destroy();
     }
 
@@ -289,11 +410,12 @@ QtObject {
     // --- Запись состояния (design D6) ---
 
     readonly property string statePath: Quickshell.statePath("notifications.json")
+    readonly property string iconsDir: Quickshell.statePath("notification-icons")
 
     // Каталог состояния панель создаёт сама: запись в несуществующий каталог
     // не удалась бы.
     property Process stateDir: Process {
-        command: ["mkdir", "-p", svc.statePath.substring(0, svc.statePath.lastIndexOf("/"))]
+        command: ["mkdir", "-p", svc.statePath.substring(0, svc.statePath.lastIndexOf("/")), svc.iconsDir]
         running: true
     }
 
@@ -319,9 +441,11 @@ QtObject {
                     time: r.time || 0,
                     tag: r.tag || "",
                     appName: r.appName || "",
+                    desktopEntry: r.desktopEntry || "",
                     summary: r.summary || "",
                     body: r.body || "",
                     icon: r.icon || "",
+                    iconFile: r.iconFile || "",
                     urgency: r.urgency === undefined ? 1 : r.urgency,
                     progress: r.progress === undefined ? -1 : r.progress,
                     seen: r.seen === true,
@@ -343,7 +467,8 @@ QtObject {
             nextKey: svc.nextKey,
             records: svc.records.map(r => ({
                 key: r.key, time: r.time, tag: r.tag, appName: r.appName,
-                summary: r.summary, body: r.body, icon: r.icon,
+                desktopEntry: r.desktopEntry,
+                summary: r.summary, body: r.body, icon: r.icon, iconFile: r.iconFile,
                 urgency: r.urgency, progress: r.progress, seen: r.seen
             }))
         };
@@ -359,9 +484,15 @@ QtObject {
             property real time: 0
             property string tag: ""
             property string appName: ""
+            // Идентификатор .desktop приложения-отправителя: по нему ищется
+            // его окно, когда действия по умолчанию нет.
+            property string desktopEntry: ""
             property string summary: ""
             property string body: ""
             property string icon: ""
+            // Путь к перерисованному файлу значка, если он есть: его надо
+            // удалить вместе с записью.
+            property string iconFile: ""
             property int urgency: 1
             property int progress: -1
             property bool seen: false
@@ -403,10 +534,11 @@ QtObject {
         function closeAll(): void { svc.markAllSeen(); }
         // Очистить историю целиком.
         function clear(): void { svc.clearHistory(); }
-        // Верхнее (самое старое) уведомление столбика: пометить просмотренным.
+        // Верхнее (самое старое) уведомление столбика: выполнить его действие
+        // по умолчанию и пометить просмотренным — то же, что левый клик.
         function dismissOldest(): void {
             const list = svc.onScreen;
-            if (list.length > 0) svc.requestSeen(list[0]);
+            if (list.length > 0) svc.requestSeenAction(list[0]);
         }
         // Верхнее уведомление: действие по умолчанию и удаление из истории.
         function invokeOldest(): void {
