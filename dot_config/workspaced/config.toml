@@ -508,6 +508,17 @@ exec = "qs -c panel ipc call notifications close"
 chain = "CTRL+SHIFT+space"
 exec = "qs -c panel ipc call notifications closeAll"
 
+# Super+Ctrl+Enter помечает просмотренными все уведомления (то же, что средний
+# клик по карточке), Super+Ctrl+Alt+Enter очищает историю целиком (то же, что
+# кнопка «Очистить» в окне истории).
+[[binds]]
+chain = "SUPER+CTRL+Return"
+exec = "qs -c panel ipc call notifications closeAll"
+
+[[binds]]
+chain = "SUPER+CTRL+ALT+Return"
+exec = "qs -c panel ipc call notifications clear"
+
 # Мультимедиа: работают и при заблокированном экране.
 [[binds]]
 chain = "XF86AudioRaiseVolume"

@@ -401,6 +401,8 @@ QtObject {
         }
         // Пометить просмотренными все.
         function closeAll(): void { svc.markAllSeen(); }
+        // Очистить историю целиком.
+        function clear(): void { svc.clearHistory(); }
         // Верхнее (самое старое) уведомление столбика: пометить просмотренным.
         function dismissOldest(): void {
             const list = svc.onScreen;
