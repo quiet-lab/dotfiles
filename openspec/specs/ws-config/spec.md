@@ -96,7 +96,7 @@
 - **THEN** нажатие Alt+Tab переводит фокус на следующее окно стола, и оно оказывается поверх остальных
 
 #### Scenario: Зарезервированное сочетание
-- **WHEN** в `[keys]` задано `reserved = ["SUPER+space", "ALT+E"]`, а в `[[binds]]` есть `chain = "ALT+E"`
+- **WHEN** в `[keys]` задано `reserved = ["SUPER+space", "ALT+SUPER+E"]`, а в `[[binds]]` есть `chain = "ALT+SUPER+E"`
 - **THEN** `workspaced check` завершается с ошибкой, называющей запись и зарезервированное сочетание
 
 #### Scenario: Развёртывание окна в записи привязки

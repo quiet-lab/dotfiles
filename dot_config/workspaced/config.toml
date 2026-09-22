@@ -36,10 +36,10 @@ sessions = "SUPER+S"
 next_workspace = "SUPER+TAB Tab"
 # Сочетания, которые не может занять ни одна привязка; `workspaced check`
 # отклоняет конфиг с такой привязкой (спецификация hyprland-binds).
-# Карта XKB (~/.config/X11/xkb_custom): Super+Пробел, Alt+E, Alt+R — иначе
-# композитор перехватит их раньше XKB.
+# Карта XKB (~/.config/X11/xkb_custom): Super+Пробел, Alt+Super+E,
+# Alt+Super+R — иначе композитор перехватит их раньше XKB.
 # Намеренно свободное: Alt+Super+Пробел.
-reserved = ["SUPER+space", "ALT+E", "ALT+R", "ALT+SUPER+space"]
+reserved = ["SUPER+space", "ALT+SUPER+E", "ALT+SUPER+R", "ALT+SUPER+space"]
 
 # ---- Шаблоны геометрии --------------------------------------------------
 

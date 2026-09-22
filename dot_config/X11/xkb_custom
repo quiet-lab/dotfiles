@@ -1,28 +1,51 @@
 // Пользовательская карта клавиатуры: две раскладки (US, RU) и переключение
-// раскладки средствами XKB, без горячих клавиш Openbox:
-//   Win + Пробел — циклическое переключение (опция group(win_space_toggle));
-//   Alt + E      — фиксировать US (группа 1);
-//   Alt + R      — фиксировать RU (группа 2).
-// Загружается из autostart.sh: xkbcomp ~/.config/X11/xkb_custom $DISPLAY.
+// раскладки средствами XKB, без горячих клавиш сессии:
+//   Win + Пробел     — циклическое переключение (опция group(win_space_toggle));
+//   Win + Alt + E    — фиксировать US (группа 1);
+//   Win + Alt + R    — фиксировать RU (группа 2).
+// Загружается настройкой input.kb_file в ~/.config/hypr/hyprland.lua.
+// После правки файла композитор карту сам не перечитывает: см. раздел
+// «Перезагрузка конфига» в docs/agent-session-tips.md репозитория chezmoi.
 xkb_keymap {
     xkb_keycodes  { include "evdev+aliases(qwerty)" };
     xkb_types     {
         include "complete"
-        // Тип клавиши для Alt+буква: уровни Base, Shift/Caps, Alt.
-        // На третьем уровне стоит VoidSymbol (не NoSymbol: при NoSymbol wezterm под
-        // X11 подставлял латиницу вместо русской буквы): под Wayland клиент получает
-        // Alt+буква как текст, и с базовым символом на третьем уровне при
-        // переключении раскладки печаталась буква.
-        type "ALT_GROUP_SELECT" {
-            modifiers = Shift+Lock+Mod1;
+        // Тип клавиши для Win+Alt+буква: уровни Base, Shift/Caps, Super+Alt.
+        // Третий уровень берётся только при Mod1 вместе с Mod4 (Alt вместе
+        // с Super), поэтому одиночное Alt+буква остаётся обычной клавишей
+        // с модификатором и достаётся приложению: в браузерах на Chromium
+        // Alt+E открывает меню браузера.
+        // На третьем уровне стоит VoidSymbol (не NoSymbol: при NoSymbol wezterm
+        // под X11 подставлял латиницу вместо русской буквы): под Wayland клиент
+        // получает сочетание как текст, и с базовым символом на третьем уровне
+        // при переключении раскладки печаталась буква.
+        // preserve оставляет Mod1 и Mod4 приложению там, где они третий
+        // уровень не дают: без него xkbcommon считает модификатор
+        // использованным на выбор уровня и приложение получит букву
+        // без Alt или без Super.
+        type "SUPER_ALT_GROUP_SELECT" {
+            modifiers = Shift+Lock+Mod1+Mod4;
             map[Shift] = Level2;
             map[Lock] = Level2;
-            map[Mod1] = Level3;
-            map[Shift+Mod1] = Level3;
-            map[Lock+Mod1] = Level3;
+            map[Mod1] = Level1;
+            map[Shift+Mod1] = Level2;
+            map[Lock+Mod1] = Level2;
+            map[Mod4] = Level1;
+            map[Shift+Mod4] = Level2;
+            map[Lock+Mod4] = Level2;
+            map[Mod1+Mod4] = Level3;
+            map[Shift+Mod1+Mod4] = Level3;
+            map[Lock+Mod1+Mod4] = Level3;
+            map[Shift+Lock+Mod1+Mod4] = Level3;
+            preserve[Mod1] = Mod1;
+            preserve[Shift+Mod1] = Mod1;
+            preserve[Lock+Mod1] = Mod1;
+            preserve[Mod4] = Mod4;
+            preserve[Shift+Mod4] = Mod4;
+            preserve[Lock+Mod4] = Mod4;
             level_name[Level1] = "Base";
             level_name[Level2] = "Shift";
-            level_name[Level3] = "Alt";
+            level_name[Level3] = "Super+Alt";
         };
     };
     xkb_compat    { include "complete" };
@@ -30,17 +53,17 @@ xkb_keymap {
         // Базовая клавиатура США + русская второй группой + Win+Пробел для переключения
         include "pc+us+ru:2+inet(evdev)+group(win_space_toggle)"
 
-        // Alt+E — фиксировать US; в обеих группах символы клавиши сохранены
+        // Win+Alt+E — фиксировать US; в обеих группах символы клавиши сохранены
         key <AD03> {
-            type = "ALT_GROUP_SELECT",
+            type = "SUPER_ALT_GROUP_SELECT",
             symbols[Group1] = [ e, E, VoidSymbol ],
             actions[Group1] = [ NoAction(), NoAction(), LockGroup(group=1) ],
             symbols[Group2] = [ Cyrillic_u, Cyrillic_U, VoidSymbol ],
             actions[Group2] = [ NoAction(), NoAction(), LockGroup(group=1) ]
         };
-        // Alt+R — фиксировать RU
+        // Win+Alt+R — фиксировать RU
         key <AD04> {
-            type = "ALT_GROUP_SELECT",
+            type = "SUPER_ALT_GROUP_SELECT",
             symbols[Group1] = [ r, R, VoidSymbol ],
             actions[Group1] = [ NoAction(), NoAction(), LockGroup(group=2) ],
             symbols[Group2] = [ Cyrillic_ka, Cyrillic_KA, VoidSymbol ],
