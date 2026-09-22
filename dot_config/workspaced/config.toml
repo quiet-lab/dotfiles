@@ -200,11 +200,15 @@ neovide = "right"
 
 # Браузеры на шаблоне overlay: Яндекс.Браузер по центру (главный), Chrome
 # профиля Default слева, AI.dev2026 справа. Живёт на столе 2.
+# mode = "stack": окна стоят друг поверх друга, и менять их ячейками незачем —
+# клавиша браузера поднимает его окно наверх и даёт ему фокус, не двигая
+# ни одного окна. У work режима нет, там действует обмен ячеек ("swap").
 [workspaces.surf]
 chain = "SUPER+TAB s"
 template = "overlay"
 main = "yandex-browser"
 icon = "yandex-browser"
+mode = "stack"
 [workspaces.surf.apps]
 chrome = "left"
 yandex-browser = "center"
