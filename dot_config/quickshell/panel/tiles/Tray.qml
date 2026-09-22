@@ -38,9 +38,9 @@ Tile {
                     hoverEnabled: true
                     acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
                     onEntered: Popups.tooltip.show(entry, entry.modelData.tooltipTitle || entry.modelData.title || entry.modelData.id)
-                    onExited: Popups.tooltip.hide()
+                    onExited: Popups.tooltip.hide(entry)
                     onClicked: (m) => {
-                        Popups.tooltip.hide();
+                        Popups.tooltip.hide(entry);
                         if (m.button === Qt.RightButton) {
                             if (entry.modelData.hasMenu) trayMenu.open(entry, entry.modelData.menu);
                         } else if (m.button === Qt.MiddleButton) {

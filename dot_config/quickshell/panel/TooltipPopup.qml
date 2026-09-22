@@ -1,5 +1,5 @@
 // Подсказка при наведении: одна на панель. show(item, text) показывает её справа
-// от колонки на уровне item, hide() скрывает.
+// от колонки на уровне item, hide(item) скрывает.
 import QtQuick
 
 PanelPopup {
@@ -8,29 +8,32 @@ PanelPopup {
     padY: 4
     property string text: ""
 
-    // Скрытие выполняется не в самом обработчике ухода указателя, а сразу после
-    // того, как разобрано текущее событие мыши: при переходе между соседними
-    // значками уход с одного и наведение на другой приходят одним событием,
-    // и подсказка не должна из-за этого пропадать и появляться заново. Отсрочки
-    // по времени здесь нет — Qt.callLater ждёт не срока, а конца разбора события.
-    property bool hidePending: false
+    // Элемент, которому подсказка принадлежит сейчас. Скрыть её может только он
+    // сам: Qt доставляет наведение на новый элемент раньше, чем уход с прежнего
+    // (проверено 22.09.2026 по журналу панели), поэтому уход с прежнего значка
+    // приходит, когда подсказку уже показал соседний. Без проверки владельца
+    // такой уход гасил подсказку под указателем, и она больше не появлялась:
+    // указатель стоит внутри нового значка, второго наведения не будет.
+    property Item owner: null
 
     function show(item, text) {
-        tip.hidePending = false;
+        tip.owner = item;
         tip.text = text;
-        tip.target = item;
-        tip.anchor.updateAnchor();
+        if (tip.target !== item) {
+            tip.target = item;
+            tip.anchor.updateAnchor();
+        }
         tip.visible = true;
     }
-    function hide() {
-        tip.hidePending = true;
-        Qt.callLater(tip.applyHide);
-    }
-    function applyHide() {
-        if (!tip.hidePending) return;
-        tip.hidePending = false;
+    function hide(item) {
+        if (item !== tip.owner) return;
+        tip.owner = null;
         tip.visible = false;
     }
+
+    // Элемент-владелец исчез (список плитки перестроился под указателем): якоря
+    // у подсказки больше нет, и она скрывается.
+    onTargetChanged: if (!tip.target) tip.hide(tip.owner);
 
     Text {
         text: tip.text

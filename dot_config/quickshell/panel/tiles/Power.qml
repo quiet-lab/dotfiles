@@ -57,8 +57,8 @@ Item {
                 anchors.fill: parent
                 hoverEnabled: true
                 onEntered: Popups.tooltip.show(btn, btn.modelData.tip)
-                onExited: Popups.tooltip.hide()
-                onClicked: { Popups.tooltip.hide(); btn.modelData.run(); }
+                onExited: Popups.tooltip.hide(btn)
+                onClicked: { Popups.tooltip.hide(btn); btn.modelData.run(); }
             }
         }
     }

@@ -77,9 +77,9 @@ Tile {
             anchors.margins: -4
             hoverEnabled: true
             onEntered: Popups.tooltip.show(menuBtn, "Действия сети")
-            onExited: Popups.tooltip.hide()
+            onExited: Popups.tooltip.hide(menuBtn)
             onClicked: {
-                Popups.tooltip.hide();
+                Popups.tooltip.hide(menuBtn);
                 if (Popups.menu.visible && Popups.menu.target === menuBtn) Popups.menu.close();
                 else menuProc.running = true;
             }
@@ -153,7 +153,7 @@ Tile {
         anchors.topMargin: 30
         hoverEnabled: true
         onEntered: Popups.tooltip.show(tile, "ЛКМ — редактор соединений")
-        onExited: Popups.tooltip.hide()
-        onClicked: { Popups.tooltip.hide(); Run.detached(["nm-connection-editor"]); }
+        onExited: Popups.tooltip.hide(tile)
+        onClicked: { Popups.tooltip.hide(tile); Run.detached(["nm-connection-editor"]); }
     }
 }

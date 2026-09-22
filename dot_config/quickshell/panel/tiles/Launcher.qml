@@ -214,8 +214,8 @@ Tile {
                 // Режим OnDemand включается заранее, при наведении: композитор отдаёт
                 // клавиатуру слою только по клику, а к моменту клика запрос уже стоит.
                 onEntered: { Popups.tooltip.show(header, "Фильтр по названию"); if (Popups.panel) Popups.panel.grabKeyboard(); }
-                onExited: { Popups.tooltip.hide(); if (!search.activeFocus && Popups.panel) Popups.panel.releaseKeyboard(); }
-                onClicked: { Popups.tooltip.hide(); search.forceActiveFocus(); }
+                onExited: { Popups.tooltip.hide(header); if (!search.activeFocus && Popups.panel) Popups.panel.releaseKeyboard(); }
+                onClicked: { Popups.tooltip.hide(header); search.forceActiveFocus(); }
             }
         }
     }
@@ -267,8 +267,8 @@ Tile {
                             anchors.fill: parent
                             hoverEnabled: true
                             onEntered: Popups.tooltip.show(appBtn, appBtn.modelData.name)
-                            onExited: Popups.tooltip.hide()
-                            onClicked: { Popups.tooltip.hide(); tile.launch(appBtn.modelData); }
+                            onExited: Popups.tooltip.hide(appBtn)
+                            onClicked: { Popups.tooltip.hide(appBtn); tile.launch(appBtn.modelData); }
                         }
                     }
                 }

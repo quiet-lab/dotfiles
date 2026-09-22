@@ -284,9 +284,9 @@ Item {
                                 hoverEnabled: true
                                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                                 onEntered: Popups.hoverInfo.show(btn, btn.isWs ? root.wsInfoFor(btn.modelData) : root.infoFor(btn.modelData), "ws-" + row.wsName)
-                                onExited: Popups.hoverInfo.hide()
+                                onExited: Popups.hoverInfo.hide(btn)
                                 onClicked: (m) => {
-                                    Popups.hoverInfo.hide();
+                                    Popups.hoverInfo.hide(btn);
                                     if (btn.isWs) {
                                         if (m.button === Qt.RightButton) Popups.menu.open(btn, root.wsMenuFor(btn.modelData));
                                         else Wsd.raise(btn.modelData.name, btn.modelData.desktop);

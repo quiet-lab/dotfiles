@@ -69,9 +69,9 @@ Tile {
         anchors.fill: parent
         hoverEnabled: true
         onEntered: Popups.tooltip.show(tile, "Переключить раскладку")
-        onExited: Popups.tooltip.hide()
+        onExited: Popups.tooltip.hide(tile)
         onClicked: {
-            Popups.tooltip.hide();
+            Popups.tooltip.hide(tile);
             Run.detached(["hyprctl", "switchxkblayout", tile.keyboard || "all", "next"]);
         }
     }
