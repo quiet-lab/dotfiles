@@ -109,6 +109,51 @@ VA-API для Firefox на NVIDIA: без них аппаратный декод
 не нужно: демон заводит каталог заново, `default.toml` наполняется в работе,
 `keys.lua` записывается при первом удачном перечитывании конфига.
 
+## Контейнер distrobox `fedora-box`
+
+Сам контейнер под chezmoi не попадает: его настройки хранит база podman
+`~/.local/share/containers/storage/db.sql`. Из dotfiles к нему относятся
+только юнит прогрева `dot_config/systemd/user/distrobox@.service` и ярлыки
+(см. ниже). Восстановление после переустановки — `distrobox create` с ключом
+`--nvidia` на образе `registry.fedoraproject.org/fedora:latest` и установка
+браузеров внутри.
+
+**Политика перезапуска — `always`** (`podman update --restart=always
+fedora-box`, поле `restart_policy` в базе podman; проверяется
+`podman inspect fedora-box --format '{{json .HostConfig.RestartPolicy}}'`).
+Без неё смерть контейнера оставалась незамеченной до следующего нажатия
+клавиши браузера: `distrobox-enter` обнаруживал остановленный контейнер,
+запускал его сам и ждал в `podman logs -f` строку `container_setup_done`.
+Строка теряется в потоке трассировки entrypoint (см. ниже), и ожидание
+затягивалось на часы. С политикой `always` podman поднимает контейнер сам
+сразу после смерти — по событию выхода, без опроса, — и `distrobox-enter`
+застаёт его работающим, минуя чтение журнала. Явную остановку
+(`podman stop` из `ExecStop` юнита при выходе из сессии) политика
+не отменяет. Контейнер делит с хостом пространство PID, поэтому его
+процесс завершит любая команда на хосте, рассылающая сигналы чужим
+процессам; подробности — в [`media-and-portals.md`](media-and-portals.md).
+
+**Трассировку entrypoint выключить нельзя.** `distrobox-create` (версия
+1.8.2.5, строка 994 `/usr/bin/distrobox-create`) безусловно, независимо
+от своего ключа `--verbose`, дописывает `--verbose` в аргументы entrypoint,
+а `distrobox-init` по этому флагу включает `set -o xtrace`. Флаг лежит
+в `Config.Cmd` контейнера, то есть в базе podman; `podman update` меняет
+только ограничения ресурсов, проверки работоспособности, переменные
+окружения и политику перезапуска, а правка `config.json` в хранилище
+бесполезна — podman собирает его из базы при каждом запуске. Переменной
+окружения или файла настроек, отключающих трассировку, `distrobox-init`
+не читает. Пересоздание контейнера тоже не помогло бы: `--verbose` добавится
+снова. За 7 секунд запуска entrypoint выдаёт больше 15 000 строк,
+и journald их ограничивает («Suppressed … messages from user@1000.service»),
+теряя в том числе `container_setup_done`.
+
+**Драйвер журнала — `journald`** (`HostConfig.LogConfig.Type`). Сменить его
+у существующего контейнера нечем: у `podman update` ключа `--log-driver`
+нет, а значение хранится в базе. `k8s-file` ограничения скорости не знает,
+поэтому при следующем пересоздании контейнера драйвер стоит задать
+явно (`--log-driver k8s-file` в `container_manager_additional_flags`
+или `log_driver` в `~/.config/containers/containers.conf`).
+
 ## Ярлыки приложений
 
 **`~/.local/share/applications/fedora-box-*.desktop`** — записи,
