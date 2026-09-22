@@ -245,7 +245,7 @@ hl.window_rule({
 })
 hl.window_rule({
     name    = "blur-terminal-focused",
-    match   = { class = "^(org\\.wezfurlong\\.wezterm|termfilechooser|neovide)$", focus = true },
+    match   = { class = "^(org\\.wezfurlong\\.wezterm|wezterm-herdr|termfilechooser|neovide)$", focus = true },
     no_blur = false,
 })
 -- Браузеры и видеоплееры непрозрачные и без размытия всегда, в фокусе и без него:
