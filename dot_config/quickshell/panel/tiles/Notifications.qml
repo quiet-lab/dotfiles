@@ -1,55 +1,50 @@
 // Плитка уведомлений (спецификация qs-notifications, требование «Плитка
-// уведомлений»): глиф колокольчика, подпись состояния и счётчик записей,
-// попавших в историю с последнего её открытия. Левый клик открывает и
-// закрывает окно истории, правый переключает режим «не беспокоить».
+// уведомлений»): маленький виджет 36×36 в одной колонке с треем и
+// переключателем раскладки, на уровне плитки первого рабочего стола.
+// Показывает глиф колокольчика, а при непустой истории — число её записей
+// в кружке поверх глифа. Левый клик открывает и закрывает окно истории,
+// правый переключает режим «не беспокоить».
 import Quickshell
 import QtQuick
 import qs
 
 Tile {
     id: tile
+    width: 36
     height: 36
     color: mouse.containsMouse ? Theme.background : Theme.tileBg
 
     readonly property bool dnd: NotificationService.dnd
-    readonly property int unread: NotificationService.unread
+    readonly property int records: NotificationService.history.length
 
     Text {
-        id: glyph
-        anchors.verticalCenter: parent.verticalCenter
-        x: 0
+        anchors.centerIn: parent
         text: tile.dnd ? "󰂛" : "󰂚"
         color: tile.dnd ? Theme.gray : Theme.yellow
         font.family: Theme.fontFamily
         font.pixelSize: 20
     }
 
-    Text {
-        anchors.verticalCenter: parent.verticalCenter
-        x: glyph.width + Theme.gap
-        text: tile.dnd ? "Не беспокоить" : "Уведомления"
-        color: tile.dnd ? Theme.gray : Theme.foreground
-        font.family: Theme.fontFamily
-        font.pixelSize: Theme.fontSize
-    }
-
-    // Счётчик непрочитанных; нулевой не показывается.
+    // Счётчик записей истории в правом верхнем углу плитки. Содержимое плитки
+    // лежит с отступом 10 px от края, поэтому кружок вынесен за его границы
+    // отрицательными полями.
     Rectangle {
-        id: badge
-        visible: tile.unread > 0
-        anchors.verticalCenter: parent.verticalCenter
+        visible: tile.records > 0
         anchors.right: parent.right
-        width: Math.max(22, count.implicitWidth + 12)
-        height: 20
-        radius: 10
+        anchors.top: parent.top
+        anchors.rightMargin: -6
+        anchors.topMargin: -6
+        width: Math.max(16, badge.implicitWidth + 6)
+        height: 16
+        radius: 8
         color: Theme.yellow
         Text {
-            id: count
+            id: badge
             anchors.centerIn: parent
-            text: tile.unread
+            text: tile.records
             color: "#000000"
             font.family: Theme.fontFamily
-            font.pixelSize: 14
+            font.pixelSize: 11
             font.bold: true
         }
     }

@@ -11,7 +11,9 @@ import qs
 Tile {
     id: tile
     width: 36
-    height: 312
+    // Высота полосы трея: блок столов без плитки уведомлений сверху и без
+    // переключателя раскладки снизу (спецификация qs-tray-lang).
+    height: 266
 
     // --- Значки ---
     // Новые элементы добавляются в конец модели, а показываются сверху.
@@ -106,13 +108,15 @@ Tile {
         Item {
             id: panelClip
             x: 1; y: 1
-            width: 34; height: 276
+            // Панель громкости закрывает плитку до верхнего края кнопки: её
+            // высота считается от высоты плитки, а не задана числом.
+            width: 34; height: tile.height - 36
             clip: true
 
             Rectangle {
                 id: volPanel
                 width: 34
-                height: 276
+                height: panelClip.height
                 y: tile.showPanel ? 0 : height
                 Behavior on y { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
                 color: "#000000"
@@ -125,7 +129,7 @@ Tile {
                 Item {
                     id: slider
                     x: 11; y: 14
-                    width: 12; height: 230
+                    width: 12; height: panelClip.height - 46
                     Rectangle {
                         anchors.fill: parent
                         radius: 6
@@ -162,7 +166,7 @@ Tile {
         // Кнопка громкости: глиф 23 px, поле снизу 5 px, по центру плитки.
         Item {
             id: volBtn
-            x: 1; y: 312 - 1 - 5 - 28
+            x: 1; y: tile.height - 1 - 5 - 28
             width: 34; height: 28
             Text {
                 anchors.centerIn: parent

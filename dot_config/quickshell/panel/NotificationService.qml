@@ -33,8 +33,6 @@ QtObject {
     readonly property var shown: svc.model ? svc.model.values : []
     // История: записи { time, appName, summary, body, icon, urgency }.
     property var history: []
-    // Записи, добавленные в историю с последнего открытия окна истории.
-    property int unread: 0
     property bool dnd: false
 
     // Просьба открыть или закрыть окно истории: само окно живёт в плитке.
@@ -149,7 +147,6 @@ QtObject {
         });
         if (list.length > svc.historyLimit) list.length = svc.historyLimit;
         svc.history = list;
-        svc.unread += 1;
     }
 
     // --- Команды ---
@@ -168,8 +165,7 @@ QtObject {
         const n = svc.shown[0];
         svc.requestClose(n, svc.defaultAction(n));
     }
-    function clearHistory() { svc.history = []; svc.unread = 0; }
-    function markRead() { svc.unread = 0; }
+    function clearHistory() { svc.history = []; }
     function forget(index) {
         const list = svc.history.slice();
         list.splice(index, 1);

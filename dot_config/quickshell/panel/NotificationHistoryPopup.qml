@@ -26,8 +26,6 @@ PanelPopup {
         popup.target = popup.anchorItem;
         popup.anchor.updateAnchor();
         popup.visible = true;
-        // Открытие истории обнуляет счётчик непрочитанных (design D5).
-        NotificationService.markRead();
     }
     function close() { popup.visible = false; }
     function toggle() { if (popup.visible) popup.close(); else popup.open(); }
@@ -50,10 +48,11 @@ PanelPopup {
     Item {
         id: box
         width: 560
-        // Высота ограничена так, чтобы окно истории оставалось выше столбика
-        // уведомлений и не пряталось под ним: столбик лежит на слое Overlay,
-        // а всплывающее окно панели — ниже него.
-        height: head.height + 9 + Math.max(28, Math.min(list.contentHeight, 640))
+        // Высота ограничена так, чтобы окно, открытое от плитки на уровне
+        // первого стола, умещалось до нижнего края экрана: столбик уведомлений
+        // лежит на слое Overlay, а всплывающее окно панели — ниже него, и
+        // выросшее окно пряталось бы под карточками.
+        height: head.height + 9 + Math.max(28, Math.min(list.contentHeight, 620))
 
         Item {
             id: head
