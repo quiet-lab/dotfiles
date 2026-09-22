@@ -1,8 +1,14 @@
 // Сервер уведомлений панели (спецификация qs-notifications): панель занимает
-// имя D-Bus org.freedesktop.Notifications вместо dunst, ведёт стопку показанных
-// уведомлений, историю и режим «не беспокоить». Карточка — NotificationCard.qml,
-// стопка — NotificationStack.qml, окно истории — NotificationHistoryPopup.qml,
+// имя D-Bus org.freedesktop.Notifications вместо dunst и ведёт историю
+// уведомлений за последние сутки. У каждой записи есть состояние
+// «просмотрено»/«не просмотрено»: на экране столбиком показываются только
+// непросмотренные (NotificationStack.qml, карточка — NotificationCard.qml),
+// вся история целиком — в окне от плитки (NotificationHistoryPopup.qml),
 // плитка колонки — tiles/Notifications.qml.
+//
+// История и режим «не беспокоить» лежат в файле состояния панели и переживают
+// её перезапуск. Живой объект уведомления в файл не попадает, поэтому
+// у восстановленной записи действия по умолчанию нет.
 pragma Singleton
 import Quickshell
 import Quickshell.Io
@@ -12,40 +18,45 @@ import QtQuick
 QtObject {
     id: svc
 
-    // Предел истории: столько записей хватает, чтобы разобрать пропущенное
-    // за день, а список остаётся обозримым в одном окне (design D4).
-    readonly property int historyLimit: 50
+    // Запись живёт в истории сутки. Срок проверяется при обращении к истории,
+    // а не по расписанию: таймеров в панели нет.
+    readonly property int lifetimeMs: 24 * 60 * 60 * 1000
+    // Предохранитель от лавины уведомлений: больше записей файл не хранит,
+    // самые старые вытесняются даже внутри суток.
+    readonly property int historyLimit: 200
     // Подсказки, задающие метку стопки: уведомление с уже занятой меткой
-    // занимает место прежнего (design D12). Первая — та, которой пользуются
-    // скрипты громкости, яркости и снимков экрана.
+    // занимает место прежнего. Первая — та, которой пользуются скрипты
+    // громкости, яркости и снимков экрана.
     readonly property var stackTagHints: [
         "synchronous", "private-synchronous",
         "x-dunst-stack-tag", "x-canonical-private-synchronous"
     ]
 
-    // Показанные уведомления — модель самого сервера: он держит принятые
-    // уведомления в порядке появления, новые в конце. Столбик рисует модель
-    // сверху вниз, поэтому новая карточка встаёт снизу, а прежние поднимаются
-    // выше. Модель нужна именно как модель, а не как список: она добавляет
-    // и убирает по одному уведомлению, и карточки остальных не пересоздаются
-    // (иначе закрытие одного уведомления обрывало бы растворение соседних).
-    readonly property var model: svc.server.trackedNotifications
-    readonly property var shown: svc.model ? svc.model.values : []
-    // История: записи { time, appName, summary, body, icon, urgency }.
-    property var history: []
+    // Все записи истории по времени, старые в начале.
+    property var records: []
     property bool dnd: false
+    property int nextKey: 1
+    // Состояние прочитано с диска: до этого записывать файл нельзя.
+    property bool ready: false
+
+    // Что показывается на экране: непросмотренные записи, а в режиме
+    // «не беспокоить» — только критические.
+    readonly property var onScreen: (svc.records || []).filter(
+        r => !r.seen && (!svc.dnd || r.urgency === NotificationUrgency.Critical))
+    // Счётчик плитки: непросмотренные целиком, включая скрытые режимом.
+    readonly property int unseen: (svc.records || []).filter(r => !r.seen).length
+    // История для окна: новые записи сверху.
+    readonly property var newestFirst: (svc.records || []).slice().reverse()
 
     // Просьба открыть или закрыть окно истории: само окно живёт в плитке.
     signal historyToggleRequested()
-    // Просьба закрыть уведомление: карточка растворяется и закрывает его,
-    // когда анимация кончилась. action — действие, которое нужно выполнить
-    // вместо простого закрытия, или null; expire — закрыть по истечении
-    // (уйдёт в историю), а не как закрытое пользователем.
-    signal closeRequested(var notification, var action, var expire)
+    // Просьба карточке на экране растворяться и сделать после этого своё:
+    // kind — "seen" (пометить просмотренным) или "act" (действие по умолчанию
+    // и удаление из истории).
+    signal cardActionRequested(var record, string kind)
 
     // --- Разбор уведомления ---
 
-    // Метка стопки уведомления или пустая строка.
     function stackTag(n) {
         const hints = n.hints;
         if (!hints) return "";
@@ -68,7 +79,7 @@ QtObject {
     }
 
     // Процент для полосы заполнения или −1, если подсказки value нет.
-    function progress(n) {
+    function progressOf(n) {
         const hints = n.hints;
         if (!hints || hints["value"] === undefined || hints["value"] === null) return -1;
         const v = Number(hints["value"]);
@@ -86,6 +97,7 @@ QtObject {
 
     // Действие по умолчанию: с идентификатором default, иначе первое из списка.
     function defaultAction(n) {
+        if (!n) return null;
         const actions = n.actions;
         if (!actions || actions.length === 0) return null;
         for (const a of actions) if (a.identifier === "default") return a;
@@ -93,111 +105,269 @@ QtObject {
     }
 
     // Кнопки карточки: все действия, кроме действия по умолчанию — оно
-    // выполняется кликом по самой карточке, а не отдельной кнопкой.
+    // выполняется правым кликом по самой карточке.
     function buttons(n) {
         const out = [];
+        if (!n) return out;
         const actions = n.actions;
         if (!actions) return out;
         for (const a of actions) if (a.identifier !== "default") out.push(a);
         return out;
     }
 
-    // --- Приём и закрытие ---
+    // --- Приём уведомлений ---
+
+    function byNotification(n) {
+        for (const r of svc.records) if (r.notification === n) return r;
+        return null;
+    }
 
     function handle(n) {
-        // Режим «не беспокоить»: обычное уведомление на экран не выходит
-        // и сразу становится записью истории, critical показывается (design D7).
-        // Уведомление, у которого tracked остался выключенным, сервер закрывает
-        // сам и сообщает об этом клиенту.
-        if (svc.dnd && n.urgency !== NotificationUrgency.Critical) {
-            svc.remember(n);
-            return;
-        }
+        svc.prune();
 
-        // Замена по метке стопки: прежнее уведомление с той же меткой
-        // закрывается как закрытое пользователем и в историю не идёт.
+        // Перечитывание конфигурации панели: сервер присылает прежние объекты
+        // заново, записи для них уже есть — их надо только снова удержать.
+        const known = svc.byNotification(n);
+        if (known) { n.tracked = true; return; }
+
+        // Уведомление удерживается, пока запись жива: только так у неё
+        // остаётся действие по умолчанию и кнопки действий.
+        n.tracked = true;
+
+        // Замена по метке стопки: прежняя запись с той же меткой уходит
+        // из истории целиком, иначе одних уведомлений громкости в ней
+        // накопились бы десятки.
         const tag = svc.stackTag(n);
         if (tag !== "") {
-            for (const other of svc.shown) {
-                if (other !== n && svc.stackTag(other) === tag) { other.dismiss(); break; }
+            for (const r of svc.records) {
+                if (r.tag === tag) { svc.forget(r); break; }
             }
         }
 
-        n.tracked = true;
-        n.closed.connect(reason => svc.finished(n, reason));
-    }
-
-    function finished(n, reason) {
-        // Закрытое пользователем в историю не попадает (design D3): он его
-        // уже видел и убрал сам.
-        if (reason === NotificationCloseReason.Dismissed) return;
-        svc.remember(n);
-    }
-
-    function remember(n) {
-        // Клиент прямо просит не сохранять уведомление.
-        if (n.transient) return;
-        const list = svc.history.slice();
-        list.unshift({
-            time: new Date(),
+        const rec = svc.recordComponent.createObject(svc, {
+            key: svc.nextKey,
+            time: Date.now(),
+            tag: tag,
             appName: n.appName || "",
             summary: n.summary || "",
             body: n.body || "",
             icon: svc.iconSource(n),
-            urgency: n.urgency
+            urgency: n.urgency,
+            progress: svc.progressOf(n),
+            seen: false,
+            notification: n
         });
-        if (list.length > svc.historyLimit) list.length = svc.historyLimit;
-        svc.history = list;
+        svc.nextKey += 1;
+
+        // Уведомление закрыто приложением или его действием: запись остаётся
+        // в истории, но живого объекта у неё больше нет, а значит нет
+        // и действия по умолчанию.
+        n.closed.connect(() => { rec.notification = null; });
+        // Замена по replaces_id: модуль обновляет прежний объект и сигнал
+        // notification не повторяет, поэтому за содержимым следят сигналы
+        // самих свойств. Обновлённое уведомление снова считается
+        // непросмотренным и возвращается на экран.
+        const refresh = () => svc.refresh(rec);
+        n.summaryChanged.connect(refresh);
+        n.bodyChanged.connect(refresh);
+        n.hintsChanged.connect(refresh);
+        n.appIconChanged.connect(refresh);
+
+        svc.records = svc.records.concat([rec]);
+        svc.save();
     }
 
-    // --- Команды ---
+    function refresh(rec) {
+        const n = rec.notification;
+        if (!n) return;
+        rec.summary = n.summary || "";
+        rec.body = n.body || "";
+        rec.icon = svc.iconSource(n);
+        rec.progress = svc.progressOf(n);
+        rec.urgency = n.urgency;
+        rec.seen = false;
+        svc.save();
+    }
 
-    function requestClose(n, action) { svc.closeRequested(n, action || null, false); }
-    // Уведомление вытеснено с экрана: растворяется так же, но уходит в историю.
-    function requestExpire(n) { svc.closeRequested(n, null, true); }
-    // Закрыть последнее пришедшее уведомление — самое нижнее в столбике.
-    function closeNewest() {
-        if (svc.shown.length > 0) svc.requestClose(svc.shown[svc.shown.length - 1], null);
+    // --- Состояния записей ---
+
+    function markSeen(rec) {
+        if (!rec || rec.seen) return;
+        rec.seen = true;
+        svc.save();
     }
-    function closeAll() { for (const n of svc.shown.slice()) svc.requestClose(n, null); }
-    // Самое старое видимое уведомление — верхнее в столбике — закрывается
-    // вместе с выполнением своего действия по умолчанию, то есть ровно так же,
-    // как по клику мышью по нему.
-    function dismissOldest() {
-        if (svc.shown.length === 0) return;
-        const n = svc.shown[0];
-        svc.requestClose(n, svc.defaultAction(n));
+    function markUnseen(rec) {
+        if (!rec || !rec.seen) return;
+        rec.seen = false;
+        svc.save();
     }
-    function clearHistory() { svc.history = []; }
-    function forget(index) {
-        const list = svc.history.slice();
-        list.splice(index, 1);
-        svc.history = list;
+    function toggleSeen(rec) {
+        if (!rec) return;
+        if (rec.seen) svc.markUnseen(rec);
+        else svc.requestSeen(rec);
     }
+    function markAllSeen() {
+        for (const r of svc.records) r.seen = true;
+        svc.save();
+    }
+    // Вернуть на экран последнее просмотренное уведомление.
+    function restoreLast() {
+        for (let i = svc.records.length - 1; i >= 0; --i) {
+            if (svc.records[i].seen) { svc.markUnseen(svc.records[i]); return; }
+        }
+    }
+
+    // Действие по умолчанию и удаление записи из истории.
+    function act(rec) {
+        if (!rec) return;
+        const action = svc.defaultAction(rec.notification);
+        // invoke() сообщает клиенту о выборе действия и закрывает уведомление
+        // само, если клиент не просил оставить его открытым.
+        if (action) action.invoke();
+        svc.forget(rec);
+    }
+
+    // Просьбы, приходящие от кликов и клавиш: если запись сейчас на экране,
+    // сперва растворяется её карточка, и только потом меняется состояние —
+    // так соседние карточки не двигаются во время растворения.
+    function requestSeen(rec) {
+        if (!rec) return;
+        if (svc.onScreen.indexOf(rec) >= 0) svc.cardActionRequested(rec, "seen");
+        else svc.markSeen(rec);
+    }
+    function requestAct(rec) {
+        if (!rec) return;
+        if (svc.onScreen.indexOf(rec) >= 0) svc.cardActionRequested(rec, "act");
+        else svc.act(rec);
+    }
+
+    // --- История ---
+
+    // Убрать запись из истории целиком и закрыть её живое уведомление.
+    function forget(rec) {
+        if (!rec) return;
+        svc.records = svc.records.filter(r => r !== rec);
+        svc.discard(rec);
+        svc.save();
+    }
+    function clearHistory() {
+        const old = svc.records;
+        svc.records = [];
+        for (const r of old) svc.discard(r);
+        svc.save();
+    }
+
+    // Уничтожение записи: живому уведомлению сообщается, что оно закрыто.
+    function discard(rec) {
+        const n = rec.notification;
+        rec.notification = null;
+        if (n) n.dismiss();
+        rec.destroy();
+    }
+
+    // Срок жизни записи. Проверяется при обращении к истории — приходе нового
+    // уведомления, открытии окна истории, переключении режима и при старте
+    // панели, — а не по расписанию: таймеров в панели нет.
+    function prune() {
+        if (!svc.ready) return;
+        const edge = Date.now() - svc.lifetimeMs;
+        let list = svc.records.filter(r => r.time >= edge);
+        if (list.length > svc.historyLimit) list = list.slice(list.length - svc.historyLimit);
+        if (list.length === svc.records.length) return;
+        const gone = svc.records.filter(r => list.indexOf(r) < 0);
+        svc.records = list;
+        for (const r of gone) svc.discard(r);
+        svc.save();
+    }
+
     function toggleDnd() {
         svc.dnd = !svc.dnd;
-        svc.dndFile.setText(svc.dnd ? "1\n" : "0\n");
+        svc.prune();
+        svc.save();
     }
 
-    // --- Состояние режима «не беспокоить» на диске (design D6) ---
+    // --- Запись состояния (design D6) ---
 
-    readonly property string dndPath: Quickshell.statePath("notifications-dnd")
+    readonly property string statePath: Quickshell.statePath("notifications.json")
 
-    // Каталог состояния панели создаёт сама панель: запись в несуществующий
-    // каталог не удалась бы. Режим переключают уже после старта, так что
-    // каталог к этому моменту готов.
+    // Каталог состояния панель создаёт сама: запись в несуществующий каталог
+    // не удалась бы.
     property Process stateDir: Process {
-        command: ["mkdir", "-p", svc.dndPath.substring(0, svc.dndPath.lastIndexOf("/"))]
+        command: ["mkdir", "-p", svc.statePath.substring(0, svc.statePath.lastIndexOf("/"))]
         running: true
     }
 
-    property FileView dndFile: FileView {
-        path: svc.dndPath
+    property FileView stateFile: FileView {
+        path: svc.statePath
         preload: true
         atomicWrites: true
-        // Файла нет, пока режим ни разу не включали, — это не ошибка.
+        // Файла нет, пока панель ни разу не сохраняла состояние, — не ошибка.
         printErrors: false
-        onLoaded: svc.dnd = text().trim() === "1"
+        onLoaded: svc.restore(text())
+        onLoadFailed: { svc.ready = true; }
+    }
+
+    function restore(text) {
+        try {
+            const data = JSON.parse(text);
+            svc.dnd = data.dnd === true;
+            svc.nextKey = data.nextKey || 1;
+            const list = [];
+            for (const r of (data.records || [])) {
+                list.push(svc.recordComponent.createObject(svc, {
+                    key: r.key || 0,
+                    time: r.time || 0,
+                    tag: r.tag || "",
+                    appName: r.appName || "",
+                    summary: r.summary || "",
+                    body: r.body || "",
+                    icon: r.icon || "",
+                    urgency: r.urgency === undefined ? 1 : r.urgency,
+                    progress: r.progress === undefined ? -1 : r.progress,
+                    seen: r.seen === true,
+                    notification: null
+                }));
+            }
+            svc.records = list;
+        } catch (e) {
+            console.warn("уведомления: состояние не прочитано:", e);
+        }
+        svc.ready = true;
+        svc.prune();
+    }
+
+    function save() {
+        if (!svc.ready) return;
+        const data = {
+            dnd: svc.dnd,
+            nextKey: svc.nextKey,
+            records: svc.records.map(r => ({
+                key: r.key, time: r.time, tag: r.tag, appName: r.appName,
+                summary: r.summary, body: r.body, icon: r.icon,
+                urgency: r.urgency, progress: r.progress, seen: r.seen
+            }))
+        };
+        svc.stateFile.setText(JSON.stringify(data));
+    }
+
+    // Запись истории. Собственный объект, а не поле в массиве: у него есть
+    // сигналы об изменении свойств, поэтому карточка и строка истории сами
+    // перерисовываются, когда запись меняется.
+    property Component recordComponent: Component {
+        QtObject {
+            property int key: 0
+            property real time: 0
+            property string tag: ""
+            property string appName: ""
+            property string summary: ""
+            property string body: ""
+            property string icon: ""
+            property int urgency: 1
+            property int progress: -1
+            property bool seen: false
+            // Живой объект уведомления или null, если его уже нет.
+            property var notification: null
+        }
     }
 
     // --- Сервер ---
@@ -224,9 +394,25 @@ QtObject {
     // Вызов: qs -c panel ipc call notifications <функция>.
     property IpcHandler ipc: IpcHandler {
         target: "notifications"
-        function close(): void { svc.closeNewest(); }
-        function closeAll(): void { svc.closeAll(); }
-        function dismissOldest(): void { svc.dismissOldest(); }
+        // Пометить просмотренным последнее пришедшее уведомление столбика.
+        function close(): void {
+            const list = svc.onScreen;
+            if (list.length > 0) svc.requestSeen(list[list.length - 1]);
+        }
+        // Пометить просмотренными все.
+        function closeAll(): void { svc.markAllSeen(); }
+        // Верхнее (самое старое) уведомление столбика: пометить просмотренным.
+        function dismissOldest(): void {
+            const list = svc.onScreen;
+            if (list.length > 0) svc.requestSeen(list[0]);
+        }
+        // Верхнее уведомление: действие по умолчанию и удаление из истории.
+        function invokeOldest(): void {
+            const list = svc.onScreen;
+            if (list.length > 0) svc.requestAct(list[0]);
+        }
+        // Вернуть на экран последнее просмотренное уведомление.
+        function restore(): void { svc.restoreLast(); }
         function dnd(): void { svc.toggleDnd(); }
         function history(): void { svc.historyToggleRequested(); }
     }

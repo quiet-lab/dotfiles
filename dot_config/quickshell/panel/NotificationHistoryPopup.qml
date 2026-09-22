@@ -1,6 +1,9 @@
-// Окно истории уведомлений (спецификация qs-notifications, требование «История
-// уведомлений»): всплывающее окно панели справа от колонки с зазором 10 px,
-// в оформлении плиток. Открывается кликом по плитке уведомлений и командой
+// Окно истории уведомлений (спецификация qs-notifications, требование
+// «История уведомлений»): всплывающее окно панели справа от колонки
+// с зазором 10 px, в оформлении плиток. Показывает все записи за сутки,
+// новые сверху, и отличает просмотренные от непросмотренных. Левый клик
+// по записи переключает её состояние, правый выполняет действие по умолчанию
+// и удаляет запись. Открывается кликом по плитке и командой
 // `qs -c panel ipc call notifications history`.
 import Quickshell
 import Quickshell.Services.Notifications
@@ -22,6 +25,8 @@ PanelPopup {
 
     function open() {
         if (!popup.anchorItem) return;
+        // Обращение к истории — повод отбросить записи старше суток.
+        NotificationService.prune();
         popup.entered = false;
         popup.target = popup.anchorItem;
         popup.anchor.updateAnchor();
@@ -40,8 +45,9 @@ PanelPopup {
     }
 
     function stamp(time) {
-        const h = String(time.getHours()).padStart(2, "0");
-        const m = String(time.getMinutes()).padStart(2, "0");
+        const d = new Date(time);
+        const h = String(d.getHours()).padStart(2, "0");
+        const m = String(d.getMinutes()).padStart(2, "0");
         return h + ":" + m;
     }
 
@@ -62,7 +68,7 @@ PanelPopup {
             Text {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
-                text: "ИСТОРИЯ УВЕДОМЛЕНИЙ"
+                text: "УВЕДОМЛЕНИЯ ЗА СУТКИ"
                 color: Theme.gray
                 font.family: Theme.fontFamily
                 font.pointSize: Theme.pt(Theme.titleSize)
@@ -105,9 +111,9 @@ PanelPopup {
         }
 
         Text {
-            visible: NotificationService.history.length === 0
+            visible: NotificationService.records.length === 0
             y: separator.y + 9
-            text: "Пропущенных уведомлений нет"
+            text: "Уведомлений за сутки нет"
             color: Theme.gray
             font.family: Theme.fontFamily
             font.pixelSize: 16
@@ -120,80 +126,106 @@ PanelPopup {
             height: box.height - y
             clip: true
             spacing: 6
-            model: NotificationService.history
+            model: NotificationService.newestFirst
 
             delegate: Item {
-                id: record
+                id: row
                 required property var modelData
-                required property int index
+                readonly property bool seen: row.modelData.seen
+                // Действие по умолчанию есть только у записи с живым
+                // уведомлением: после перезапуска панели объекты потеряны.
+                readonly property bool actionable: NotificationService.defaultAction(row.modelData.notification) !== null
                 width: list.width
                 height: lines.implicitHeight + 8
 
                 Rectangle {
                     anchors.fill: parent
                     radius: 8
-                    color: recordMouse.containsMouse ? Theme.black : "transparent"
+                    color: rowMouse.containsMouse ? Theme.black : "transparent"
+                }
+
+                // Метка состояния: непросмотренная запись отмечена точкой
+                // цвета рамки, просмотренная — пустым кружком.
+                Rectangle {
+                    x: 4
+                    y: 10
+                    width: 8
+                    height: 8
+                    radius: 4
+                    color: row.seen ? "transparent" : Theme.yellow
+                    border.color: Theme.gray
+                    border.width: row.seen ? 1 : 0
                 }
 
                 Row {
                     id: lines
-                    x: 6
+                    x: 18
                     y: 4
-                    width: parent.width - 12
+                    width: parent.width - 24
                     spacing: Theme.gap
 
                     Image {
-                        visible: record.modelData.icon !== ""
+                        visible: row.modelData.icon !== ""
                         width: visible ? 20 : 0
                         height: 20
-                        source: record.modelData.icon
+                        source: row.modelData.icon
                         sourceSize: Qt.size(40, 40)
                         fillMode: Image.PreserveAspectFit
                         asynchronous: true
+                        opacity: row.seen ? 0.5 : 1
                     }
                     Text {
                         width: 44
-                        text: popup.stamp(record.modelData.time)
+                        text: popup.stamp(row.modelData.time)
                         color: Theme.gray
                         font.family: Theme.fontFamily
                         font.pixelSize: 14
                     }
                     Column {
-                        width: lines.width - lines.spacing * 2 - 44 - (record.modelData.icon !== "" ? 20 + lines.spacing : 0)
+                        width: lines.width - lines.spacing * 2 - 44
+                               - (row.modelData.icon !== "" ? 20 + lines.spacing : 0)
                         spacing: 2
 
                         Text {
                             width: parent.width
-                            text: record.modelData.summary
-                            textFormat: Text.PlainText
+                            // Запись без действия по умолчанию (уведомление
+                            // закрыто приложением или потеряно при перезапуске
+                            // панели) не выделяется подчёркиванием.
+                            text: row.actionable ? "<u>" + row.modelData.summary + "</u>"
+                                                 : row.modelData.summary
+                            textFormat: Text.StyledText
                             elide: Text.ElideRight
-                            color: record.modelData.urgency === NotificationUrgency.Critical ? Theme.red : Theme.yellow
+                            color: row.seen ? Theme.gray
+                                            : (row.modelData.urgency === NotificationUrgency.Critical
+                                               ? Theme.red : Theme.yellow)
                             font.family: Theme.fontFamily
                             font.pixelSize: 15
-                            font.bold: true
+                            font.bold: !row.seen
                         }
                         Text {
                             visible: text !== ""
                             width: parent.width
-                            text: NotificationService.markup(record.modelData.body)
+                            text: NotificationService.markup(row.modelData.body)
                             textFormat: Text.StyledText
                             wrapMode: Text.Wrap
                             maximumLineCount: 3
                             elide: Text.ElideRight
-                            color: Theme.foreground
+                            color: row.seen ? Theme.gray : Theme.foreground
                             font.family: Theme.fontFamily
                             font.pixelSize: 14
                         }
                     }
                 }
 
-                // Правый клик убирает одну запись.
                 MouseArea {
-                    id: recordMouse
+                    id: rowMouse
                     anchors.fill: parent
                     hoverEnabled: true
-                    acceptedButtons: Qt.RightButton
-                    onClicked: NotificationService.forget(record.index)
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    onClicked: (ev) => {
+                        if (ev.button === Qt.RightButton) NotificationService.requestAct(row.modelData);
+                        else NotificationService.toggleSeen(row.modelData);
+                    }
                 }
             }
         }

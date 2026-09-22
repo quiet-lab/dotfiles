@@ -487,12 +487,18 @@ exec = "~/.local/bin/handmade-scripts/screenshot-selection"
 chain = "CTRL+Escape"
 exec = "qs -c panel ipc call notifications history"
 
-# Super+Enter закрывает самое старое видимое уведомление и выполняет его
-# действие по умолчанию — то же, что клик мышью по нему. Ctrl+Enter под это
-# не занят намеренно: он нужен приложениям (отправка сообщения, формы).
+# Super+Enter делает с верхним уведомлением столбика то же, что левый клик
+# по нему: помечает просмотренным и убирает с экрана, из истории не удаляет.
+# Shift+Super+Enter — то же, что правый клик: выполняет действие по умолчанию
+# и удаляет уведомление из истории. Ctrl+Enter под это не занят намеренно:
+# он нужен приложениям (отправка сообщения, формы).
 [[binds]]
 chain = "SUPER+Return"
 exec = "qs -c panel ipc call notifications dismissOldest"
+
+[[binds]]
+chain = "SUPER+SHIFT+Return"
+exec = "qs -c panel ipc call notifications invokeOldest"
 
 [[binds]]
 chain = "CTRL+space"

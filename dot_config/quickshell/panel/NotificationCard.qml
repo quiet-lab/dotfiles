@@ -1,8 +1,9 @@
-// Карточка уведомления (спецификация qs-notifications, требования «Окно
-// всплывающих уведомлений», «Действия и клики по уведомлению», «Значок,
-// картинка и разметка тела», «Индикатор выполнения»). Оформление — как
-// у плиток колонки: чёрная заливка 0.9, рамка 1 px, скругление 12 px,
-// внутренний отступ 10 px до содержимого.
+// Карточка уведомления на экране (спецификация qs-notifications). Рисует
+// запись истории: значок, заголовок, тело с разметкой, полосу по подсказке
+// `value` и кнопки действий. Клики: левый — пометить просмотренным и убрать
+// с экрана, правый — действие по умолчанию и удаление из истории, средний —
+// пометить просмотренными все. Карточку создаёт и расставляет
+// NotificationStack.qml, она же растворяется при уходе.
 import Quickshell
 import Quickshell.Services.Notifications
 import QtQuick
@@ -11,22 +12,21 @@ import qs
 
 Rectangle {
     id: card
-    required property var notification
+    // Запись истории, которую показывает карточка.
+    required property var record
 
     // Отступ до содержимого 10 px складывается из рамки и tilePadding.
     readonly property int pad: Theme.tilePadding + 1
     readonly property int iconSize: 48
-    readonly property string icon: NotificationService.iconSource(card.notification)
-    readonly property int progress: NotificationService.progress(card.notification)
+    readonly property var notification: card.record.notification
     readonly property var buttons: NotificationService.buttons(card.notification)
-    readonly property bool critical: card.notification.urgency === NotificationUrgency.Critical
+    readonly property bool critical: card.record.urgency === NotificationUrgency.Critical
 
-    // Карточка уже растворяется; повторные просьбы закрыть её пропускаются.
+    // Карточка уже растворяется; повторные просьбы пропускаются.
     property bool closing: false
-    // Действие, которое надо выполнить, когда растворение закончится.
-    property var pendingAction: null
-    // Закрыть по истечении (уйдёт в историю), а не как закрытое пользователем.
-    property bool pendingExpire: false
+    // Что сделать, когда растворение кончится: "seen", "act" или пусто —
+    // просто исчезнуть (карточку убрали не действием пользователя).
+    property string pendingKind: ""
 
     // Смещение верхнего края карточки от нижнего края окна столбика.
     // Расстановку задаёт столбик, а едет к ней карточка сама, поэтому
@@ -51,17 +51,15 @@ Rectangle {
         anchors.fill: parent
         acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
         onClicked: (ev) => {
-            if (ev.button === Qt.MiddleButton) { NotificationService.closeAll(); return; }
-            if (ev.button === Qt.RightButton) { NotificationService.requestClose(card.notification, null); return; }
-            NotificationService.requestClose(card.notification,
-                                             NotificationService.defaultAction(card.notification));
+            if (ev.button === Qt.MiddleButton) { NotificationService.markAllSeen(); return; }
+            if (ev.button === Qt.RightButton) { NotificationService.requestAct(card.record); return; }
+            NotificationService.requestSeen(card.record);
         }
     }
 
-    // Растворение при закрытии: карточка становится прозрачной, и только
-    // когда анимация закончилась, уведомление закрывается на самом деле.
-    // Отсчёта времени в логике здесь нет — действие выполняет сигнал
-    // окончания анимации.
+    // Растворение: карточка становится прозрачной, и только когда анимация
+    // закончилась, меняется состояние записи. Отсчёта времени в логике нет —
+    // действие выполняет сигнал окончания анимации.
     NumberAnimation {
         id: fade
         target: card
@@ -69,40 +67,40 @@ Rectangle {
         to: 0
         duration: 150
         easing.type: Easing.InQuad
-        onFinished: card.finishClose()
+        onFinished: card.finished()
     }
 
     Connections {
         target: NotificationService
-        function onCloseRequested(n, action, expire) {
-            if (n === card.notification) card.beginClose(action, expire);
+        function onCardActionRequested(rec, kind) {
+            if (rec === card.record) card.fadeThen(kind);
         }
     }
 
-    function beginClose(action, expire) {
+    function fadeThen(kind) {
         if (card.closing) return;
         card.closing = true;
-        card.pendingAction = action;
-        card.pendingExpire = expire === true;
+        card.pendingKind = kind;
         fade.start();
     }
 
-    function finishClose() {
-        const action = card.pendingAction;
-        const expire = card.pendingExpire;
-        card.pendingAction = null;
-        // invoke() сообщает клиенту о выборе действия и закрывает уведомление
-        // само, если клиент не просил оставить его открытым.
-        if (action) action.invoke();
-        else if (expire) card.notification.expire();
-        else card.notification.dismiss();
-        // Уведомление с признаком resident приложение просит оставить
-        // открытым: после действия оно не закрывается, и карточка возвращается.
-        if (NotificationService.shown.indexOf(card.notification) >= 0) {
-            card.closing = false;
-            card.pendingExpire = false;
-            card.opacity = 1;
-        }
+    // Запись ушла с экрана не по клику (режим «не беспокоить», удаление
+    // из истории, истёкший срок): карточку надо просто убрать.
+    function vanish() {
+        if (card.closing) { card.destroy(); return; }
+        card.closing = true;
+        card.pendingKind = "";
+        fade.start();
+    }
+
+    function finished() {
+        const kind = card.pendingKind;
+        card.pendingKind = "";
+        if (kind === "seen") NotificationService.markSeen(card.record);
+        else if (kind === "act") NotificationService.act(card.record);
+        else card.destroy();
+        // После смены состояния запись уходит с экрана, и столбик уничтожит
+        // карточку сам.
     }
 
     RowLayout {
@@ -114,11 +112,11 @@ Rectangle {
         spacing: Theme.gap
 
         Image {
-            visible: card.icon !== ""
+            visible: card.record.icon !== ""
             Layout.preferredWidth: card.iconSize
             Layout.preferredHeight: card.iconSize
             Layout.alignment: Qt.AlignTop
-            source: card.icon
+            source: card.record.icon
             sourceSize: Qt.size(card.iconSize * 2, card.iconSize * 2)
             fillMode: Image.PreserveAspectFit
             asynchronous: true
@@ -134,7 +132,7 @@ Rectangle {
 
                 Text {
                     Layout.fillWidth: true
-                    text: card.notification.summary
+                    text: card.record.summary
                     // Заголовок выводится без разметки: спецификация уведомлений
                     // разрешает её только в теле.
                     textFormat: Text.PlainText
@@ -147,7 +145,7 @@ Rectangle {
                 Text {
                     visible: text !== ""
                     Layout.alignment: Qt.AlignTop
-                    text: card.notification.appName
+                    text: card.record.appName
                     color: Theme.gray
                     font.family: Theme.fontFamily
                     font.pixelSize: 13
@@ -157,7 +155,7 @@ Rectangle {
             Text {
                 visible: text !== ""
                 Layout.fillWidth: true
-                text: NotificationService.markup(card.notification.body)
+                text: NotificationService.markup(card.record.body)
                 // Безопасное подмножество разметки: StyledText не ходит в сеть
                 // и не открывает ссылок, неизвестные теги отбрасывает (design D10).
                 textFormat: Text.StyledText
@@ -169,14 +167,14 @@ Rectangle {
 
             // Полоса заполнения по подсказке value.
             Rectangle {
-                visible: card.progress >= 0
+                visible: card.record.progress >= 0
                 Layout.fillWidth: true
                 Layout.topMargin: 2
                 implicitHeight: 5
                 radius: 2.5
                 color: Theme.background
                 Rectangle {
-                    width: parent.width * card.progress / 100
+                    width: parent.width * Math.max(0, card.record.progress) / 100
                     height: parent.height
                     radius: parent.radius
                     color: Theme.yellow
@@ -213,7 +211,10 @@ Rectangle {
                             id: buttonMouse
                             anchors.fill: parent
                             hoverEnabled: true
-                            onClicked: NotificationService.requestClose(card.notification, button.modelData)
+                            onClicked: {
+                                button.modelData.invoke();
+                                NotificationService.requestSeen(card.record);
+                            }
                         }
                     }
                 }
