@@ -2,12 +2,19 @@
 # Графический запрос пароля для sudo (SUDO_ASKPASS). Нужен агентам и
 # сценариям без терминала: sudo -A вызывает эту обёртку с подсказкой в
 # первом аргументе и читает пароль из её stdout.
+# Подсказку задаёт ключ sudo -p: агент пишет в ней, зачем нужны права,
+# и окно показывает это пояснение над полем ввода. Без -p sudo передаёт
+# свою стандартную строку «[sudo] пароль для …».
 # Диалог — pinentry-gtk: у поля ввода есть кнопка показа набранного пароля,
 # у zenity --password такой возможности нет. pinentry общается по протоколу
-# Assuan: пароль приходит строкой «D …», спецсимволы в ней закодированы как %XX.
-# Использование: SUDO_ASKPASS=~/.local/bin/handmade-scripts/sudo-askpass sudo -A команда
-prompt="${1:-Пароль sudo}"
-pin=$(printf 'SETTITLE sudo\nSETDESC %s\nSETPROMPT Пароль:\nGETPIN\nBYE\n' "$prompt" \
+# Assuan: в SETDESC знак процента и перевод строки кодируются как %25 и %0A,
+# пароль приходит строкой «D …», спецсимволы в ней закодированы как %XX.
+# Использование:
+#   SUDO_ASKPASS=~/.local/bin/handmade-scripts/sudo-askpass \
+#       sudo -A -p 'Установка пакета playerctl для паузы плееров VoxType' команда
+reason="${1:-Команда запрашивает права root}"
+desc=$(printf '%s' "$reason" | sed 's/%/%25/g' | awk 'NR>1{printf "%%0A"} {printf "%s", $0}')
+pin=$(printf 'SETTITLE sudo\nSETDESC %s\nSETPROMPT Пароль sudo:\nGETPIN\nBYE\n' "$desc" \
     | pinentry-gtk 2>/dev/null | sed -n 's/^D //p')
 [ -n "$pin" ] || exit 1
 printf '%b\n' "$(printf '%s' "$pin" | sed 's/\\/\\\\/g; s/%\([0-9A-Fa-f][0-9A-Fa-f]\)/\\x\1/g')"
