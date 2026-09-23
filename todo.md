@@ -15,7 +15,6 @@
 - Проверки раздела 6 [`tasks.md`](openspec/changes/keys-help/tasks.md) изменения `keys-help`: Shift+Super+/ при английской и русской раскладке показывает и скрывает окно подсказки, клик мимо карточки скрывает его, вид окна (карточка 1920 px, одна колонка с прокруткой, подписи не обрезаны).
 - Проверки раздела 4 [`tasks.md`](openspec/changes/live-layout/tasks.md) изменения `live-layout`: в `work` Shift+Super+V, сдвинуть и растянуть окно Chrome AI мышью, Super+V — Chrome AI на главном месте, herdr в его прямоугольнике, ещё раз Super+V — обратно; растянуть herdr за край и снова Super+V; сдвинуть neovide, Super+T, закрыть neovide и открыть из yazi — окно встаёт в ячейку `right` (закрытие снимает изменённое место); Ctrl+Super+Пробел возвращает места из описания, сохраняя обмен. Ctrl+Super+S Ctrl+Super+W пишет раскладку в `config.toml` — решить, коммитить ли такую правку конфига под chezmoi или откатить (`chezmoi apply --force ~/.config/workspaced/config.toml`).
 - Проверки раздела 5 [`tasks.md`](openspec/changes/sticky-chains/tasks.md) изменения `sticky-chains`: на столе 2 с `surf` — Super+S, R, V, Y, Backspace, S, V, V, E (V поднимает Chrome AI, Y — Яндекс.Браузер, Backspace возвращает в корень, S, V, V открывают два новых окна Chrome AI, E открывает neovide и закрывает цепочку; карточка вверху показывает путь и клавиши на каждом шаге); то же с неотпущенным Super после Super+S; Q, Alt+Tab, Super+Delete в «Поднять» поглощаются, при русской раскладке R и V действуют так же; Escape из «Новое окно» и Backspace из корня закрывают цепочку и убирают карточку; Shift+Super+S открывает окно выбора сессии.
-- Отправлять ли черновики запросов из `docs/upstream/` в Hyprland и Chromium.
 
 ### Где остановились
 
@@ -37,7 +36,7 @@
 5. `askpass-only-quickshell`: `openspec archive askpass-only-quickshell -y` (пункт 6.1).
 6. `sticky-chains`: получить итоги проверок раздела 5, `openspec archive sticky-chains -y` (пункт 6.3); его дельта hyprland-binds записана в редакции `work-area-center` с обеими строками.
 7. После той же перезагрузки, что для `session-instances`: `conceal_vrr_caps` действует (команда `status` ниже), DP-2 на 120 Гц, `graphical-session.target` останавливается при выходе (пункт в разделе «Hyprland» ниже).
-8. Решить с пользователем, отправлять ли запросы из `docs/upstream/` в Hyprland и Chromium.
+8. После 23.10.2026 снова спросить пользователя об отправке черновиков из `docs/upstream/` (условие пересмотра в `docs/open-questions/hyprland-window-parent.md`).
 
 ### Как проверить
 
