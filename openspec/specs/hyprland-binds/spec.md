@@ -70,6 +70,7 @@
 | Super+L | заблокировать сессию командой `loginctl lock-session` |
 | Ctrl+Alt+Super+Escape | выход из сессии |
 | Print, Ctrl+Print, Shift+Print | скриншот экрана, с обратным отсчётом, области |
+| Shift+Super+/ | окно подсказки клавиш панели Quickshell (`qs -c panel ipc call keys toggle`, спецификация qs-keys-help): все цепочки сессии по группам; повторное нажатие скрывает окно. Привязка записана именем keysym `SUPER+SHIFT+slash` и срабатывает при любой раскладке: Hyprland сверяет привязки по первой раскладке карты XKB (`us`) |
 | Ctrl+Escape, Super+Enter, Shift+Super+Enter, Ctrl+Пробел, Ctrl+Shift+Пробел, Super+Ctrl+Enter, Super+Ctrl+Alt+Enter | уведомления панели Quickshell (`qs -c panel ipc call notifications …`): окно истории, убрать верхнюю карточку с экрана без удаления из истории (`dismissOldest`), выполнить её действие по умолчанию и удалить из истории (`invokeOldest`), пометить просмотренным последнее пришедшее (`close`), пометить просмотренными все (`closeAll`, то же вторым сочетанием), очистить историю целиком (`clear`) |
 | XF86AudioRaiseVolume / LowerVolume / Mute | `~/.local/bin/handmade-scripts/change-volume.sh` с аргументами `+`, `-`, `0` |
 | XF86MonBrightnessUp / Down | `~/.local/bin/handmade-scripts/change-brightness.sh` с аргументами `+`, `-` |
@@ -130,6 +131,10 @@
 #### Scenario: Блокировка
 - **WHEN** нажато Super+L
 - **THEN** экран закрывает hyprlock, после ввода пароля сессия продолжается со всеми окнами
+
+#### Scenario: Подсказка клавиш
+- **WHEN** при русской раскладке нажато Shift+Super+/, затем Shift+Super+/ ещё раз
+- **THEN** первое нажатие показывает окно подсказки клавиш, второе скрывает его; `hyprctl binds` содержит привязку с клавишей `slash` и модификаторами Super и Shift
 
 #### Scenario: Привязок в конфиге Hyprland нет
 - **WHEN** выполнен поиск `hl.bind` в `~/.config/hypr/hyprland.lua`

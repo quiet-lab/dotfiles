@@ -40,5 +40,6 @@
 
 ## 6. Документация
 
-- [ ] 6.1 `AGENTS.md`, раздел «Сессия Hyprland»: абзац о цепочке Super+S (состояния, Backspace, Escape, индикатор) и о ключе `--new`
-- [ ] 6.2 Шапка раздела привязок в `config.toml` — ссылка на раздел `[sticky]`; `openspec validate sticky-chains --strict`; архивация после `keys-help`, `live-layout`, `work-area-center`, `session-instances`, `askpass-only-quickshell`
+- [x] 6.1 `AGENTS.md`, раздел «Сессия Hyprland»: абзац о цепочке Super+S (состояния, Backspace, Escape, индикатор) и о ключе `--new`: отдельный пункт после абзаца о привязках, окно сессий на Shift+Super+S, ссылки на спецификации ws-config, ws-daemon, hyprland-binds и qs-key-chains (подходящего документа в `docs/` нет); `todo.md` — вопрос о проверках раздела 5 и порядок архивации — 23.09.2026
+- [x] 6.2 Шапка раздела привязок в `config.toml` — ссылка на раздел `[sticky]`; `openspec validate sticky-chains --strict`: шапка дополнена группой «Цепочки с выходом» и абзацем о разделе `[sticky.<имя>]`, `chezmoi apply`, демон перечитал конфиг без ошибок; проход по формулировкам дельт и `design.md`; проверка проходит — 23.09.2026
+- [ ] 6.3 Архивация после `keys-help`, `session-instances`, `live-layout`, `work-area-center`, `askpass-only-quickshell` (порядок — в `todo.md`)
