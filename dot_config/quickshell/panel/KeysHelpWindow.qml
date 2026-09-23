@@ -32,8 +32,9 @@ PanelWindow {
     readonly property int barGap: 24
     // Шаг колеса мыши — три строки за щелчок.
     readonly property int wheelStep: 3 * rowHeight
-    // Длительность плавной прокрутки, мс.
-    readonly property int scrollDuration: 150
+    // Длительность плавной прокрутки, мс: движение с замедлением к концу
+    // (Easing.OutCubic) за это время доходит до цели.
+    readonly property int scrollDuration: 320
     // Первое g из пары g g уже нажато: следующее g ведёт в начало перечня.
     // Срока у пары нет (таймеры запрещены): пару сбрасывает любая другая клавиша.
     property bool gPending: false
@@ -84,11 +85,15 @@ PanelWindow {
         }
     }
 
-    // Плавный сдвиг прокрутки к y с ограничением пределами перечня.
+    // Плавный сдвиг прокрутки к y с ограничением пределами перечня. Новая
+    // цель подхватывает движение с нынешнего положения, без остановки
+    // и без скачка; цель, к которой анимация уже идёт, её не перезапускает,
+    // иначе упор в начало или конец перечня растягивал бы подход к краю.
     function scrollTo(y) {
         const max = Math.max(0, flick.contentHeight - flick.height);
         const to = Math.max(0, Math.min(max, y));
         flick.cancelFlick();
+        if (scrollAnim.running && to === scrollAnim.to) return;
         scrollAnim.stop();
         if (to === flick.contentY) return;
         scrollAnim.from = flick.contentY;
@@ -287,10 +292,10 @@ PanelWindow {
             contentWidth: width
             contentHeight: list.height
             boundsBehavior: Flickable.StopAtBounds
-            // Инерция перетаскивания для экрана 4K: быстрый рывок проходит
-            // заметную часть перечня, а торможение не затягивается.
-            flickDeceleration: 4000
-            maximumFlickVelocity: 8000
+            // Мягкая инерция перетаскивания: перечень после броска
+            // тормозит постепенно, а скорость броска ограничена умеренной.
+            flickDeceleration: 1500
+            maximumFlickVelocity: 4000
             // Перетаскивание прерывает плавную прокрутку клавишами и колесом.
             onMovementStarted: scrollAnim.stop()
 
@@ -364,21 +369,20 @@ PanelWindow {
             }
         }
 
-        // Колесо мыши: щелчок сдвигает перечень на wheelStep с анимацией;
-        // точная прокрутка тачпада (pixelDelta) идёт без анимации, она и так
-        // плавная. Кнопки мыши область не принимает — их получает Flickable.
+        // Колесо мыши и тачпад: щелчок колеса сдвигает цель прокрутки
+        // на wheelStep, точная прокрутка тачпада (pixelDelta) — на свои
+        // пиксели; в обоих случаях цель копится, а перечень едет к ней той же
+        // анимацией, что и от клавиш. Кнопки мыши область не принимает —
+        // их получает Flickable.
         MouseArea {
             id: wheel
             anchors.fill: flick
             acceptedButtons: Qt.NoButton
             onWheel: (w) => {
-                if (w.pixelDelta.y !== 0) {
-                    scrollAnim.stop();
-                    const max = Math.max(0, flick.contentHeight - flick.height);
-                    flick.contentY = Math.max(0, Math.min(max, flick.contentY - w.pixelDelta.y));
-                } else {
+                if (w.pixelDelta.y !== 0)
+                    win.scrollBy(-w.pixelDelta.y);
+                else
                     win.scrollBy(-w.angleDelta.y / 120 * win.wheelStep);
-                }
                 w.accepted = true;
             }
         }
