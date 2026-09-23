@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Возвращает окну в фокусе раскладку физической клавиатуры после того, как
+# VoxType напечатал текст виртуальной клавиатурой wtype. Вызывается перехватом
+# post_output_command из ~/.config/voxtype/config.toml, то есть по событию
+# «вывод закончен», а не по расписанию.
+#
+# Причина (Hyprland 0.56.2, разбор 23.09.2026): wtype создаёт виртуальную
+# клавиатуру с собственной картой из одной раскладки, и Hyprland отдаёт окну
+# эту карту. Когда wtype выходит, Hyprland делает клавиатурой сиденья
+# последнее устройство из своего списка (power-button-1) и присылает окну
+# полную карту us+ru, но не присылает события modifiers с номером группы.
+# Клиент на каждую новую карту заводит новое состояние xkb с группой 0, поэтому
+# окно печатает латиницу, хотя главная клавиатура и плитка раскладки показывают
+# RU. Нажатие обычной клавиши группу не присылает (карты одинаковые, повторно
+# не отправляются), смена фокуса присылает группу power-button-1, то есть 0;
+# ошибку исправляло только первое нажатие модификатора или смена раскладки.
+#
+# Исправление: у каждой физической клавиатуры с ненулевой группой группа
+# переключается на 0 и сразу обратно одним запросом hyprctl --batch. Каждое
+# переключение Hyprland проводит как изменение модификаторов этой клавиатуры:
+# она снова становится клавиатурой сиденья, а окно получает событие modifiers
+# с её группой. Клавиатуры с группой 0 не трогаются: для них новое состояние
+# клиента уже верное, а плитка раскладки не мигает лишний раз.
+set -euo pipefail
+
+# Подпись экземпляра Hyprland наследуется из окружения пользовательского
+# systemd; после перезахода она может указывать на прежний экземпляр. Тогда
+# берётся каталог живого экземпляра — он самый свежий.
+runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+if [[ -z ${HYPRLAND_INSTANCE_SIGNATURE:-} || ! -S $runtime/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock ]]; then
+    HYPRLAND_INSTANCE_SIGNATURE=$(ls -t "$runtime/hypr" | head -1)
+    export HYPRLAND_INSTANCE_SIGNATURE
+fi
+
+batch=""
+while IFS=$'\t' read -r name index; do
+    [[ -n $name ]] || continue
+    batch+="switchxkblayout $name 0 ; switchxkblayout $name $index ; "
+done < <(hyprctl devices -j | jq -r '
+    .keyboards[]
+    | select(.name | startswith("hl-virtual-keyboard") | not)
+    | select(.active_layout_index != null and .active_layout_index != 0)
+    | "\(.name)\t\(.active_layout_index)"')
+
+if [[ -n $batch ]]; then
+    hyprctl --batch "$batch" >/dev/null
+fi

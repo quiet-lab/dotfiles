@@ -201,6 +201,12 @@ paste_keys = "ctrl+shift+v"  # Some terminal emulators
 # pre_recording_command = "hyprctl dispatch submap voxtype_recording"
 # pre_output_command = "hyprctl dispatch submap voxtype_suppress"
 # post_output_command = "hyprctl dispatch submap reset"
+#
+# После вывода текста окну возвращается раскладка физической клавиатуры:
+# после выхода wtype Hyprland 0.56.2 присылает окну полную карту без номера
+# группы, и окно печатает латиницу при индикаторе RU. Подробности —
+# в комментарии скрипта и в docs/media-and-portals.md.
+post_output_command = "~/.local/bin/handmade-scripts/voxtype-restore-layout"
 
 [output.notification]
 # Show notification when recording starts (hotkey pressed)
