@@ -26,10 +26,12 @@ QtObject {
     readonly property color tileBorder: yellow
     readonly property int   tileRadius: 12
     readonly property int   tilePadding: 9
-    // Полоса табов плитки активного стола: серый Tokyo Night с непрозрачностью
-    // 0.5 поверх чёрной заливки плитки. Активный таб не покрыт полосой и
-    // остаётся цвета заливки, поэтому сливается с рядом окон под ним.
-    readonly property color tabBarBg:   Qt.rgba(0x56 / 255, 0x5F / 255, 0x89 / 255, 0.5)
+    // Полоса табов плитки активного стола: тёмно-серый Tokyo Night (`black`)
+    // с непрозрачностью 0.5 поверх чёрной заливки плитки — полоса лишь чуть
+    // светлее ряда окон (решение пользователя 23.09.2026). Активный таб
+    // не покрыт полосой и остаётся цвета заливки, поэтому сливается с рядом
+    // окон под ним.
+    readonly property color tabBarBg:   Qt.rgba(0x24 / 255, 0x28 / 255, 0x3B / 255, 0.5)
     // Всплывающие окна: та же заливка и рамка, скругление 8 px.
     readonly property int   popupRadius: 8
 
