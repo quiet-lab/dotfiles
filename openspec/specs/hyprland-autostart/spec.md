@@ -7,11 +7,11 @@
 ## Requirements
 
 ### Requirement: Состав автозапуска
-При старте сессии Hyprland MUST запускаться: обои (hyprpaper), уведомления dunst, агент polkit `hyprpolkitagent`, апплет NetworkManager `nm-applet` в режиме StatusNotifier, менеджер буфера обмена cliphist с наблюдателем `wl-paste --watch` для текста и изображений, демон voxtype с наблюдателем за состоянием диктовки, hypridle, демон workspaced и панель Quickshell (конфигурация `panel`). Окна для работы открывает демон, поднимая стартовый workspace из своего конфига (спецификация ws-sessions); конфиг Hyprland MUST NOT запускать терминал и браузер сам. Панель MUST запускаться пользовательским юнитом systemd `quickshell-panel.service`, а демон workspaced — юнитом `workspaced.service`; оба привязаны к цели `hyprland-session.target`: одна копия на сессию, перезапуск при аварийном завершении, остановка вместе с целью; панель запускается после демона, но не зависит от него. Наблюдатель за состоянием диктовки MUST запускаться юнитом `voxtype-mute-others.service`, привязанным к `voxtype.service`, а не к `hyprland-session.target`: он поднимается и останавливается вместе с демоном voxtype (спецификация voxtype-dictation).
+При старте сессии Hyprland MUST запускаться: обои (hyprpaper), агент polkit `hyprpolkitagent`, апплет NetworkManager `nm-applet` в режиме StatusNotifier, менеджер буфера обмена cliphist с наблюдателем `wl-paste --watch` для текста и изображений, демон voxtype, hypridle, демон workspaced и панель Quickshell (конфигурация `panel`). Уведомления сессии показывает сама панель (спецификация qs-notifications): отдельный демон уведомлений MUST NOT запускаться, юнит `dunst.service` MUST быть замаскирован. Окна для работы открывает демон, поднимая стартовый workspace из своего конфига (спецификация ws-sessions); конфиг Hyprland MUST NOT запускать терминал и браузер сам. Панель MUST запускаться пользовательским юнитом systemd `quickshell-panel.service`, а демон workspaced — юнитом `workspaced.service`; оба привязаны к цели `hyprland-session.target`: одна копия на сессию, перезапуск при аварийном завершении, остановка вместе с целью; панель запускается после демона, но не зависит от него.
 
 #### Scenario: Сессия запущена
 - **WHEN** прошло 10 секунд после входа в сессию
-- **THEN** `pgrep` находит по одному процессу hyprpaper, dunst, hyprpolkitagent, nm-applet, voxtype, hypridle, workspaced, quickshell и два наблюдателя wl-paste, `systemctl --user is-active voxtype-mute-others.service` даёт `active`, панель видна у левого края экрана, а на экране открыты окна стартового workspace демона
+- **THEN** `pgrep` находит по одному процессу hyprpaper, hyprpolkitagent, nm-applet, voxtype, hypridle, workspaced, quickshell и два наблюдателя wl-paste, процесса dunst нет, панель видна у левого края экрана, а на экране открыты окна стартового workspace демона
 
 #### Scenario: Конфиг перезагружен
 - **WHEN** выполнена `hyprctl reload`
@@ -27,7 +27,7 @@
 
 #### Scenario: Выход из сессии
 - **WHEN** сессия Hyprland завершена штатно
-- **THEN** `quickshell-panel.service` и `workspaced.service` остановлены вместе с `hyprland-session.target`, процессов quickshell и workspaced не осталось, а `voxtype-mute-others.service` остановлен вместе с `graphical-session.target` и вернул звук
+- **THEN** `quickshell-panel.service` и `workspaced.service` остановлены вместе с `hyprland-session.target`, процессов quickshell и workspaced не осталось
 
 ### Requirement: VPN при старте сессии
 При старте сессии MUST подниматься VPN-соединение NetworkManager `axata`, если оно ещё не активно; перед этим сессия MUST дождаться состояния `connected` у NetworkManager, но не дольше 30 секунд. Соединение `kozloff-de` MUST NOT подниматься автоматически ни сессией, ни NetworkManager (`connection.autoconnect no`).
