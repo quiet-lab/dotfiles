@@ -2,52 +2,48 @@
 
 ## Текущая работа
 
-Снимок на 2026-09-23 (день). Файл хранится в git, но в `$HOME` не попадает: он исключён в `.chezmoiignore`.
+Снимок на 2026-09-24 (ночь). Файл хранится в git, но в `$HOME` не попадает: он исключён в `.chezmoiignore`.
 
 ### Цель
 
-Серия изменений модели окон демона workspaced по [`docs/window-model.md`](docs/window-model.md) реализована целиком: шаги 1–6 проверены пользователем и заархивированы, шаг 7 (экземпляры и общие окна в снимке сессии, изменение [`session-instances`](openspec/changes/session-instances/tasks.md)) реализован, проверки командами пройдены, ждёт проверки перезагрузкой. Дальше изменения вне серии: [`keys-help`](openspec/changes/keys-help/tasks.md) (окно подсказки цепочек клавиш по Shift+Super+/) реализовано и ждёт проверки пользователем, [`live-layout`](openspec/changes/live-layout/tasks.md) (фактическая геометрия окон как раскладка workspace в памяти) реализовано, проверки командами пройдены, документация обновлена, ждёт проверки пользователем; [`sticky-chains`](openspec/changes/sticky-chains/tasks.md) (цепочки клавиш с выходом: режим на Super+S, индикатор панели, окно сессий на Shift+Super+S) реализовано, проверки командами и документация выполнены, ждёт проверки нажатиями. Серия и связанные изменения идут без пауз и подтверждений (правило в `AGENTS.md`).
+Серия изменений модели окон демона workspaced по [`docs/window-model.md`](docs/window-model.md) реализована целиком (шаги 1–6 заархивированы, шаг 7 ждёт проверки перезагрузкой). Сверх серии за 23.09.2026 сделаны и ждут закрытия: раскладка workspace в памяти (`live-layout`), центр окон по рабочей области (`work-area-center`), окно пароля только на Quickshell (`askpass-only-quickshell`), цепочки клавиш с выходом (`sticky-chains`) и превращение всех многошаговых цепочек в липкие (`chains-sticky`). Конфиг сессии и поведение остального не меняются: остаётся довести проверки пользователем и заархивировать изменения по порядку.
 
 ### Открытые вопросы к пользователю
 
-- Проверка перезагрузкой (изменение `session-instances`, пункт 4.1 [`tasks.md`](openspec/changes/session-instances/tasks.md)): два окна Chromium в `work`, второй neovide, открытый из yazi, окно Chrome AI в `work` и `surf`, сдвинутое в `surf`; Ctrl+Super+S дважды; перезагрузка. После входа состояние должно вернуться с экземплярами и общими окнами: два neovide в ячейке `right`, Chrome AI на месте в `work`, а на столе 2 — там, где его оставили. Второе окно Chromium вернётся, только если браузер сам восстанавливает окна (следующий вопрос). Состояние после входа агент проверяет командами.
-- Включать ли в профилях браузеров (Chromium, Chrome в двух каталогах данных, Яндекс.Браузер) «При запуске: продолжить с того же места», чтобы после перезагрузки возвращались вторые окна браузеров; сейчас настройка не задана ни в одном профиле ([`docs/host-state.md`](docs/host-state.md)).
-- Проверки раздела 6 [`tasks.md`](openspec/changes/keys-help/tasks.md) изменения `keys-help`: Shift+Super+/ при английской и русской раскладке показывает и скрывает окно подсказки, клик мимо карточки скрывает его, вид окна (карточка 1920 px, одна колонка с прокруткой, подписи не обрезаны).
-- Проверки раздела 4 [`tasks.md`](openspec/changes/live-layout/tasks.md) изменения `live-layout`: в `work` Shift+Super+V, сдвинуть и растянуть окно Chrome AI мышью, Super+V — Chrome AI на главном месте, herdr в его прямоугольнике, ещё раз Super+V — обратно; растянуть herdr за край и снова Super+V; сдвинуть neovide, Super+T, закрыть neovide и открыть из yazi — окно встаёт в ячейку `right` (закрытие снимает изменённое место); Ctrl+Super+Пробел возвращает места из описания, сохраняя обмен. Ctrl+Super+S Ctrl+Super+W пишет раскладку в `config.toml` — решить, коммитить ли такую правку конфига под chezmoi или откатить (`chezmoi apply --force ~/.config/workspaced/config.toml`).
-- Проверки раздела 5 [`tasks.md`](openspec/changes/sticky-chains/tasks.md) изменения `sticky-chains`: на столе 2 с `surf` — Super+S, R, V, Y, Backspace, S, V, V, E (V поднимает Chrome AI, Y — Яндекс.Браузер, Backspace возвращает в корень, S, V, V открывают два новых окна Chrome AI, E открывает neovide и закрывает цепочку; карточка вверху показывает путь и клавиши на каждом шаге); то же с неотпущенным Super после Super+S; Q, Alt+Tab, Super+Delete в «Поднять» поглощаются, при русской раскладке R и V действуют так же; Escape из «Новое окно» и Backspace из корня закрывают цепочку и убирают карточку; Shift+Super+S открывает окно выбора сессии.
+- Проверка нажатиями изменения `chains-sticky` (пункты 4.1–4.4 его [`tasks.md`](openspec/changes/chains-sticky/tasks.md)): Super+Tab даёт карточку в правом нижнем углу, Q поглощается, S/W/Tab выполняют действие и закрывают режим; Ctrl+Super+S и, не отпуская модификаторы, S — снимок сессии; Ctrl+Super+S, затем W без модификаторов — поглощается, Ctrl+Super+W — запись workspace (после неё откатить конфиг `chezmoi apply --force ~/.config/workspaced/config.toml`); Backspace и Escape закрывают режим без действия. Предложена 23.09.2026, ответа не было.
+- Проверка перезагрузкой изменения `session-instances` (пункт 4.1 его [`tasks.md`](openspec/changes/session-instances/tasks.md)): перед ней открыть второе окно Chromium в `work` и второй neovide, нажать Ctrl+Super+S дважды, перезагрузиться — после входа состояние должно вернуться с экземплярами и общими окнами; во всех четырёх профилях браузеров включено «продолжить с того же места», поэтому вторые окна браузеров должны вернуться. Итог дописать в `docs/host-state.md` (пункт 5.4 того же `tasks.md`).
 
 ### Где остановились
 
-- Демон на коммите `c142d97` (`~/work/pets/workspaced`, `master`, 153 теста; последним вошло `sticky-chains`: раздел `[sticky]`, ключ `--new` у `key` и `app`, несколько ожиданий запуска одного приложения). Шаги 1–7 модели окон реализованы, 1–6 заархивированы; вне серии реализован `live-layout` (коммиты `ea2ad71`, `6a23d03`): раскладка workspace в памяти, обмен мест, память окна в обоих режимах, раскладка в снимке сессии; разделы 1–3 и 5.3–5.5 его `tasks.md` выполнены, открыты проверка пользователем (раздел 4) и архивация (5.1–5.2). Шаг 7: снимок хранит окна экземплярами (номер, состав, прямоугольники `stack`, командная строка у экземпляра с собственным процессом), при старте живые окна не перезапускаются, недостающие экземпляры запускаются при поднятии своего workspace; раздел документации `session-instances` выполнен, открыт только пункт 4.1. README демона изменён этим разделом и ещё не закоммичен в репозитории демона.
-- Снимок сессии пишет только Ctrl+Super+S дважды (автозаписи нет: после перезапуска демона и перезагрузки восстанавливается последний сохранённый снимок).
-- Панель: сервер уведомлений, плитка активного стола с табами workspace, ряд плитки по составу активного workspace с общими окнами в плитках обоих столов; окно подсказки клавиш `keys-help` ждёт проверки пользователем; пакет dunst удалён, скрипты сессии шлют уведомления через `notify-send`.
-- Пароль для sudo спрашивает только окно Quickshell askpass (запасной pinentry удалён, `Path askpass` в `/etc/sudo.conf`, `SUDO_ASKPASS` в сессии; оформление в общем модуле `dot_config/quickshell/common`): изменение [`askpass-only-quickshell`](openspec/changes/askpass-only-quickshell/tasks.md) реализовано и проверено пользователем, архивация после `work-area-center`.
-- Диалоги: признака у Hyprland нет, Chromium не вызывает `set_parent` — `docs/window-info-sources.md`; отложенный вопрос `docs/open-questions/hyprland-window-parent.md`, черновики запросов в `docs/upstream/` (не отправлены).
-- Параметр `conceal_vrr_caps` возвращён 22.09.2026, действовать начнёт с ближайшей перезагрузки; до неё DP-2 на 60 Гц ([`0006`](docs/decisions/0006-nvidia-conceal-vrr-caps.md)).
+- Демон на коммите `1e395ff` (`~/work/pets/workspaced`, `master`, 156 тестов), служба `workspaced.service` работает на этом бинарнике. В нём: шаги 1–7 модели окон, раскладка в памяти, центр по рабочей области, `[sticky.<имя>]` и липкие многошаговые цепочки, `key --new`/`app --new`, `keys --json` с группами и режимами.
+- Панель: плитка активного стола с табами, общее окно в плитках обоих столов, кнопка «+k» поверх ряда, окно подсказки клавиш (Shift+Super+/, 1920 px, одна колонка, плавная прокрутка, клавиши в духе Vim), карточка режима цепочек в правом нижнем углу; оформление `Theme`/`Tile` в общем модуле `dot_config/quickshell/common` (`qs.common`), его же использует окно пароля.
+- Окно пароля sudo — только Quickshell: запасной pinentry удалён, `Path askpass` в `/etc/sudo.conf` (копия `system/sudo/`), `SUDO_ASKPASS` в окружении сессии, правило в общем `CLAUDE.md` и `AGENTS.md`, запись [`0008`](docs/decisions/0008-askpass-quickshell-only.md). Агент polkit на Quickshell — отдельная доработка (раздел «Панель Quickshell» ниже).
+- Раскладка после диктовки VoxType возвращается перехватом `post_output_command` (обход ошибки Hyprland, вопрос [`hyprland-keymap-group-after-virtual-keyboard.md`](docs/open-questions/hyprland-keymap-group-after-virtual-keyboard.md)); dunst удалён, скрипты на `notify-send`.
+- Проверены пользователем и ждут только архивации: `live-layout` (4.1–4.3), `work-area-center` (5.1–5.2), `askpass-only-quickshell` (5.1–5.2), `sticky-chains` (5.1–5.4). `keys-help`, `shared-windows`, `workspace-overrides`, `panel-shared-windows`, `move-desktop-*`, `ws-tile-*`, `classless-windows-stay-free`, `voxtype-restore-layout`, `dunst-removed` — в архиве.
+- Параметр `conceal_vrr_caps` действует с ближайшей перезагрузки ([`0006`](docs/decisions/0006-nvidia-conceal-vrr-caps.md)).
+- Рабочие деревья chezmoi (`main`) и `~/work/pets/workspaced` (`master`) чисты, всё отправлено в `origin`.
 
 ### Следующие шаги
 
-Изменения архивируются строго по порядку: у каждого следующего дельты написаны поверх предыдущих (порядок — в `proposal.md` и `tasks.md` каждого изменения). После каждой архивации — `openspec validate --specs --strict`.
-
-1. `keys-help`: получить итоги проверок раздела 6, выполнить пункт 7.1, `openspec archive keys-help -y`.
-2. `session-instances`: получить итог проверки перезагрузкой (пункт 4.1), проверить состояние командами (`hyprctl clients -j`, `workspaced status --json`, журнал демона), дописать итог в `docs/host-state.md` (настройка браузеров), `openspec archive session-instances -y`; ссылки на изменение в `docs/window-model.md` и `AGENTS.md` сменить на архивные.
-3. `live-layout`: получить итоги проверок раздела 4, `openspec archive live-layout -y` (пункты 5.1–5.2; шесть требований взяты из дельт `workspace-overrides` и `session-instances`, поэтому только после `session-instances`); ссылки на изменение в `docs/window-model.md` сменить на архивные.
-4. `work-area-center`: `openspec archive work-area-center -y` (пункт 6.1). Таблицу «Раскладка клавиш сессии» (hyprland-binds) правят дельты `keys-help` и `work-area-center`: в дельте `keys-help` нет строки Alt+Super+Enter, в дельте `work-area-center` строка Shift+Super+/ уже есть. После архивации проверить, что в `openspec/specs/hyprland-binds/spec.md` есть обе строки и сценарии «Подсказка клавиш» и «Окно 1920×1080 по центру рабочей области»; если строки нет — дописать её коммитом.
-5. `askpass-only-quickshell`: `openspec archive askpass-only-quickshell -y` (пункт 6.1).
-6. `sticky-chains`: получить итоги проверок раздела 5, `openspec archive sticky-chains -y` (пункт 6.3); его дельта hyprland-binds записана в редакции `work-area-center` с обеими строками.
-7. После той же перезагрузки, что для `session-instances`: `conceal_vrr_caps` действует (команда `status` ниже), DP-2 на 120 Гц, `graphical-session.target` останавливается при выходе (пункт в разделе «Hyprland» ниже).
-8. После 23.10.2026 снова спросить пользователя об отправке черновиков из `docs/upstream/` (условие пересмотра в `docs/open-questions/hyprland-window-parent.md`).
+1. Получить итоги проверки `chains-sticky` нажатиями, отметить 4.1–4.4 в его `tasks.md`; при отказе — исправить и повторить.
+2. Провести проверку перезагрузкой (`session-instances`, 4.1); заодно после перезагрузки проверить `conceal_vrr_caps` (команда `status` ниже, DP-2 на 120 Гц) и остановку `graphical-session.target` при выходе (раздел «Hyprland» ниже). Итог записать в `docs/host-state.md`, отметить 4.1 и 5.4.
+3. Архивировать по порядку, после каждого — `openspec validate --specs`: `session-instances` → `live-layout` (пункты 5.1–5.2) → `work-area-center` (6.1; после него проверить, что в `openspec/specs/hyprland-binds/spec.md` есть строки Shift+Super+/ и Alt+Super+Enter) → `askpass-only-quickshell` (6.1) → `sticky-chains` (6.3) → `chains-sticky` (5.2). Ссылки на изменения в `docs/window-model.md` перевести на архивные.
+4. Комментарии в демоне: к запуску записей без workspace ссылка на D16 вместо D17 (`session-instances`, пункт 5.7) — поправить при следующей правке `daemon.rs`.
+5. Агент polkit на Quickshell (`Quickshell.Services.Polkit`) — отдельное изменение по плану D5 из `openspec/changes/askpass-only-quickshell/design.md`.
+6. После 23.10.2026 снова спросить пользователя об отправке черновиков из `docs/upstream/` (условие пересмотра в `docs/open-questions/hyprland-window-parent.md`).
 
 ### Как проверить
 
 ```bash
-openspec list                              # активны keys-help, session-instances (ждёт перезагрузки), live-layout, work-area-center, askpass-only-quickshell, sticky-chains — архивация в этом порядке
+openspec list                              # активны: chains-sticky, session-instances, live-layout, sticky-chains, askpass-only-quickshell, work-area-center
+openspec validate --specs                  # 20 passed
 systemctl --user is-active workspaced.service quickshell-panel.service voxtype.service voxtype-mute-others.service
-ss -xp | rg workspaced/sock                # ESTAB — панель подключена к демону
-busctl --user list | rg -i notifications   # имя org.freedesktop.Notifications у qs
-workspaced status --json | jq -c '.pending, .restore, .restore_apps, (.desktops | to_entries | map({(.key): [.value.workspaces[].name]}) | add)'
-workspaced keys --list | rg 'move-desktop|arrange|detach|save-|dismissOldest'
-system/modprobe.d/nvidia-vrr.sh status    # после перезагрузки ожидается conceal_vrr_caps = Y, vrr_capable у DP-2 = 0
+workspaced check && workspaced keys --list | rg 'SUPER\+TAB|SUPER\+CTRL\+s|SUPER\+S '   # цепочки с exit, режим sticky.apps
+workspaced status --json | jq -c '.desktops | to_entries | map({(.key): [.value.active, [.value.workspaces[].name]]}) | add'
+qs -c panel ipc call keys state; qs -c panel ipc call chains state; qs -c panel ipc call workspaces row 1
+journalctl --user -t voxtype-restore-layout -n 3   # вызовы после диктовки
+env -u SUDO_ASKPASS sudo -A -p 'Проверка окна пароля' true   # окно Quickshell, Escape даёт код 1
+system/modprobe.d/nvidia-vrr.sh status    # после перезагрузки ожидается conceal_vrr_caps = Y
 chezmoi status && git status -sb          # расхождений и незакоммиченного быть не должно
 ```
 
@@ -55,13 +51,15 @@ chezmoi status && git status -sb          # расхождений и незак
 
 - Относить окно браузера, открытое по Ctrl+N, к приложению активного окна: признак ненадёжен, подробности в `docs/window-model.md`.
 - Правило окна `focus_on_activate = false` для Telegram: отключило бы переход к топику по клику на уведомление.
-- Таймеры вместо событий (подсказки, переподключение панели, срок показа уведомлений): пользователь велел обходиться событиями; у уведомлений срока показа нет вовсе (`docs/decisions/0007-no-timers.md`).
+- Таймеры вместо событий (подсказки, переподключение панели, срок показа уведомлений, ожидание клавиши в режиме): пользователь велел обходиться событиями (`docs/decisions/0007-no-timers.md`).
 - Судить о загрузке новой карты XKB по `hyprctl devices` или по работе нового сочетания: список раскладок берётся из старой карты.
 - Хранить `~/.claude/settings.json` сценарием `modify_`: пользователь решил держать файл целиком.
 - Брать текущий стол для команд демона из кэша событий композитора: отставшее событие возвращает прежний стол.
 - Плагин Hyprland ради признака диалога: для браузеров бесполезен (Chromium не сообщает родителя), стоит сборки под каждую версию.
 - Ctrl+Enter как клавиша «не беспокоить»: нужна приложениям (отправка сообщений в Telegram).
 - Окно столбика уведомлений ростом со столбик: композитор анимировал бы каждое изменение размера; окно постоянного размера с областью ввода по карточкам.
+- Отменять обмен мест при запуске приложения без окон (коммит демона 260d88b): пользователь подтвердил действующее правило «запуск без окон переводит приложение на главное место», коммит откачен (eb8b0bb).
+- Запасной pinentry у окна пароля, `input:virtualkeyboard:share_states` как лечение раскладки после диктовки, три колонки и центр всего экрана у окна подсказки, карточка режима вверху экрана — отвергнуты пользователем 23.09.2026.
 
 ## Возможные доработки
 
