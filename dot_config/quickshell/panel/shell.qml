@@ -62,18 +62,20 @@ ShellRoot {
             Clock { x: Theme.margin; y: 76 }
             Weather { x: Theme.margin; y: 325 }
 
-            // ---- Средняя группа: шкалы, сеть, диски, избранное (704…1301) ----
-            Gauges { x: Theme.margin; y: 704 }
-            Network { x: Theme.margin; y: 816 }
-            Disks { x: Theme.margin; y: 933 }
-            Favorites { x: Theme.margin; y: 1178 }
+            // ---- Средняя группа: шкалы, сеть, диски, избранное (680…1277) — по
+            // центру промежутка между верхней и нижней группами (140 и 139 px).
+            Gauges { x: Theme.margin; y: 680 }
+            Network { x: Theme.margin; y: 792 }
+            Disks { x: Theme.margin; y: 909 }
+            Favorites { x: Theme.margin; y: 1154 }
 
-            // ---- Нижняя группа: столы с уведомлениями, треем и раскладкой (1462…1820),
-            // лаунчер (1830…2150). В правой колонке 36 px: уведомления на уровне
-            // первого стола, под ними трей, внизу раскладка.
-            Workspaces { id: workspacesTile; x: Theme.margin; y: 1462 }
-            Notifications { x: 294; y: 1462 }
-            Tray { x: 294; y: 1508 }
+            // ---- Нижняя группа: столы с уведомлениями, треем и раскладкой (1416…1820),
+            // лаунчер (1830…2150). Блок столов — семь одинарных плиток и одна
+            // двойная (активный стол), 404 px. В правой колонке 36 px: уведомления
+            // на уровне первого стола, под ними трей, внизу раскладка.
+            Workspaces { id: workspacesTile; x: Theme.margin; y: 1416 }
+            Notifications { x: 294; y: 1416 }
+            Tray { x: 294; y: 1462 }
             Lang { x: 294; y: 1784 }
             Launcher { x: Theme.margin; y: 1830 }
 

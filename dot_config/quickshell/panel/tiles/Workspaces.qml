@@ -1,21 +1,39 @@
-// Плитки рабочих столов (спецификация qs-workspaces): восемь одинаковых плиток
-// 274×36, иконки окон слева, номер справа. Состояние — из модуля Hyprland
-// (события сокета), окна на special:hidden показываются приглушёнными в плитке
-// стола, с которого были скрыты (design D5). Иконки workspace демона
-// workspaced (синглтон Wsd) стоят в начале ряда в порядке, в котором workspace
-// попадали на стол: активный подсвечен, неактивные затенены, и при
-// переключении позиции не меняются. За ними идут окна активного workspace и
-// свободные окна стола; окна неактивных workspace не показываются. Клик по
-// иконке workspace поднимает его на этом столе.
+// Плитки рабочих столов (спецификация qs-workspaces): восемь плиток шириной
+// 274 px, иконки окон слева, номер справа. Плитка неактивного стола — 274×36,
+// плитка активного стола (того, на котором композитор) — двойной высоты 274×82:
+// ровно две плитки и зазор, поэтому плитки ниже неё сдвигаются на целую плитку,
+// а высота всего блока не меняется. Состояние — из модуля Hyprland (события
+// сокета), окна на special:hidden показываются приглушёнными в плитке стола,
+// с которого были скрыты (design D5).
+// Плитка активного стола: верхний ряд — табы workspace демона workspaced
+// (синглтон Wsd) в порядке списка стола; активный таб чёрный и сливается
+// с нижним рядом, неактивные лежат на серой полосе. Нижний ряд — окна
+// активного workspace и свободные окна стола. Плитка неактивного стола — один
+// ряд: иконки workspace (активный подсвечен, неактивные затенены), затем окна
+// активного workspace и свободные окна. Окна неактивных workspace не
+// показываются. Клик по табу или иконке workspace поднимает его на этом столе.
 import Quickshell
 import Quickshell.Hyprland
 import QtQuick
+import QtQuick.Shapes
 import qs
 
 Item {
     id: root
     width: 274
-    height: 8 * 46 - 10
+    // Семь одинарных плиток и одна двойная (шаг плиток 46 px, зазор 10 px).
+    height: count * 46 - 10 + 46
+
+    // Номер активного стола среди плиток (0…7) или -1, если композитор на столе
+    // вне 1…8: тогда двойной плитки нет, и блок снизу остаётся пустым.
+    readonly property int activeIndex: {
+        const n = Number(focusedName);
+        return Number.isInteger(n) && n >= 1 && n <= count ? n - 1 : -1;
+    }
+    // Лимит табов: при ширине полосы 230 px и наименьшей ширине таба 24 px
+    // с зазором 2 px помещается восемь; при большем числе показываются семь
+    // и метка «+N».
+    readonly property int tabLimit: 8
 
     readonly property int count: 8
     readonly property string hiddenWs: "special:hidden"
@@ -195,15 +213,16 @@ Item {
         if (!d || !d.workspaces) return [];
         return d.workspaces.map(w => ({ kind: "ws", name: w.name, icon: candidates([w.icon || "folder"]), active: !!w.active, apps: w.apps || [], windows: w.windows || [], desktop: Number(wsName) }));
     }
-    // Общий ряд плитки: сначала все workspace стола по порядку списка, затем
+    // Ряд иконок плитки: сначала все workspace стола по порядку списка (только
+    // у плитки неактивного стола, withWs; у активного они стоят табами), затем
     // окна активного workspace (по списку адресов от демона), затем свободные
     // окна стола. Окна неактивных workspace демон паркует на special:pool, и в
     // список окон стола они не попадают; окно, которое по списку демона
     // принадлежит неактивному workspace, но осталось на столе, тоже не
-    // показывается. Лимит 10 и «+N» считаются по сумме иконок.
-    function itemsFor(wins, wsList) {
+    // показывается. Лимит 10 и «+N» считаются по сумме иконок ряда.
+    function itemsFor(wins, wsList, withWs) {
         const norm = a => String(a || "").toLowerCase().replace(/^0x/, "");
-        const items = wsList.slice();
+        const items = withWs ? wsList.slice() : [];
         const used = {};
         // Адреса окон неактивных workspace: в ряд свободных окон они не идут.
         const parked = {};
@@ -247,15 +266,32 @@ Item {
             readonly property string wsName: String(index + 1)
             readonly property var wins: root.byWs[wsName] || []
             readonly property var wsList: root.wsListFor(wsName)
-            readonly property var items: root.itemsFor(wins, wsList)
-            readonly property bool active: root.focusedName === wsName
-            y: index * 46
+            readonly property bool active: root.activeIndex === index
+            readonly property var items: root.itemsFor(wins, wsList, !active)
+
+            // Табы активного стола: при переполнении — первые tabLimit − 1 и «+N».
+            readonly property bool tabsOverflow: wsList.length > root.tabLimit
+            readonly property var tabs: tabsOverflow ? wsList.slice(0, root.tabLimit - 1) : wsList
+            // Ширина таба: 36 px, пока табы помещаются в полосу 230 px, иначе уже,
+            // но не меньше 24 px (иконка 20 px и по 2 px с боков).
+            readonly property int tabWidth: {
+                const n = tabs.length;
+                if (!n) return 36;
+                const free = 230 - (tabsOverflow ? 26 : 0) - 2 * (n - 1);
+                return Math.min(36, Math.max(24, Math.floor(free / n)));
+            }
+            readonly property int activeTab: tabs.findIndex(t => t.active)
+
+            // Плитки ниже активной сдвинуты на целую плитку с зазором.
+            y: index * 46 + (root.activeIndex >= 0 && index > root.activeIndex ? 46 : 0)
             width: 274
-            height: 36
+            height: active ? 82 : 36
             color: "transparent"
             border.color: Theme.tileBorder
             border.width: 1
             radius: Theme.tileRadius
+            Behavior on y { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+            Behavior on height { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
 
             MouseArea {
                 id: rowMouse
@@ -264,17 +300,159 @@ Item {
                 onClicked: root.focusWs(row.wsName)
             }
 
-            // Ряд иконок с фоном плитки, левые углы под рамку.
+            // Содержимое с фоном плитки, левые углы под рамку. Обрезка нужна на
+            // время анимации высоты: полоса табов не выходит за плитку.
             Rectangle {
+                id: body
                 x: 1; y: 1
                 width: 272 - 30
-                height: 34
+                height: row.height - 2
                 color: Theme.tileBg
                 topLeftRadius: 11
                 bottomLeftRadius: 11
+                clip: true
 
+                // ---- Полоса табов (только у активного стола) ----
+                // Высота полосы 38 px: табы 32 px от y = 5 до линии основания
+                // на y = 37. Серая заливка покрывает полосу везде, кроме
+                // активного таба; жёлтая линия 1 px идёт по основанию и обводит
+                // активный таб сверху и с боков, как вкладку браузера.
+                Item {
+                    id: strip
+                    visible: row.active
+                    width: body.width
+                    height: 38
+
+                    readonly property int tabTop: 5
+                    readonly property int base: 37
+                    readonly property int r: 6
+                    readonly property bool hasActive: row.activeTab >= 0
+                    readonly property real ax: 6 + row.activeTab * (row.tabWidth + 2)
+                    readonly property real aw: row.tabWidth
+
+                    // Полоса без активного таба: прямоугольник и линия основания.
+                    Rectangle {
+                        visible: !strip.hasActive
+                        width: strip.width; height: strip.height
+                        topLeftRadius: 11
+                        color: Theme.tabBarBg
+                    }
+                    Rectangle {
+                        visible: !strip.hasActive
+                        y: strip.base
+                        width: strip.width; height: 1
+                        color: Theme.tileBorder
+                    }
+
+                    // Полоса с вырезом под активный таб.
+                    Shape {
+                        visible: strip.hasActive
+                        anchors.fill: parent
+                        preferredRendererType: Shape.CurveRenderer
+                        ShapePath {
+                            strokeWidth: -1
+                            fillColor: Theme.tabBarBg
+                            startX: 0; startY: 11
+                            PathArc { x: 11; y: 0; radiusX: 11; radiusY: 11 }
+                            PathLine { x: strip.width; y: 0 }
+                            PathLine { x: strip.width; y: strip.height }
+                            PathLine { x: strip.ax + strip.aw; y: strip.height }
+                            PathLine { x: strip.ax + strip.aw; y: strip.tabTop + strip.r }
+                            PathArc { x: strip.ax + strip.aw - strip.r; y: strip.tabTop; radiusX: strip.r; radiusY: strip.r; direction: PathArc.Counterclockwise }
+                            PathLine { x: strip.ax + strip.r; y: strip.tabTop }
+                            PathArc { x: strip.ax; y: strip.tabTop + strip.r; radiusX: strip.r; radiusY: strip.r; direction: PathArc.Counterclockwise }
+                            PathLine { x: strip.ax; y: strip.height }
+                            PathLine { x: 0; y: strip.height }
+                        }
+                        // Контур: основание слева, активный таб, основание справа.
+                        // Координаты смещены на полпикселя, чтобы линия 1 px
+                        // ложилась ровно на пиксели.
+                        ShapePath {
+                            strokeWidth: 1
+                            strokeColor: Theme.tileBorder
+                            fillColor: "transparent"
+                            startX: 0; startY: strip.base + 0.5
+                            PathLine { x: strip.ax + 0.5; y: strip.base + 0.5 }
+                            PathLine { x: strip.ax + 0.5; y: strip.tabTop + strip.r + 0.5 }
+                            PathArc { x: strip.ax + strip.r + 0.5; y: strip.tabTop + 0.5; radiusX: strip.r; radiusY: strip.r }
+                            PathLine { x: strip.ax + strip.aw - strip.r - 0.5; y: strip.tabTop + 0.5 }
+                            PathArc { x: strip.ax + strip.aw - 0.5; y: strip.tabTop + strip.r + 0.5; radiusX: strip.r; radiusY: strip.r }
+                            PathLine { x: strip.ax + strip.aw - 0.5; y: strip.base + 0.5 }
+                            PathLine { x: strip.width; y: strip.base + 0.5 }
+                        }
+                    }
+
+                    Repeater {
+                        model: row.tabs
+                        Item {
+                            id: tab
+                            required property var modelData
+                            required property int index
+                            readonly property bool current: !!modelData.active
+                            x: 6 + index * (row.tabWidth + 2)
+                            y: strip.tabTop
+                            width: row.tabWidth
+                            height: strip.base - strip.tabTop
+
+                            // Подсветка неактивного таба при наведении.
+                            Rectangle {
+                                visible: !tab.current && tabMouse.containsMouse
+                                x: 1; y: 1
+                                width: parent.width - 2; height: parent.height - 1
+                                topLeftRadius: strip.r - 1
+                                topRightRadius: strip.r - 1
+                                color: Theme.background
+                            }
+                            // Разделитель между соседними неактивными табами.
+                            Rectangle {
+                                visible: !tab.current && tab.index < row.tabs.length - 1 && tab.index + 1 !== row.activeTab
+                                x: parent.width
+                                y: (parent.height - height) / 2
+                                width: 2; height: 16
+                                color: "transparent"
+                                Rectangle { x: 0.5; width: 1; height: parent.height; color: Theme.gray }
+                            }
+                            AppIcon {
+                                anchors.centerIn: parent
+                                width: 20; height: 20
+                                opacity: tab.current ? 1 : 0.7
+                                sources: tab.modelData.icon
+                            }
+                            MouseArea {
+                                id: tabMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                                onEntered: Popups.hoverInfo.show(tab, root.wsInfoFor(tab.modelData), "ws-" + row.wsName)
+                                onExited: Popups.hoverInfo.hide(tab)
+                                onClicked: (m) => {
+                                    Popups.hoverInfo.hide(tab);
+                                    if (m.button === Qt.RightButton) Popups.menu.open(tab, root.wsMenuFor(tab.modelData));
+                                    else Wsd.raise(tab.modelData.name, tab.modelData.desktop);
+                                }
+                            }
+                        }
+                    }
+                    Text {
+                        visible: row.tabsOverflow
+                        x: 6 + row.tabs.length * (row.tabWidth + 2)
+                        y: strip.tabTop
+                        height: strip.base - strip.tabTop
+                        verticalAlignment: Text.AlignVCenter
+                        text: "+" + (row.wsList.length - row.tabs.length)
+                        color: Theme.yellow
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.fontSize
+                        font.bold: true
+                    }
+                }
+
+                // ---- Ряд иконок ----
+                // У одинарной плитки ряд 24 px стоит с отступами 5 px сверху и
+                // снизу; у двойной — по центру области под полосой табов.
                 Row {
-                    x: 9; y: 5
+                    x: 9
+                    y: row.active ? strip.height + Math.max(0, (body.height - strip.height - 24) / 2) : (body.height - 24) / 2
                     spacing: 0
                     Repeater {
                         model: row.items.slice(0, 10)
@@ -326,7 +504,7 @@ Item {
             // Блок номера во всю высоту содержимого, правые углы под рамку.
             Rectangle {
                 x: 1 + 272 - 30; y: 1
-                width: 30; height: 34
+                width: 30; height: row.height - 2
                 topRightRadius: 11
                 bottomRightRadius: 11
                 color: row.active ? Theme.yellow : (rowMouse.containsMouse ? Theme.background : Qt.rgba(6/255, 6/255, 6/255, 0.6))
