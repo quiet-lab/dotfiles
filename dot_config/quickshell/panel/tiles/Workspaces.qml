@@ -2,9 +2,11 @@
 // 274×36, иконки окон слева, номер справа. Состояние — из модуля Hyprland
 // (события сокета), окна на special:hidden показываются приглушёнными в плитке
 // стола, с которого были скрыты (design D5). Иконки workspace демона
-// workspaced (синглтон Wsd) стоят перед иконками своих окон: активный
-// workspace с подсветкой, за ним его окна, затем свободные окна стола и
-// приглушённые припаркованные workspace; клик поднимает workspace на этом столе.
+// workspaced (синглтон Wsd) стоят в начале ряда в порядке, в котором workspace
+// попадали на стол: активный подсвечен, неактивные затенены, и при
+// переключении позиции не меняются. За ними идут окна активного workspace и
+// свободные окна стола; окна неактивных workspace не показываются. Клик по
+// иконке workspace поднимает его на этом столе.
 import Quickshell
 import Quickshell.Hyprland
 import QtQuick
@@ -185,33 +187,44 @@ Item {
     }
 
     // --- Workspace демона ---
-    // Список workspace стола: активный первым, остальные по порядку списка демона.
+    // Список workspace стола в порядке списка демона, то есть в порядке
+    // попадания на стол: демон добавляет workspace в конец и не переставляет
+    // его при поднятии, поэтому позиции иконок при переключении не меняются.
     function wsListFor(wsName) {
         const d = Wsd.desktops[wsName];
         if (!d || !d.workspaces) return [];
-        const list = d.workspaces.map(w => ({ kind: "ws", name: w.name, icon: candidates([w.icon || "folder"]), active: !!w.active, apps: w.apps || [], windows: w.windows || [], desktop: Number(wsName) }));
-        return list.filter(w => w.active).concat(list.filter(w => !w.active));
+        return d.workspaces.map(w => ({ kind: "ws", name: w.name, icon: candidates([w.icon || "folder"]), active: !!w.active, apps: w.apps || [], windows: w.windows || [], desktop: Number(wsName) }));
     }
-    // Общий ряд плитки: активный workspace и за ним его окна (по списку адресов
-    // от демона), затем свободные окна стола, затем припаркованные workspace;
-    // лимит 10 и «+N» считаются по сумме.
+    // Общий ряд плитки: сначала все workspace стола по порядку списка, затем
+    // окна активного workspace (по списку адресов от демона), затем свободные
+    // окна стола. Окна неактивных workspace демон паркует на special:pool, и в
+    // список окон стола они не попадают; окно, которое по списку демона
+    // принадлежит неактивному workspace, но осталось на столе, тоже не
+    // показывается. Лимит 10 и «+N» считаются по сумме иконок.
     function itemsFor(wins, wsList) {
         const norm = a => String(a || "").toLowerCase().replace(/^0x/, "");
-        const items = [];
+        const items = wsList.slice();
         const used = {};
-        for (const ws of wsList.filter(w => w.active)) {
-            items.push(ws);
+        // Адреса окон неактивных workspace: в ряд свободных окон они не идут.
+        const parked = {};
+        for (const ws of wsList) {
+            if (ws.active) continue;
+            ws.windows.forEach(a => { parked[norm(a)] = true; });
+        }
+        for (const ws of wsList) {
+            if (!ws.active) continue;
             const own = {};
             ws.windows.forEach(a => { own[norm(a)] = true; });
             for (const w of wins) {
-                if (own[norm(w.address)] && !used[w.address]) {
-                    used[w.address] = true;
+                const a = norm(w.address);
+                if (own[a] && !used[a]) {
+                    used[a] = true;
                     items.push(Object.assign({ kind: "win" }, w));
                 }
             }
         }
-        for (const w of wins) if (!used[w.address]) items.push(Object.assign({ kind: "win" }, w));
-        return items.concat(wsList.filter(w => !w.active));
+        for (const w of wins) if (!used[norm(w.address)] && !parked[norm(w.address)]) items.push(Object.assign({ kind: "win" }, w));
+        return items;
     }
     function wsMenuFor(w) {
         return [
@@ -220,7 +233,7 @@ Item {
         ];
     }
     function wsInfoFor(w) {
-        const lines = ["workspace " + w.name, w.active ? "активен на столе " + w.desktop : "на столе " + w.desktop + ", припаркован"];
+        const lines = ["workspace " + w.name, (w.active ? "активен" : "неактивен") + " на столе " + w.desktop];
         for (const a of w.apps) lines.push("  " + a);
         return lines;
     }
@@ -270,7 +283,7 @@ Item {
                             required property var modelData
                             readonly property bool isWs: modelData.kind === "ws"
                             width: 24; height: 24; radius: 6
-                            // Активный workspace подсвечен, припаркованный приглушён; скрытое окно приглушено.
+                            // Активный workspace подсвечен, неактивный затенён; скрытое окно тоже затенено.
                             color: btnMouse.containsMouse ? Theme.background : (isWs && modelData.active ? Qt.rgba(224/255, 175/255, 104/255, 0.3) : "transparent")
                             opacity: (isWs ? !modelData.active : modelData.hidden) ? 0.4 : 1
                             AppIcon {

@@ -2,20 +2,20 @@
 
 ## Текущая работа
 
-Снимок на 2026-09-22 (ночь). Файл хранится в git, но в `$HOME` не попадает: он исключён в `.chezmoiignore`.
+Снимок на 2026-09-23 (утро). Файл хранится в git, но в `$HOME` не попадает: он исключён в `.chezmoiignore`.
 
 ### Цель
 
-Перевести демон workspaced на новую модель окон по [`docs/window-model.md`](docs/window-model.md). Шаги 1–3 реализованы (шаг 3 — изменение `windows-join-workspace`, ждёт проверки пользователем), дальше шаги 4–7. Параллельно панель Quickshell получила сервер уведомлений вместо dunst (изменение `qs-notifications`, ждёт проверки мышью). Серия идёт без пауз и подтверждений (правило в `AGENTS.md`).
+Перевести демон workspaced на новую модель окон по [`docs/window-model.md`](docs/window-model.md). Шаги 1–3 реализованы, проверены пользователем и заархивированы, дальше шаги 4–7. Панель Quickshell получила сервер уведомлений вместо dunst (`qs-notifications`, заархивировано 23.09.2026). Серия идёт без пауз и подтверждений (правило в `AGENTS.md`).
 
 ### Открытые вопросы к пользователю
 
-Вопросов нет.
+- Вид плитки стола после изменения `ws-tile-order` (пункт 4.1 его `tasks.md`): иконки workspace стоят в начале ряда в порядке попадания на стол и не меняют позиций при переключении, неактивный затенён, окна показываются только у активного, затем свободные окна стола. Если так — изменение архивируется.
 
 ### Где остановились
 
-- Демон на коммите `810da3a` (`~/work/pets/workspaced`, `master`, 71 тест): шаги 1–3 модели окон, `move-desktop`, `arrange`, `detach`, `dialog_title`, `ignore_classes`, снимок сессии только по Ctrl+Super+S (автозаписи нет: после перезапуска демона восстанавливается последний сохранённый вручную снимок).
-- Панель: сервер уведомлений (столбик справа от лаунчера, плитка над треем со счётчиком истории, история, «не беспокоить», Super+Enter), подсказки без задержки; dunst замаскирован, пакет не удалён (команда удаления — в отчёте `qs-notifications`, перед этим перевести `change-volume.sh`, `change-brightness.sh`, `screenshot-common` с `dunstify` на `notify-send`).
+- Демон на коммите `5ebe3c8` (`~/work/pets/workspaced`, `master`, 73 теста): шаги 1–3 модели окон, `move-desktop` (с 23.09.2026 сохраняет прямоугольники окон в обоих режимах, изменение `move-desktop-keeps-geometry` заархивировано), `arrange`, `detach`, `dialog_title`, `ignore_classes`, снимок сессии только по Ctrl+Super+S (автозаписи нет: после перезапуска демона восстанавливается последний сохранённый вручную снимок).
+- Панель: сервер уведомлений (столбик справа от лаунчера, плитка над треем со счётчиком истории, история, «не беспокоить», Super+Enter), подсказки без задержки; плитка стола показывает workspace в порядке списка демона (активное изменение `ws-tile-order`, ждёт взгляда пользователя); dunst замаскирован, пакет не удалён (команда удаления — в отчёте `qs-notifications`, перед этим перевести `change-volume.sh`, `change-brightness.sh`, `screenshot-common` с `dunstify` на `notify-send`).
 - Окно ввода пароля sudo рисует Quickshell (`dot_config/quickshell/askpass`), pinentry — запасной путь; агенты обязаны передавать причину в `sudo -A -p`.
 - VoxType: пауза MPRIS-плееров и тишина на время диктовки проверены; флаг `hardware-media-key-handling` Яндекс.Браузера возвращён в «Default» (`docs/media-and-portals.md`).
 - Клавиши: Ctrl+Super+1..8 перенос workspace, Ctrl+Super+Пробел расстановка, Super+Alt+E/R раскладка, Super+Пробел по кругу без других модификаторов.
@@ -25,7 +25,7 @@
 
 ### Следующие шаги
 
-1. Получить итоги проверок, отметить в `tasks.md`, заархивировать сначала `qs-notifications`, затем `windows-join-workspace` (оба правят требование hyprland-binds «Раскладка клавиш сессии», дельта шага 3 — надмножество).
+1. Получить от пользователя оценку вида плитки стола, отметить пункт 4.1 в `tasks.md` изменения `ws-tile-order` и заархивировать его (`openspec archive ws-tile-order -y`).
 2. Решить с пользователем, отправлять ли запросы из `docs/upstream/` в Hyprland и Chromium.
 3. Шаг 4 серии (общие окна) — `docs/window-model.md`, раздел 5.
 4. После ближайшей перезагрузки: `conceal_vrr_caps` действует (команда `status` ниже), DP-2 на 120 Гц, `graphical-session.target` останавливается при выходе (пункт в разделе «Hyprland» ниже), принятые окна восстанавливаются по снимку сессии.
@@ -34,7 +34,7 @@
 ### Как проверить
 
 ```bash
-openspec list                              # активные: qs-notifications, windows-join-workspace
+openspec list                              # активные: ws-tile-order
 systemctl --user is-active workspaced.service quickshell-panel.service voxtype.service voxtype-mute-others.service
 ss -xp | rg workspaced/sock                # ESTAB — панель подключена к демону
 busctl --user list | rg -i notifications   # имя org.freedesktop.Notifications у qs
