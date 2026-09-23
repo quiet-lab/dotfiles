@@ -1,6 +1,9 @@
 #!/usr/bin/env sh
 
-# Громкость по клавишам XF86Audio*: amixer и уведомление dunst.
+# Громкость по клавишам XF86Audio*: amixer и уведомление notify-send
+# (libnotify) для панели Quickshell. Подсказка synchronous — метка стопки:
+# новое уведомление занимает место прежнего, и на экране остаётся одна карточка
+# громкости (спецификация qs-notifications).
 # За основу взят скрипт из dotfiles owl4ce (https://github.com/owl4ce/dotfiles),
 # настройки заданы прямо здесь, файл ~/.joyfuld больше не используется.
 
@@ -16,9 +19,9 @@ AUDIO_DEVICE='pulse'     # устройство amixer (`aplay -L`), пусто 
 AUDIO_VOLUME_STEPS='5'   # шаг в процентах
 
 
-[ -x "$(command -v amixer)" ] || exec dunstify 'Install `alsa-utils`!' -h string:synchronous:install-deps \
-                                                                       -a hotkeys \
-                                                                       -u low
+[ -x "$(command -v amixer)" ] || exec notify-send 'Install `alsa-utils`!' -h string:synchronous:install-deps \
+                                                                          -a hotkeys \
+                                                                          -u low
 
 case "${1}" in
     +) amixer ${AUDIO_DEVICE:+-D "$AUDIO_DEVICE"} sset Master "${AUDIO_VOLUME_STEPS:-5}%+" on -q
@@ -46,11 +49,11 @@ esac
         ICON='notification-audio-volume-high'
     fi
 
-    exec dunstify ${MUTED:-"$AUDIO_VOLUME" -h "int:value:${AUDIO_VOLUME}"} \
-                                           -a hotkeys \
-                                           -h string:synchronous:audio-volume \
-                                           -i "$ICON" \
-                                           -t 1000
+    exec notify-send ${MUTED:-"$AUDIO_VOLUME" -h "int:value:${AUDIO_VOLUME}"} \
+                                              -a hotkeys \
+                                              -h string:synchronous:audio-volume \
+                                              -i "$ICON" \
+                                              -t 1000
 } &
 
 exit ${?}

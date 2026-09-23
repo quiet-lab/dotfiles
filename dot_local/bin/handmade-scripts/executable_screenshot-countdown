@@ -2,7 +2,7 @@
 # Снимок экрана с обратным отсчётом (Ctrl+Print), версия для Hyprland.
 . "${HOME}/.local/bin/handmade-scripts/screenshot-common"
 SS_COUNTDOWN_SECONDS=5
-dunstify '' "Taken in ${SS_COUNTDOWN_SECONDS}s .." -h string:synchronous:screenshot-countdown \
+notify-send '' "Taken in ${SS_COUNTDOWN_SECONDS}s .." -h string:synchronous:screenshot-countdown \
     -a hotkeys -i camera-photo -t 1000
 sleep "$SS_COUNTDOWN_SECONDS"
 tmp=$(mktemp --suffix=.png)

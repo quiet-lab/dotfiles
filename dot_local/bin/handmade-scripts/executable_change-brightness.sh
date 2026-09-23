@@ -1,6 +1,9 @@
 #!/usr/bin/env sh
 
-# Яркость по клавишам XF86MonBrightness*: brightnessctl и уведомление dunst.
+# Яркость по клавишам XF86MonBrightness*: brightnessctl и уведомление
+# notify-send (libnotify) для панели Quickshell. Подсказка synchronous — метка
+# стопки: новое уведомление занимает место прежнего, и на экране остаётся одна
+# карточка яркости (спецификация qs-notifications).
 # За основу взят скрипт из dotfiles owl4ce (https://github.com/owl4ce/dotfiles),
 # настройки заданы прямо здесь, файл ~/.joyfuld больше не используется.
 
@@ -16,9 +19,9 @@ BRIGHTNESS_DEVICE=''     # устройство brightnessctl (`brightnessctl -l
 BRIGHTNESS_STEPS='5'     # шаг в процентах
 
 
-[ -x "$(command -v brightnessctl)" ] || exec dunstify 'Install `brightnessctl`!' -h string:synchronous:install-deps \
-                                                                                 -a hotkeys \
-                                                                                 -u low
+[ -x "$(command -v brightnessctl)" ] || exec notify-send 'Install `brightnessctl`!' -h string:synchronous:install-deps \
+                                                                                    -a hotkeys \
+                                                                                    -u low
 
 case "${1}" in
     +) brightnessctl ${BRIGHTNESS_DEVICE:+-d "$BRIGHTNESS_DEVICE"} set "${BRIGHTNESS_STEPS:-5}%+" -q
@@ -42,11 +45,11 @@ esac
         ICON='notification-display-brightness-full'
     fi
 
-    exec dunstify "$BRIGHTNESS" -h "int:value:${BRIGHTNESS}" \
-                                -a hotkeys \
-                                -h string:synchronous:display-brightness \
-                                -i "$ICON" \
-                                -t 1000
+    exec notify-send "$BRIGHTNESS" -h "int:value:${BRIGHTNESS}" \
+                                   -a hotkeys \
+                                   -h string:synchronous:display-brightness \
+                                   -i "$ICON" \
+                                   -t 1000
 } &
 
 exit ${?}
