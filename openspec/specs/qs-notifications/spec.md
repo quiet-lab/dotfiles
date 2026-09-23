@@ -8,10 +8,8 @@ TBD - created by archiving change qs-notifications. Update Purpose after archive
 ### Requirement: Сервер уведомлений сессии
 Панель Quickshell MUST быть единственным сервером уведомлений сессии: она
 MUST занимать имя D-Bus `org.freedesktop.Notifications` и обслуживать вызовы
-спецификации Desktop Notifications. dunst в сессии MUST NOT запускаться:
-его юнит MUST быть замаскирован ссылкой `~/.config/systemd/user/dunst.service`
-на `/dev/null` под управлением chezmoi, а конфиг `~/.config/dunst/dunstrc`
-MUST NOT входить в источник chezmoi.
+спецификации Desktop Notifications. Отдельный демон уведомлений (dunst)
+в системе не установлен и MUST NOT устанавливаться и запускаться.
 
 Сервер MUST объявлять клиентам возможности `persistence`, `body`,
 `body-markup`, `actions` и `icon-static` и MUST NOT объявлять
@@ -26,7 +24,7 @@ MUST NOT входить в источник chezmoi.
 
 #### Scenario: Имя D-Bus у панели
 - **WHEN** сессия запущена и панель работает
-- **THEN** `busctl --user list` показывает владельцем `org.freedesktop.Notifications` процесс `qs`, а процесса `dunst` в системе нет
+- **THEN** `busctl --user list` показывает владельцем `org.freedesktop.Notifications` процесс `qs`, а пакета dunst в системе нет (`pacman -Q dunst` не находит пакет, `systemctl --user status dunst.service` отвечает «could not be found»)
 
 #### Scenario: Уведомление доходит до панели
 - **WHEN** выполнено `notify-send "Заголовок" "Текст"`
