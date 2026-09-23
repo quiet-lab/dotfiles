@@ -37,9 +37,10 @@ ShellRoot {
     }
 
     // Индикатор цепочки с выходом — окно layer-shell размером с карточку
-    // вверху по центру рабочей области на слое Overlay (спецификация
+    // в правом нижнем углу экрана на слое Overlay (спецификация
     // qs-key-chains). Показывается, пока открыта подкарта ws-sticky:… демона
-    // workspaced; состояние — в синглтоне KeyChains, проверка —
+    // workspaced: цепочка с выходом или режим многозвенной цепочки
+    // (Super+Tab, Ctrl+Super+S); состояние — в синглтоне KeyChains, проверка —
     // `qs -c panel ipc call chains state`.
     Variants {
         model: Quickshell.screens.filter(s => s.name === "DP-2")
