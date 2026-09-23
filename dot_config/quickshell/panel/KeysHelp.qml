@@ -20,6 +20,10 @@ QtObject {
     // Текст ошибки последней загрузки; пустая строка — ошибки нет.
     property string error: ""
     property bool loading: false
+    // Сведения окна для проверки по IPC: положение и размер карточки,
+    // прокрутка «нынешняя/предельная» и добавка высоты от перенесённых строк
+    // (0 — ни одна подпись и ни одно описание не перенесены). Пишет KeysHelpWindow.
+    property string view: ""
 
     // Части результата процесса: вывод и код выхода приходят отдельными
     // событиями в произвольном порядке, разбор — когда пришли все три.
@@ -104,6 +108,7 @@ QtObject {
             let rows = 0;
             for (const g of svc.groups) rows += (g.keys || []).length;
             return (svc.shown ? "shown" : "hidden") + " groups=" + svc.groups.length + " rows=" + rows
+                + (svc.view !== "" ? " " + svc.view : "")
                 + (svc.loading ? " loading" : "") + (svc.error !== "" ? " error=" + svc.error : "");
         }
     }
