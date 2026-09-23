@@ -165,7 +165,9 @@ fedora-box`, поле `restart_policy` в базе podman; проверяетс�
 добавленные руками. Повторный `distrobox-export` записи перезапишет,
 и ключи придётся вернуть. Те же ключи продублированы в аргументах
 приложений демона (`dot_config/workspaced/config.toml`), поэтому запуск
-по Super+B, Super+V и Super+Y от ярлыков не зависит.
+браузеров клавишами демона (Super+B, Super+V, Super+Y в `surf`
+и Shift+Super+B, Shift+Super+V, Shift+Super+Y — собственные клавиши
+браузеров) от ярлыков не зависит.
 
 Ярлык `~/.local/share/applications/com.getpostman.Postman.desktop`, наоборот,
 под chezmoi (`dot_local/share/applications/`, рядом с переопределением
@@ -187,7 +189,7 @@ google-chrome-ai`, те же ключи Wayland и VA-API, что и у сосе
 `google-chrome-ai`, поэтому окна профилей `Default` и `AI.dev2026`
 различаются по классу. Демон workspaced запускает тот же экземпляр теми же
 ключами из `dot_config/workspaced/config.toml`, так что запуск по Super+V
-от ярлыка не зависит.
+и Shift+Super+V от ярлыка не зависит.
 
 ## Резервные копии удалённого
 

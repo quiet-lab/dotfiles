@@ -6,17 +6,18 @@
 
 ### Цель
 
-Перевести демон workspaced на новую модель окон по [`docs/window-model.md`](docs/window-model.md). Шаги 1–3 реализованы, проверены пользователем и заархивированы; шаг 4 (общие окна, изменение [`shared-windows`](openspec/changes/shared-windows/tasks.md)) реализован и ждёт проверки пользователем, дальше шаги 5–7. Панель Quickshell получила сервер уведомлений вместо dunst (`qs-notifications`, заархивировано 23.09.2026). Серия идёт без пауз и подтверждений (правило в `AGENTS.md`).
+Перевести демон workspaced на новую модель окон по [`docs/window-model.md`](docs/window-model.md). Шаги 1–3 реализованы, проверены пользователем и заархивированы; шаги 4 (общие окна, изменение [`shared-windows`](openspec/changes/shared-windows/tasks.md)) и 5 (переопределения в workspace, изменение [`workspace-overrides`](openspec/changes/workspace-overrides/tasks.md)) реализованы и ждут проверки пользователем, дальше шаги 6 и 7. Панель Quickshell получила сервер уведомлений вместо dunst (`qs-notifications`, заархивировано 23.09.2026). Серия идёт без пауз и подтверждений (правило в `AGENTS.md`).
 
 ### Открытые вопросы к пользователю
 
 - Каталог `~/.config/dunst` с `dunstrc` остался в `$HOME` после удаления пакета dunst; под chezmoi он не лежит. Удалить или оставить?
 - Отправлять ли черновики запросов из `docs/upstream/` в Hyprland и Chromium.
 - Проверки раздела 4 `tasks.md` изменения `shared-windows`: переход между столами Super+1/Super+2 при общем окне (мелькание), переход кликом по плитке, Super+Backspace над общим окном на двух столах, значок общего окна в плитках; для проверки сделать окно общим командой `workspaced app chrome-ai --pull` на столе 1.
+- Проверки раздела 4 `tasks.md` изменения `workspace-overrides`: в `surf` Super+B/V/Y ведут себя как раньше; Super+V на столе 1 переводит к `surf` на стол 2; Shift+Super+V на столе 1 забирает окно Chrome AI в `work`, а следующие нажатия Shift+Super+V переключают фокус между ним и прежним окном, не меняя ячеек; Super+Backspace над ним возвращает окно в `surf`.
 
 ### Где остановились
 
-- Демон на коммите `2bbe38c` (`~/work/pets/workspaced`, `master`, 101 тест): шаги 1–3 модели окон; шаг 4 (общие окна: теги состава `ws:<имя>`, следование за столом, `app --pull`, Super+Backspace без закрытия общего окна) реализован, проверки агента пройдены, ждёт проверки пользователем (раздел 4 [`tasks.md`](openspec/changes/shared-windows/tasks.md)); `move-desktop` (с 23.09.2026 сохраняет прямоугольники окон в обоих режимах и оставляет на прежнем столе активным преемника — прежний активный workspace, иначе предыдущий по списку; изменения `move-desktop-keeps-geometry` и `move-desktop-successor` заархивированы), `arrange`, `detach`, `dialog_title`, `ignore_classes`, снимок сессии только по Ctrl+Super+S (автозаписи нет: после перезапуска демона восстанавливается последний сохранённый вручную снимок).
+- Демон на коммите `e772598` (`~/work/pets/workspaced`, `master`, 114 тестов): шаги 1–3 модели окон; шаг 4 (общие окна: теги состава `ws:<имя>`, следование за столом, `app --pull`, Super+Backspace без закрытия общего окна) и шаг 5 (запись приложения в workspace с `cell`/`rect`, `chain`, `mode`; команда `workspaced key`; Super+B/V/Y — клавиши `surf`, Shift+Super+B/V/Y — собственные клавиши браузеров) реализованы, проверки агента пройдены, ждут проверки пользователем (раздел 4 [`tasks.md`](openspec/changes/shared-windows/tasks.md) и [`tasks.md`](openspec/changes/workspace-overrides/tasks.md)); `move-desktop` (с 23.09.2026 сохраняет прямоугольники окон в обоих режимах и оставляет на прежнем столе активным преемника — прежний активный workspace, иначе предыдущий по списку; изменения `move-desktop-keeps-geometry` и `move-desktop-successor` заархивированы), `arrange`, `detach`, `dialog_title`, `ignore_classes`, снимок сессии только по Ctrl+Super+S (автозаписи нет: после перезапуска демона восстанавливается последний сохранённый вручную снимок).
 - Панель: сервер уведомлений (столбик справа от лаунчера, плитка над треем со счётчиком истории, история, «не беспокоить», Super+Enter), подсказки без задержки; плитка активного стола двойной высоты с табами workspace (`ws-tile-tabs`, проверено пользователем и заархивировано 23.09.2026); пакет dunst удалён, скрипты сессии шлют уведомления через `notify-send`.
 - Окно ввода пароля sudo рисует Quickshell (`dot_config/quickshell/askpass`), pinentry — запасной путь; агенты обязаны передавать причину в `sudo -A -p`.
 - VoxType: пауза MPRIS-плееров и тишина на время диктовки проверены; флаг `hardware-media-key-handling` Яндекс.Браузера возвращён в «Default» (`docs/media-and-portals.md`).
@@ -27,8 +28,8 @@
 
 ### Следующие шаги
 
-1. Получить от пользователя итоги проверок раздела 4 [`tasks.md`](openspec/changes/shared-windows/tasks.md) и заархивировать `shared-windows` (`openspec archive shared-windows -y`, ссылки на изменение в `docs/window-model.md` сменить на архивные).
-2. Шаг 5 серии — переопределения на уровне workspace (`docs/window-model.md`, раздел 5).
+1. Получить от пользователя итоги проверок раздела 4 [`tasks.md`](openspec/changes/shared-windows/tasks.md) шага 4 и [`tasks.md`](openspec/changes/workspace-overrides/tasks.md) шага 5.
+2. Заархивировать сначала `shared-windows` (`openspec archive shared-windows -y`), затем сверить три требования `workspace-overrides`, взятые из его дельт (задача 5.1), и заархивировать `workspace-overrides`; ссылки на оба изменения в `docs/window-model.md` сменить на архивные.
 3. Шаг 6 — панель: общее окно в плитках обоих столов.
 4. Шаг 7 — сессии: экземпляры, общие окна и состав workspace в снимке.
 5. Решить с пользователем, отправлять ли запросы из `docs/upstream/` в Hyprland и Chromium.
@@ -38,7 +39,7 @@
 ### Как проверить
 
 ```bash
-openspec list                              # активно shared-windows (ждёт проверок раздела 4)
+openspec list                              # активны shared-windows и workspace-overrides (ждут проверок раздела 4)
 systemctl --user is-active workspaced.service quickshell-panel.service voxtype.service voxtype-mute-others.service
 ss -xp | rg workspaced/sock                # ESTAB — панель подключена к демону
 busctl --user list | rg -i notifications   # имя org.freedesktop.Notifications у qs
@@ -88,7 +89,7 @@ chezmoi status && git status -sb          # расхождений и незак
 
 ### Система
 
-- [ ] Ярлыки `~/.local/share/applications/fedora-box-*.desktop` лежат вне chezmoi, а добавленные в них руками ключи Wayland и VA-API повторный `distrobox-export` перезапишет. Решить, брать ли ярлыки под chezmoi. Запуск браузеров по Super+B, Super+V и Super+Y от них не зависит: те же ключи продублированы в аргументах приложений демона.
+- [ ] Ярлыки `~/.local/share/applications/fedora-box-*.desktop` лежат вне chezmoi, а добавленные в них руками ключи Wayland и VA-API повторный `distrobox-export` перезапишет. Решить, брать ли ярлыки под chezmoi. Запуск браузеров клавишами демона (Super+B/V/Y и Shift+Super+B/V/Y) от них не зависит: те же ключи продублированы в аргументах приложений демона.
 
 ### Инструменты агента
 
