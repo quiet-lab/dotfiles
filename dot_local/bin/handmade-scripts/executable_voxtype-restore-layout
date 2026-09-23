@@ -42,6 +42,11 @@ done < <(hyprctl devices -j | jq -r '
     | select(.active_layout_index != null and .active_layout_index != 0)
     | "\(.name)\t\(.active_layout_index)"')
 
+# Каждый вызов виден в журнале пользователя (`journalctl --user -t voxtype-restore-layout`):
+# так проверяется, что перехват VoxType сработал после настоящей диктовки.
 if [[ -n $batch ]]; then
     hyprctl --batch "$batch" >/dev/null
+    logger -t voxtype-restore-layout "группа раскладки возвращена окну: ${batch% ; }"
+else
+    logger -t voxtype-restore-layout "все физические клавиатуры на группе 0, переключать нечего"
 fi

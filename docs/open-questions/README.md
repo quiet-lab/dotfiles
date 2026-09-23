@@ -92,3 +92,4 @@
 |---|---|---|
 | [`hyprland-systemd-integration.md`](hyprland-systemd-integration.md) | Когда убирать `hyprland-session.target` и обработчики `hyprland.start`/`hyprland.shutdown` | В выпуске Hyprland появилась встроенная интеграция с systemd |
 | [`hyprland-window-parent.md`](hyprland-window-parent.md) | Как отличить диалог приложения от обычного окна | Hyprland выводит родителя окна и модальность в `hyprctl clients -j` (или присылает их событием), а Chromium начинает вызывать `xdg_toplevel.set_parent` для дочерних окон |
+| [`hyprland-keymap-group-after-virtual-keyboard.md`](hyprland-keymap-group-after-virtual-keyboard.md) | Когда Hyprland начнёт сам присылать окну группу раскладки после виртуальной клавиатуры `wtype` | Обновление Hyprland, после которого проверка через `wev` показывает `modifiers` с группой сразу после выхода `wtype`, без обхода |
