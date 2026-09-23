@@ -13,6 +13,7 @@ import Quickshell
 import Quickshell.Wayland
 import QtQuick
 import qs.tiles
+import qs.common
 
 ShellRoot {
     // Стопка всплывающих уведомлений — второе окно layer-shell панели, у нижнего

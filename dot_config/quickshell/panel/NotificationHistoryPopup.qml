@@ -9,6 +9,7 @@ import Quickshell
 import Quickshell.Services.Notifications
 import QtQuick
 import qs
+import qs.common
 
 PanelPopup {
     id: popup

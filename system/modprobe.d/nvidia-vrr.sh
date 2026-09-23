@@ -14,7 +14,7 @@
 #            в DRM и наличие файла в собранных образах initramfs
 #
 # Запуск из терминала одной командой, права root сценарий получает сам —
-# через sudo -A с графическим запросом пароля (окно pinentry):
+# через sudo -A с графическим запросом пароля (окно Quickshell askpass):
 #   system/modprobe.d/nvidia-vrr.sh status
 #   system/modprobe.d/nvidia-vrr.sh remove
 #   system/modprobe.d/nvidia-vrr.sh restore
@@ -37,14 +37,14 @@ dst="/etc/modprobe.d/$conf_name"
 askpass=${SUDO_ASKPASS:-$HOME/.local/bin/handmade-scripts/sudo-askpass}
 
 # Повышение прав: сценарий перезапускает сам себя через sudo -A, чтобы пароль
-# спросило окно pinentry, а не терминал.
+# спросило окно Quickshell askpass, а не терминал.
 need_root() {
     [ "$(id -u)" -eq 0 ] && return 0
     if [ ! -x "$askpass" ]; then
         echo "не найдена обёртка askpass: $askpass" >&2
         exit 1
     fi
-    echo "нужны права root, пароль спросит окно pinentry"
+    echo "нужны права root, пароль спросит окно Quickshell askpass"
     exec env SUDO_ASKPASS="$askpass" sudo -A -- "$script" "$@"
 }
 

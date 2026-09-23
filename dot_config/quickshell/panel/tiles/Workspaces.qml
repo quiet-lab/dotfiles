@@ -26,6 +26,7 @@ import Quickshell.Io
 import QtQuick
 import QtQuick.Shapes
 import qs
+import qs.common
 
 Item {
     id: root

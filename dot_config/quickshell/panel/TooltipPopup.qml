@@ -1,6 +1,7 @@
 // Подсказка при наведении: одна на панель. show(item, text) показывает её справа
 // от колонки на уровне item, hide(item) скрывает.
 import QtQuick
+import qs.common
 
 PanelPopup {
     id: tip

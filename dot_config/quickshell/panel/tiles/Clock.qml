@@ -3,6 +3,7 @@
 import Quickshell
 import QtQuick
 import qs
+import qs.common
 
 Tile {
     id: tile

@@ -6,6 +6,7 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 import qs
+import qs.common
 
 Tile {
     id: tile

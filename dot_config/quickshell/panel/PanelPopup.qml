@@ -4,6 +4,7 @@
 // скругление popupRadius.
 import Quickshell
 import QtQuick
+import qs.common
 
 PopupWindow {
     id: popup

@@ -7,6 +7,7 @@ import Quickshell.Io
 import Quickshell.Hyprland
 import QtQuick
 import qs
+import qs.common
 
 Tile {
     id: tile

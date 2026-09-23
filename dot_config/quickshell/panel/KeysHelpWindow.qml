@@ -14,6 +14,7 @@ import Quickshell
 import Quickshell.Wayland
 import QtQuick
 import qs
+import qs.common
 
 PanelWindow {
     id: win

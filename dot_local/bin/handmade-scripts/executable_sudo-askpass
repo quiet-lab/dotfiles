@@ -1,46 +1,42 @@
 #!/bin/sh
-# Графический запрос пароля для sudo (SUDO_ASKPASS). Нужен агентам и
-# сценариям без терминала: sudo -A вызывает эту обёртку с подсказкой в
-# первом аргументе и читает пароль из её stdout.
+# Графический запрос пароля для sudo — единственная программа askpass
+# в системе. sudo вызывает её с подсказкой в первом аргументе и читает
+# пароль из её stdout. Путь к ней задан строкой «Path askpass» в
+# /etc/sudo.conf (копия — system/sudo/sudo.conf в репозитории chezmoi)
+# и переменной SUDO_ASKPASS окружения сессии, поэтому `sudo -A` находит
+# её сам, без переменной в командной строке.
 # Подсказку задаёт ключ sudo -p: агент пишет в ней, зачем нужны права,
 # и окно показывает это пояснение над полем ввода. Без -p sudo передаёт
 # свою стандартную строку «[sudo] пароль для …».
 # Окно рисует Quickshell (конфигурация ~/.config/quickshell/askpass,
 # спецификация qs-askpass): оно оформлено как плитки панели и показывает
-# набранный пароль по значку у поля. Запасной путь — прежний диалог
-# pinentry-gtk: он включается, когда Quickshell недоступен или окно
-# завершилось, не ответив.
+# набранный пароль по значку у поля. Запасного диалога нет: если окно
+# не удалось запустить или оно завершилось, не ответив, обёртка пишет
+# причину в stderr и завершается с кодом 1, а sudo отказывает с
+# сообщением о том, что пароль не предоставлен.
 # Пароль не попадает ни в журнал, ни в файл на диске, ни в аргументы
 # процессов: окно пишет ответ в именованный канал внутри каталога с правами
-# 0600 в $XDG_RUNTIME_DIR, обёртка читает оттуда первую строку и печатает
+# 0700 в $XDG_RUNTIME_DIR, обёртка читает оттуда первую строку и печатает
 # пароль в stdout, а каталог удаляется при выходе.
 # Использование:
-#   SUDO_ASKPASS=~/.local/bin/handmade-scripts/sudo-askpass \
-#       sudo -A -p 'Установка пакета playerctl для паузы плееров VoxType' команда
+#   sudo -A -p 'Установка пакета playerctl для паузы плееров VoxType' команда
 reason="${1:-Команда запрашивает права root}"
 
-# Запасной путь: диалог pinentry-gtk. У его поля ввода тоже есть кнопка
-# показа набранного пароля. pinentry общается по протоколу Assuan: в SETDESC
-# знак процента и перевод строки кодируются как %25 и %0A, пароль приходит
-# строкой «D …», спецсимволы в ней закодированы как %XX.
-pinentry_ask() {
-    desc=$(printf '%s' "$reason" | sed 's/%/%25/g' | awk 'NR>1{printf "%%0A"} {printf "%s", $0}')
-    pin=$(printf 'SETTITLE sudo\nSETDESC %s\nSETPROMPT Пароль sudo:\nGETPIN\nBYE\n' "$desc" \
-        | pinentry-gtk 2>/dev/null | sed -n 's/^D //p')
-    [ -n "$pin" ] || exit 1
-    printf '%b\n' "$(printf '%s' "$pin" | sed 's/\\/\\\\/g; s/%\([0-9A-Fa-f][0-9A-Fa-f]\)/\\x\1/g')"
-    exit 0
+fail() {
+    printf 'sudo-askpass: %s\n' "$1" >&2
+    exit 1
 }
 
 config="$HOME/.config/quickshell/askpass/shell.qml"
-command -v qs >/dev/null 2>&1 || pinentry_ask
-[ -f "$config" ] || pinentry_ask
-[ -n "$WAYLAND_DISPLAY" ] || pinentry_ask
+command -v qs >/dev/null 2>&1 || fail "не найдена программа qs (Quickshell)"
+[ -f "$config" ] || fail "нет конфигурации окна $config"
+[ -n "$WAYLAND_DISPLAY" ] || fail "не задана переменная WAYLAND_DISPLAY: окну некуда выводиться"
 
-dir=$(mktemp -d "${XDG_RUNTIME_DIR:-/tmp}/sudo-askpass.XXXXXX") || pinentry_ask
+dir=$(mktemp -d "${XDG_RUNTIME_DIR:-/tmp}/sudo-askpass.XXXXXX") \
+    || fail "не удалось создать каталог для канала ответа"
 trap 'rm -rf "$dir"' EXIT HUP INT TERM
 fifo="$dir/answer"
-mkfifo -m 600 "$fifo" || pinentry_ask
+mkfifo -m 600 "$fifo" || fail "не удалось создать канал ответа $fifo"
 # Канал открыт сразу и на чтение, и на запись: открытие не ждёт вторую
 # сторону, а чтение ниже не упирается в конец файла.
 exec 3<>"$fifo"
@@ -58,6 +54,6 @@ exec 3<>"$fifo"
 IFS= read -r answer <&3
 case "$answer" in
     P*) printf '%s\n' "${answer#P}" ;;
-    C*) exit 1 ;;
-    *)  pinentry_ask ;;
+    C*) fail "ввод пароля отменён" ;;
+    *)  fail "окно Quickshell завершилось, не ответив; журнал — qs log в $XDG_RUNTIME_DIR/quickshell/by-id" ;;
 esac

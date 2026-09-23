@@ -7,6 +7,7 @@ import Quickshell.Services.SystemTray
 import Quickshell.Services.Pipewire
 import QtQuick
 import qs
+import qs.common
 
 Tile {
     id: tile

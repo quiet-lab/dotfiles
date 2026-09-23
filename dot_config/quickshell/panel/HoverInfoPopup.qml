@@ -3,6 +3,7 @@
 // между соседними элементами с тем же ключом меняется только содержимое.
 import QtQuick
 import QtQuick.Layouts
+import qs.common
 
 PanelPopup {
     id: info

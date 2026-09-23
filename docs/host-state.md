@@ -25,6 +25,14 @@ initramfs, без которой параметр не действует. Фа�
 с правами root. Он же создаёт `/var/cache/tuigreet` с владельцем `greeter`,
 без чего tuigreet не запоминает имя пользователя.
 
+**`/etc/sudo.conf`** — строка `Path askpass
+/home/mne/.local/bin/handmade-scripts/sudo-askpass`: `sudo -A` запускает
+окно Quickshell askpass и без переменной `SUDO_ASKPASS`. Копия файла лежит
+в репозитории (`system/sudo/sudo.conf`), установка вручную описана
+в `system/sudo/README.md`. Файл принадлежит пакету sudo; при его обновлении
+pacman кладёт рядом `/etc/sudo.conf.pacnew`, и строку надо перенести
+(запись [`decisions/0008-askpass-quickshell-only.md`](decisions/0008-askpass-quickshell-only.md)).
+
 ## Профили и настройки программ
 
 **`~/.config/mozilla/firefox/3e5c3xuj.default-release/user.js`** — настройки

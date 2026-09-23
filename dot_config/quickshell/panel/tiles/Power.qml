@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Hyprland
 import QtQuick
 import qs
+import qs.common
 
 Item {
     id: root

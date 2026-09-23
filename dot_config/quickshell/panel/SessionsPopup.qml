@@ -9,6 +9,7 @@
 import Quickshell
 import QtQuick
 import QtQuick.Layouts
+import qs.common
 
 PanelPopup {
     id: popup

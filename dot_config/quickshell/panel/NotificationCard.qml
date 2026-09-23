@@ -9,6 +9,7 @@ import Quickshell.Services.Notifications
 import QtQuick
 import QtQuick.Layouts
 import qs
+import qs.common
 
 Rectangle {
     id: card
