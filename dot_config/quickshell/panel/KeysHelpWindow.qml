@@ -1,8 +1,10 @@
 // Окно подсказки клавиш (спецификация qs-keys-help): перечень цепочек сессии,
-// сгруппированный по назначению, в карточке по центру экрана в оформлении
-// плиток. Окно layer-shell на слое Overlay занимает экран целиком: клик мимо
-// карточки закрывает окно, а на время показа слой берёт клавиатуру монопольно,
-// чтобы закрыть окно клавишей Escape. Привязки композитора при этом работают,
+// сгруппированный по назначению, в карточке шириной 1920 px по центру экрана
+// в оформлении плиток. Перечень — одна колонка с прокруткой: колесо мыши,
+// перетаскивание, стрелки, PageUp/PageDown, Home/End. Окно layer-shell на слое
+// Overlay занимает экран целиком: клик мимо карточки закрывает окно, а на время
+// показа слой берёт клавиатуру монопольно, чтобы закрыть окно клавишей Escape
+// и прокручивать перечень клавишами. Привязки композитора при этом работают,
 // поэтому повторное Shift+Super+/ тоже закрывает окно. Сроков показа нет.
 // Данные и состояние — в синглтоне KeysHelp.
 import Quickshell
@@ -15,13 +17,15 @@ PanelWindow {
     required property var modelData
     screen: modelData
 
-    // Колонки карточки: группы раскладываются по ним по порядку, каждая
-    // следующая колонка начинается, когда предыдущая набрала свою долю строк.
-    readonly property int columns: 3
-    readonly property int columnWidth: 1180
+    // Размеры карточки и строк перечня.
+    readonly property int cardWidth: 1920
+    readonly property int padX: 24
+    readonly property int padY: 18
     readonly property int rowHeight: 52
     readonly property int headHeight: 80
     readonly property int labelWidth: 580
+    // Полоса у правого края под индикатор прокрутки.
+    readonly property int barGap: 24
 
     anchors {
         left: true
@@ -41,30 +45,6 @@ PanelWindow {
     surfaceFormat.opaque: false
     visible: KeysHelp.shown
 
-    // Группы по колонкам: [[группа, …], …]. Доля колонки считается в строках,
-    // заголовок группы весит как полторы строки.
-    readonly property var layout: {
-        const groups = KeysHelp.groups;
-        const weight = g => 1.5 + (g.keys || []).length;
-        let total = 0;
-        for (const g of groups) total += weight(g);
-        const cols = [];
-        let cur = [];
-        let acc = 0;
-        for (const g of groups) {
-            const w = weight(g);
-            if (cur.length > 0 && cols.length < win.columns - 1
-                    && acc + w / 2 > total * (cols.length + 1) / win.columns) {
-                cols.push(cur);
-                cur = [];
-            }
-            cur.push(g);
-            acc += w;
-        }
-        if (cur.length > 0) cols.push(cur);
-        return cols;
-    }
-
     // Затемнение экрана под карточкой; клик по нему закрывает окно.
     Rectangle {
         anchors.fill: parent
@@ -76,24 +56,59 @@ PanelWindow {
         }
     }
 
+    // Сдвиг прокрутки с ограничением пределами перечня.
+    function scrollTo(y) {
+        const max = Math.max(0, flick.contentHeight - flick.height);
+        flick.contentY = Math.max(0, Math.min(max, y));
+    }
+
     // Приёмник клавиш: слой держит клавиатуру, пока окно показано.
     Item {
         id: keys
         focus: true
         Keys.onPressed: (ev) => {
-            if (ev.key === Qt.Key_Escape) {
-                ev.accepted = true;
+            const page = Math.max(win.rowHeight, flick.height - win.rowHeight);
+            switch (ev.key) {
+            case Qt.Key_Escape:
                 KeysHelp.hide();
+                break;
+            case Qt.Key_Down:
+                win.scrollTo(flick.contentY + win.rowHeight);
+                break;
+            case Qt.Key_Up:
+                win.scrollTo(flick.contentY - win.rowHeight);
+                break;
+            case Qt.Key_PageDown:
+                win.scrollTo(flick.contentY + page);
+                break;
+            case Qt.Key_PageUp:
+                win.scrollTo(flick.contentY - page);
+                break;
+            case Qt.Key_Home:
+                win.scrollTo(0);
+                break;
+            case Qt.Key_End:
+                win.scrollTo(flick.contentHeight);
+                break;
+            default:
+                return;
             }
+            ev.accepted = true;
         }
     }
-    onVisibleChanged: if (visible) keys.forceActiveFocus()
+    // При каждом открытии перечень начинается сначала.
+    onVisibleChanged: if (visible) {
+        flick.cancelFlick();
+        flick.contentY = 0;
+        keys.forceActiveFocus();
+    }
 
     Rectangle {
         id: card
-        anchors.centerIn: parent
-        width: body.implicitWidth + 2 * 24
-        height: body.implicitHeight + 2 * 18
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: Theme.margin
+        width: win.cardWidth
+        height: parent.height - 2 * Theme.margin
         color: Theme.tileBg
         border.color: Theme.tileBorder
         border.width: 1
@@ -105,14 +120,17 @@ PanelWindow {
             acceptedButtons: Qt.AllButtons
         }
 
+        // Шапка: заголовок, напоминание о закрытии, черта и сообщения
+        // о загрузке; не прокручивается.
         Column {
-            id: body
-            x: 24
-            y: 18
+            id: head
+            x: win.padX
+            y: win.padY
+            width: card.width - 2 * win.padX
             spacing: 8
 
             Item {
-                width: Math.max(cols.implicitWidth, 600)
+                width: parent.width
                 height: 56
 
                 Text {
@@ -135,7 +153,7 @@ PanelWindow {
             }
 
             Rectangle {
-                width: Math.max(cols.implicitWidth, 600)
+                width: parent.width
                 height: 1
                 color: Theme.yellow
             }
@@ -143,7 +161,7 @@ PanelWindow {
             // Ошибка загрузки: конфиг с ошибкой или бинарник демона без --json.
             Text {
                 visible: KeysHelp.error !== ""
-                width: Math.max(cols.implicitWidth, 600)
+                width: parent.width
                 text: "Перечень клавиш не получен:\n" + KeysHelp.error
                 wrapMode: Text.Wrap
                 color: Theme.red
@@ -157,79 +175,94 @@ PanelWindow {
                 font.family: Theme.fontFamily
                 font.pixelSize: 32
             }
+        }
 
-            Row {
-                id: cols
-                spacing: 36
+        // Перечень одной колонкой с прокруткой. Колесо и перетаскивание
+        // обрабатывает сам Flickable, клавиши — приёмник keys выше.
+        Flickable {
+            id: flick
+            x: win.padX
+            y: head.y + head.height
+            width: card.width - 2 * win.padX
+            height: card.height - y - win.padY
+            clip: true
+            contentWidth: width
+            contentHeight: list.height
+            boundsBehavior: Flickable.StopAtBounds
+
+            Column {
+                id: list
+                width: flick.width - win.barGap
+                spacing: 0
 
                 Repeater {
-                    model: win.layout
+                    model: KeysHelp.groups
 
                     Column {
-                        id: column
+                        id: group
                         required property var modelData
-                        width: win.columnWidth
-                        spacing: 0
+                        width: list.width
+
+                        Item {
+                            width: parent.width
+                            height: win.headHeight
+                            Text {
+                                anchors.left: parent.left
+                                anchors.bottom: parent.bottom
+                                anchors.bottomMargin: 12
+                                text: group.modelData.name.toUpperCase()
+                                color: Theme.gray
+                                font.family: Theme.fontFamily
+                                font.pointSize: Theme.pt(Theme.titleSize * 2)
+                                font.bold: true
+                            }
+                        }
 
                         Repeater {
-                            model: column.modelData
+                            model: group.modelData.keys
 
-                            Column {
-                                id: group
+                            Item {
+                                id: row
                                 required property var modelData
-                                width: win.columnWidth
+                                width: group.width
+                                height: win.rowHeight
 
-                                Item {
-                                    width: parent.width
-                                    height: win.headHeight
-                                    Text {
-                                        anchors.left: parent.left
-                                        anchors.bottom: parent.bottom
-                                        anchors.bottomMargin: 12
-                                        text: group.modelData.name.toUpperCase()
-                                        color: Theme.gray
-                                        font.family: Theme.fontFamily
-                                        font.pointSize: Theme.pt(Theme.titleSize * 2)
-                                        font.bold: true
-                                    }
+                                Text {
+                                    width: win.labelWidth
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: row.modelData.label
+                                    elide: Text.ElideRight
+                                    color: Theme.yellow
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 32
                                 }
-
-                                Repeater {
-                                    model: group.modelData.keys
-
-                                    Item {
-                                        id: row
-                                        required property var modelData
-                                        width: group.width
-                                        height: win.rowHeight
-
-                                        Text {
-                                            id: label
-                                            width: win.labelWidth
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            text: row.modelData.label
-                                            elide: Text.ElideRight
-                                            color: Theme.yellow
-                                            font.family: Theme.fontFamily
-                                            font.pixelSize: 32
-                                        }
-                                        Text {
-                                            x: win.labelWidth + 24
-                                            width: parent.width - x
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            text: row.modelData.desc
-                                            elide: Text.ElideRight
-                                            color: Theme.foreground
-                                            font.family: Theme.fontFamily
-                                            font.pixelSize: 32
-                                        }
-                                    }
+                                Text {
+                                    x: win.labelWidth + 24
+                                    width: parent.width - x
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: row.modelData.desc
+                                    elide: Text.ElideRight
+                                    color: Theme.foreground
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 32
                                 }
                             }
                         }
                     }
                 }
             }
+        }
+
+        // Индикатор прокрутки у правого края перечня: показывает видимую
+        // часть; виден, только когда перечень выше области прокрутки.
+        Rectangle {
+            visible: flick.contentHeight > flick.height
+            x: flick.x + flick.width - width
+            y: flick.y + flick.visibleArea.yPosition * flick.height
+            width: 6
+            height: flick.visibleArea.heightRatio * flick.height
+            radius: 3
+            color: Theme.gray
         }
     }
 }
