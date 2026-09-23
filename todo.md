@@ -10,12 +10,12 @@
 
 ### Открытые вопросы к пользователю
 
-- Вид плитки активного стола после изменения `ws-tile-tabs` (пункт 5.1 его `tasks.md`): двойная высота, сверху табы workspace в порядке попадания на стол (активный чёрный и слит с рядом окон, неактивные на тёмно-серой полосе), снизу окна активного workspace и свободные окна; плитки ниже сдвинуты, трей 312 px, плитка уведомлений на y = 1416. Если вид устраивает — при архивации поправить раздел Purpose спецификации qs-workspaces (пункт 4.1) и заархивировать.
+Вопросов нет.
 
 ### Где остановились
 
 - Демон на коммите `da04826` (`~/work/pets/workspaced`, `master`, 78 тестов): шаги 1–3 модели окон, `move-desktop` (с 23.09.2026 сохраняет прямоугольники окон в обоих режимах и оставляет на прежнем столе активным преемника — прежний активный workspace, иначе предыдущий по списку; изменения `move-desktop-keeps-geometry` и `move-desktop-successor` заархивированы), `arrange`, `detach`, `dialog_title`, `ignore_classes`, снимок сессии только по Ctrl+Super+S (автозаписи нет: после перезапуска демона восстанавливается последний сохранённый вручную снимок).
-- Панель: сервер уведомлений (столбик справа от лаунчера, плитка над треем со счётчиком истории, история, «не беспокоить», Super+Enter), подсказки без задержки; плитка активного стола двойной высоты с табами workspace (активное изменение `ws-tile-tabs`, ждёт взгляда пользователя; `ws-tile-order` заархивировано); dunst замаскирован, пакет не удалён (команда удаления — в отчёте `qs-notifications`, перед этим перевести `change-volume.sh`, `change-brightness.sh`, `screenshot-common` с `dunstify` на `notify-send`).
+- Панель: сервер уведомлений (столбик справа от лаунчера, плитка над треем со счётчиком истории, история, «не беспокоить», Super+Enter), подсказки без задержки; плитка активного стола двойной высоты с табами workspace (`ws-tile-tabs`, проверено пользователем и заархивировано 23.09.2026); dunst замаскирован, пакет не удалён (команда удаления — в отчёте `qs-notifications`, перед этим перевести `change-volume.sh`, `change-brightness.sh`, `screenshot-common` с `dunstify` на `notify-send`).
 - Окно ввода пароля sudo рисует Quickshell (`dot_config/quickshell/askpass`), pinentry — запасной путь; агенты обязаны передавать причину в `sudo -A -p`.
 - VoxType: пауза MPRIS-плееров и тишина на время диктовки проверены; флаг `hardware-media-key-handling` Яндекс.Браузера возвращён в «Default» (`docs/media-and-portals.md`).
 - Клавиши: Ctrl+Super+1..8 перенос workspace, Ctrl+Super+Пробел расстановка, Super+Alt+E/R раскладка, Super+Пробел по кругу без других модификаторов.
@@ -25,7 +25,6 @@
 
 ### Следующие шаги
 
-1. Получить от пользователя оценку вида плитки активного стола, отметить пункт 5.1 в `tasks.md` изменения `ws-tile-tabs`, поправить раздел Purpose спецификации qs-workspaces (пункт 4.1) и заархивировать (`openspec archive ws-tile-tabs -y`).
 2. Решить с пользователем, отправлять ли запросы из `docs/upstream/` в Hyprland и Chromium.
 3. Шаг 4 серии (общие окна) — `docs/window-model.md`, раздел 5.
 4. После ближайшей перезагрузки: `conceal_vrr_caps` действует (команда `status` ниже), DP-2 на 120 Гц, `graphical-session.target` останавливается при выходе (пункт в разделе «Hyprland» ниже), принятые окна восстанавливаются по снимку сессии.
@@ -34,7 +33,7 @@
 ### Как проверить
 
 ```bash
-openspec list                              # активные: ws-tile-tabs
+openspec list                              # активных изменений нет
 systemctl --user is-active workspaced.service quickshell-panel.service voxtype.service voxtype-mute-others.service
 ss -xp | rg workspaced/sock                # ESTAB — панель подключена к демону
 busctl --user list | rg -i notifications   # имя org.freedesktop.Notifications у qs
