@@ -160,7 +160,7 @@ class = "^neovide$"
 # по классу. Каталог в аргументе пишется через $HOME: `~` демон подставляет
 # только в начале строки.
 [apps.chrome]
-chain = "SUPER+B"
+chain = "SUPER+SHIFT+B"
 cmd = "distrobox-enter"
 args = [
   "-n",
@@ -179,7 +179,7 @@ class = "(?i)^google-chrome$"
 dialog_title = "^(Диспетчер задач|Task Manager)$|^(DevTools|Инструменты разработчика)( [-–—] |$)"
 
 [apps.chrome-ai]
-chain = "SUPER+V"
+chain = "SUPER+SHIFT+V"
 cmd = "distrobox-enter"
 args = [
   "-n",
@@ -203,7 +203,7 @@ dialog_title = "^(Диспетчер задач|Task Manager)$|^(DevTools|Инс
 # сохранения. Команда записана вручную: демон взял её из /proc процесса в
 # контейнере (/opt/yandex/browser/yandex_browser), на хосте такого пути нет.
 [apps.yandex-browser]
-chain = "SUPER+Y"
+chain = "SUPER+SHIFT+Y"
 cmd = "distrobox-enter"
 args = [
   "-n",
@@ -240,6 +240,12 @@ neovide = "right"
 # mode = "stack": окна стоят друг поверх друга, и менять их ячейками незачем —
 # клавиша браузера поднимает его окно наверх и даёт ему фокус, не двигая
 # ни одного окна. У work режима нет, там действует обмен ячеек ("swap").
+# У каждого браузера две клавиши. Super+B/V/Y — клавиши surf (поле chain
+# записи ниже): в surf они ведут цикл по окнам браузера, на столе с другим
+# workspace поднимают surf. Shift+Super+B/V/Y — собственные клавиши
+# браузеров (chain в [apps]): в surf ведут тот же цикл, а на столе с другим
+# активным workspace перетаскивают туда окно браузера, и оно становится
+# общим; если surf не запущен, открывают браузер в этом workspace.
 [workspaces.surf]
 chain = "SUPER+TAB s"
 template = "overlay"
@@ -247,9 +253,9 @@ main = "yandex-browser"
 icon = "yandex-browser"
 mode = "stack"
 [workspaces.surf.apps]
-chrome = "left"
-yandex-browser = "center"
-chrome-ai = "right"
+chrome = { cell = "left", chain = "SUPER+B" }
+yandex-browser = { cell = "center", chain = "SUPER+Y" }
+chrome-ai = { cell = "right", chain = "SUPER+V" }
 
 # Поднимается при старте демона после восстановления сессии (стол 1).
 [startup]

@@ -126,8 +126,8 @@ hl.config({
             active_border   = "rgba(e0af68ee)",
             inactive_border = "rgba(2d6a4fee)",
         },
-        -- Мозаика dwindle доступна через Super+Shift+V; по умолчанию окна
-        -- плавающие (правило ниже), как в Openbox.
+        -- Раскладка dwindle задана, но окна плавающие (правило ниже),
+        -- как в Openbox.
         layout = "dwindle",
     },
     -- Прозрачность, размытие и тени повторяют прежние правила picom из
@@ -228,7 +228,7 @@ end
 
 -- Все окна открываются плавающими, как в Openbox; по ячейкам workspace их
 -- расставляет демон workspaced (спецификация ws-daemon), собственная
--- раскладка зон не планируется. Мозаика по Super+Shift+V.
+-- раскладка зон не планируется.
 hl.window_rule({
     name  = "float-by-default",
     match = { class = ".*" },
