@@ -357,20 +357,30 @@ Item {
     }
     // Иконки workspace плитки неактивного стола и окна: если вместе их больше
     // 10, а неактивных workspace два и больше, неактивные заменяются одной
-    // кнопкой fold сразу после иконки активного workspace (design D7).
+    // кнопкой fold в конце ряда, перед блоком номера стола (design D7;
+    // место кнопки — решение пользователя 23.09.2026).
     function foldRow(wsList, wins) {
         const inactive = wsList.filter(w => !w.active);
         if (wsList.length + wins.length <= 10 || inactive.length < 2)
             return wsList.concat(wins);
         const head = wsList.filter(w => w.active);
         const fold = { kind: "fold", list: inactive, desktop: inactive[0].desktop };
-        return head.concat([fold], wins);
+        return head.concat(wins, [fold]);
+    }
+    // Видимая часть ряда: не более 10 элементов; кнопка свёрнутых workspace
+    // стоит последней и при переполнении не срезается — вместо неё уходит
+    // ещё одно окно (design D7).
+    function visibleItems(items) {
+        if (items.length <= 10) return items;
+        const last = items[items.length - 1];
+        if (last.kind === "fold") return items.slice(0, 9).concat([last]);
+        return items.slice(0, 10);
     }
     // Ряд плитки для IPC: показанные элементы и метка «+N» (design D9).
     function rowJson(tile) {
         const n = Number(tile);
         const items = itemsFor(String(tile), wsListFor(String(tile)), activeIndex !== n - 1);
-        const out = items.slice(0, 10).map(it => {
+        const out = visibleItems(items).map(it => {
             if (it.kind === "ws") return { kind: "ws", name: it.name, active: it.active };
             if (it.kind === "fold") return { kind: "fold", count: it.list.length, names: it.list.map(w => w.name) };
             return { kind: "win", address: "0x" + it.address, class: it.appId, hidden: it.hidden, away: it.away, at: it.at, workspaces: it.workspaces };
@@ -609,7 +619,7 @@ Item {
                     y: row.active ? strip.height + Math.max(0, (body.height - strip.height - 24) / 2) : (body.height - 24) / 2
                     spacing: 0
                     Repeater {
-                        model: row.items.slice(0, 10)
+                        model: root.visibleItems(row.items)
                         Rectangle {
                             id: btn
                             required property var modelData
