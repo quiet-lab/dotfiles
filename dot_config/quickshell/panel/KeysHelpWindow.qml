@@ -18,10 +18,10 @@ PanelWindow {
     // Колонки карточки: группы раскладываются по ним по порядку, каждая
     // следующая колонка начинается, когда предыдущая набрала свою долю строк.
     readonly property int columns: 3
-    readonly property int columnWidth: 800
-    readonly property int rowHeight: 26
-    readonly property int headHeight: 40
-    readonly property int labelWidth: 290
+    readonly property int columnWidth: 1180
+    readonly property int rowHeight: 52
+    readonly property int headHeight: 80
+    readonly property int labelWidth: 580
 
     anchors {
         left: true
@@ -113,7 +113,7 @@ PanelWindow {
 
             Item {
                 width: Math.max(cols.implicitWidth, 600)
-                height: 28
+                height: 56
 
                 Text {
                     anchors.left: parent.left
@@ -121,7 +121,7 @@ PanelWindow {
                     text: "ГОРЯЧИЕ КЛАВИШИ"
                     color: Theme.yellow
                     font.family: Theme.fontFamily
-                    font.pixelSize: 18
+                    font.pixelSize: 36
                     font.bold: true
                 }
                 Text {
@@ -130,7 +130,7 @@ PanelWindow {
                     text: "Shift+Super+/ или Escape — закрыть"
                     color: Theme.gray
                     font.family: Theme.fontFamily
-                    font.pixelSize: 15
+                    font.pixelSize: 30
                 }
             }
 
@@ -148,14 +148,14 @@ PanelWindow {
                 wrapMode: Text.Wrap
                 color: Theme.red
                 font.family: Theme.fontFamily
-                font.pixelSize: 16
+                font.pixelSize: 32
             }
             Text {
                 visible: KeysHelp.loading && KeysHelp.groups.length === 0
                 text: "Загрузка…"
                 color: Theme.gray
                 font.family: Theme.fontFamily
-                font.pixelSize: 16
+                font.pixelSize: 32
             }
 
             Row {
@@ -185,11 +185,11 @@ PanelWindow {
                                     Text {
                                         anchors.left: parent.left
                                         anchors.bottom: parent.bottom
-                                        anchors.bottomMargin: 6
+                                        anchors.bottomMargin: 12
                                         text: group.modelData.name.toUpperCase()
                                         color: Theme.gray
                                         font.family: Theme.fontFamily
-                                        font.pointSize: Theme.pt(Theme.titleSize)
+                                        font.pointSize: Theme.pt(Theme.titleSize * 2)
                                         font.bold: true
                                     }
                                 }
@@ -211,17 +211,17 @@ PanelWindow {
                                             elide: Text.ElideRight
                                             color: Theme.yellow
                                             font.family: Theme.fontFamily
-                                            font.pixelSize: 16
+                                            font.pixelSize: 32
                                         }
                                         Text {
-                                            x: win.labelWidth + 12
+                                            x: win.labelWidth + 24
                                             width: parent.width - x
                                             anchors.verticalCenter: parent.verticalCenter
                                             text: row.modelData.desc
                                             elide: Text.ElideRight
                                             color: Theme.foreground
                                             font.family: Theme.fontFamily
-                                            font.pixelSize: 16
+                                            font.pixelSize: 32
                                         }
                                     }
                                 }
