@@ -57,6 +57,9 @@ next_workspace = "SUPER+TAB Tab"
 # Ctrl+Super+Пробел свободен для привязки и занят расстановкой окон.
 # Намеренно свободное: Alt+Super+Пробел.
 reserved = ["SUPER+space", "ALT+SUPER+E", "ALT+SUPER+R", "ALT+SUPER+space"]
+# Описания зарезервированных сочетаний для окна подсказки клавиш
+# (Shift+Super+/): там они стоят в группе «Раскладка».
+reserved_desc = { "SUPER+space" = "Следующая раскладка", "ALT+SUPER+E" = "Раскладка US", "ALT+SUPER+R" = "Раскладка RU", "ALT+SUPER+space" = "Свободно намеренно" }
 
 # ---- Шаблоны геометрии --------------------------------------------------
 
@@ -270,22 +273,32 @@ workspace = "work"
 # Флаги: locked (и при заблокированном экране), repeating (повтор при
 # удержании), mouse (кнопка мыши с удержанием), release (по отпусканию).
 # range = [от, до] разворачивает запись, $n заменяется числом.
+# desc и group — описание и группа строки в окне подсказки клавиш панели
+# (Shift+Super+/, `workspaced keys --json`). Без них описание и группа
+# выводятся из действия: команды демона описаны в самом демоне, а записи exec,
+# dispatch и lua без desc показываются своим действием. Группы: Workspace,
+# Столы, Приложения, Окна, Уведомления, Звук и яркость, Снимки экрана,
+# Раскладка, Сессия и прочее; другое имя группы заводит новую группу в конце.
 # Список привязок — `workspaced keys --list`.
 
 # Программы.
 [[binds]]
 chain = "SUPER+R"
+desc = "Лаунчер программ (rofi)"
+group = "Приложения"
 exec = "rofi -show drun"
 
 # Меню буфера обмена: история cliphist через rofi. Super+V отдан Chrome,
 # Insert — клавиша вставки.
 [[binds]]
 chain = "SUPER+Insert"
+desc = "Меню буфера обмена"
 exec = "~/.local/bin/handmade-scripts/clipboard-menu"
 
 # Окно. Закрытие — Super+Delete: Super+C занят Chromium.
 [[binds]]
 chain = "SUPER+Delete"
+desc = "Закрыть окно"
 dispatch = "window.close()"
 
 # Отделить активное окно от активного workspace текущего стола: окно выходит
@@ -299,27 +312,33 @@ action = "detach"
 # Super+Shift+Z показывает и скрывает этот стол.
 [[binds]]
 chain = "SUPER+Z"
+desc = "Спрятать окно на скрытый стол"
 dispatch = "window.move({ workspace = \"special:hidden\", follow = false })"
 
 [[binds]]
 chain = "SUPER+SHIFT+Z"
+desc = "Показать или убрать скрытый стол"
 dispatch = "workspace.toggle_special(\"hidden\")"
 
 # Фокус.
 [[binds]]
 chain = "SUPER+left"
+desc = "Фокус на окно слева"
 dispatch = "focus({ direction = \"l\" })"
 
 [[binds]]
 chain = "SUPER+right"
+desc = "Фокус на окно справа"
 dispatch = "focus({ direction = \"r\" })"
 
 [[binds]]
 chain = "SUPER+up"
+desc = "Фокус на окно выше"
 dispatch = "focus({ direction = \"u\" })"
 
 [[binds]]
 chain = "SUPER+down"
+desc = "Фокус на окно ниже"
 dispatch = "focus({ direction = \"d\" })"
 
 # Alt+Tab с подъёмом окна наверх, как NextWindow в Openbox. Диспетчер
@@ -328,6 +347,8 @@ dispatch = "focus({ direction = \"d\" })"
 # идёт по порядку создания окон (stable_id) среди окон текущего стола.
 [[binds]]
 chain = "ALT+Tab"
+desc = "Следующее окно стола с подъёмом наверх"
+group = "Окна"
 lua = """
 local cur = hl.get_active_window()
 if not cur or not cur.workspace then return end
@@ -344,6 +365,8 @@ hl.dispatch(hl.dsp.window.bring_to_top())
 
 [[binds]]
 chain = "ALT+SHIFT+Tab"
+desc = "Предыдущее окно стола с подъёмом наверх"
+group = "Окна"
 lua = """
 local cur = hl.get_active_window()
 if not cur or not cur.workspace then return end
@@ -426,6 +449,7 @@ action = "arrange"
 
 [[binds]]
 chain = "ALT+SUPER+Return"
+desc = "Окно 1920×1080 по центру экрана"
 dispatch = [
   "window.float({ action = \"on\" })",
   "window.resize({ x = 1920, y = 1080, relative = false })",
@@ -434,16 +458,19 @@ dispatch = [
 
 [[binds]]
 chain = "ALT+SUPER+Menu"
+desc = "Полноэкранный режим окна"
 dispatch = "window.fullscreen({ mode = \"fullscreen\", action = \"toggle\" })"
 
 # Рабочие столы: переход и перенос окна с переходом за ним (SendToDesktop).
 [[binds]]
 chain = "SUPER+$n"
+desc = "Перейти на стол $n"
 range = [1, 8]
 dispatch = "focus({ workspace = $n })"
 
 [[binds]]
 chain = "SUPER+SHIFT+$n"
+desc = "Перенести окно на стол $n и перейти за ним"
 range = [1, 8]
 dispatch = "window.move({ workspace = $n, follow = true })"
 
@@ -460,30 +487,36 @@ action = { move = "$n" }
 # Мышь: перемещение и изменение размера с удержанием Super.
 [[binds]]
 chain = "SUPER+mouse:272"
+desc = "Перетащить окно"
 mouse = true
 dispatch = "window.drag()"
 
 [[binds]]
 chain = "SUPER+mouse:273"
+desc = "Изменить размер окна"
 mouse = true
 dispatch = "window.resize()"
 
 # Блокировка сессии: hypridle слушает logind и запускает hyprlock.
 [[binds]]
 chain = "SUPER+L"
+desc = "Заблокировать экран"
 exec = "loginctl --no-ask-password lock-session"
 
 # Скриншоты (grim и slurp, см. ~/.local/bin/handmade-scripts).
 [[binds]]
 chain = "Print"
+desc = "Снимок всего экрана"
 exec = "~/.local/bin/handmade-scripts/screenshot-screen"
 
 [[binds]]
 chain = "CTRL+Print"
+desc = "Снимок экрана через 5 секунд"
 exec = "~/.local/bin/handmade-scripts/screenshot-countdown"
 
 [[binds]]
 chain = "SHIFT+Print"
+desc = "Снимок выделенной области"
 exec = "~/.local/bin/handmade-scripts/screenshot-selection"
 
 # Уведомления панели Quickshell (спецификация qs-notifications). Сервер
@@ -491,6 +524,7 @@ exec = "~/.local/bin/handmade-scripts/screenshot-selection"
 # по IPC Quickshell в конфигурацию panel.
 [[binds]]
 chain = "CTRL+Escape"
+desc = "Окно истории уведомлений"
 exec = "qs -c panel ipc call notifications history"
 
 # Super+Enter делает с верхним уведомлением столбика то же, что левый клик
@@ -500,18 +534,22 @@ exec = "qs -c panel ipc call notifications history"
 # он нужен приложениям (отправка сообщения, формы).
 [[binds]]
 chain = "SUPER+Return"
+desc = "Верхнее уведомление: действие, убрать с экрана"
 exec = "qs -c panel ipc call notifications dismissOldest"
 
 [[binds]]
 chain = "SUPER+SHIFT+Return"
+desc = "Верхнее уведомление: действие, удалить из истории"
 exec = "qs -c panel ipc call notifications invokeOldest"
 
 [[binds]]
 chain = "CTRL+space"
+desc = "Пометить просмотренным последнее уведомление"
 exec = "qs -c panel ipc call notifications close"
 
 [[binds]]
 chain = "CTRL+SHIFT+space"
+desc = "Пометить просмотренными все уведомления"
 exec = "qs -c panel ipc call notifications closeAll"
 
 # Super+Ctrl+Enter помечает просмотренными все уведомления (то же, что средний
@@ -519,59 +557,80 @@ exec = "qs -c panel ipc call notifications closeAll"
 # кнопка «Очистить» в окне истории).
 [[binds]]
 chain = "SUPER+CTRL+Return"
+desc = "Пометить просмотренными все уведомления"
 exec = "qs -c panel ipc call notifications closeAll"
 
 [[binds]]
 chain = "SUPER+CTRL+ALT+Return"
+desc = "Очистить историю уведомлений"
 exec = "qs -c panel ipc call notifications clear"
+
+# Окно подсказки клавиш панели Quickshell (спецификация qs-keys-help):
+# все цепочки по группам. Повторное нажатие скрывает окно. Hyprland сверяет
+# привязки по первой раскладке карты XKB (input:resolve_binds_by_sym = false),
+# поэтому сочетание срабатывает и при русской раскладке, где на этой клавише
+# точка.
+[[binds]]
+chain = "SUPER+SHIFT+slash"
+desc = "Подсказка клавиш; повторно — скрыть"
+exec = "qs -c panel ipc call keys toggle"
 
 # Мультимедиа: работают и при заблокированном экране.
 [[binds]]
 chain = "XF86AudioRaiseVolume"
+desc = "Громче"
 exec = "~/.local/bin/handmade-scripts/change-volume.sh +"
 locked = true
 repeating = true
 
 [[binds]]
 chain = "XF86AudioLowerVolume"
+desc = "Тише"
 exec = "~/.local/bin/handmade-scripts/change-volume.sh -"
 locked = true
 repeating = true
 
 [[binds]]
 chain = "XF86AudioMute"
+desc = "Выключить или включить звук"
 exec = "~/.local/bin/handmade-scripts/change-volume.sh 0"
 locked = true
 
 [[binds]]
 chain = "XF86MonBrightnessUp"
+desc = "Ярче"
 exec = "~/.local/bin/handmade-scripts/change-brightness.sh +"
 locked = true
 repeating = true
 
 [[binds]]
 chain = "XF86MonBrightnessDown"
+desc = "Темнее"
 exec = "~/.local/bin/handmade-scripts/change-brightness.sh -"
 locked = true
 repeating = true
 
 [[binds]]
 chain = "XF86AudioPlay"
+desc = "Воспроизведение или пауза"
 exec = "playerctl play-pause"
 locked = true
 
 [[binds]]
 chain = "XF86AudioStop"
+desc = "Остановить воспроизведение"
 exec = "playerctl stop"
 locked = true
 
 [[binds]]
 chain = "XF86AudioPrev"
+desc = "Предыдущая запись"
 exec = "playerctl previous"
 locked = true
 
 [[binds]]
 chain = "XF86AudioNext"
+desc = "Следующая запись"
 exec = "playerctl next"
 locked = true
 
@@ -580,4 +639,5 @@ locked = true
 # чтобы не нажать случайно.
 [[binds]]
 chain = "CTRL+ALT+SUPER+Escape"
+desc = "Выйти из сессии Hyprland"
 dispatch = "exit()"

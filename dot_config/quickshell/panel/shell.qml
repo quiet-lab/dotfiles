@@ -1,7 +1,8 @@
 // Боковая панель сессии Hyprland (спецификация qs-shell): окно layer-shell
 // у левого края DP-2 с зарезервированной зоной 330 px и колонкой плиток, повторяющей
 // геометрию дашборда eww, и второе окно layer-shell — стопка уведомлений у нижнего
-// края (спецификация qs-notifications). Здесь только окна и композиция колонки;
+// края (спецификация qs-notifications), и окно подсказки клавиш по центру экрана
+// (спецификация qs-keys-help). Здесь только окна и композиция колонки;
 // плитки — в tiles/, всплывающие окна и карточки уведомлений — рядом, общие цвета
 // и размеры — в Theme.qml.
 // Запуск: `qs -c panel` (юнит quickshell-panel.service).
@@ -21,6 +22,15 @@ ShellRoot {
         model: Quickshell.screens.filter(s => s.name === "DP-2")
 
         NotificationStack {}
+    }
+
+    // Окно подсказки клавиш — третье окно layer-shell, по центру экрана на слое
+    // Overlay (спецификация qs-keys-help). Открывает и закрывает его IPC-цель
+    // keys синглтона KeysHelp: `qs -c panel ipc call keys toggle`.
+    Variants {
+        model: Quickshell.screens.filter(s => s.name === "DP-2")
+
+        KeysHelpWindow {}
     }
 
     // Окно создаётся через Variants по списку экранов: при пропадании и возврате

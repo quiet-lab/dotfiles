@@ -4,6 +4,7 @@ singleton Popups 1.0 Popups.qml
 singleton Run 1.0 Run.qml
 singleton Wsd 1.0 Wsd.qml
 singleton NotificationService 1.0 NotificationService.qml
+singleton KeysHelp 1.0 KeysHelp.qml
 Tile 1.0 Tile.qml
 PanelPopup 1.0 PanelPopup.qml
 TooltipPopup 1.0 TooltipPopup.qml
@@ -16,3 +17,4 @@ NotificationIconSaver 1.0 NotificationIconSaver.qml
 NotificationStack 1.0 NotificationStack.qml
 NotificationHistoryPopup 1.0 NotificationHistoryPopup.qml
 AppIcon 1.0 AppIcon.qml
+KeysHelpWindow 1.0 KeysHelpWindow.qml
