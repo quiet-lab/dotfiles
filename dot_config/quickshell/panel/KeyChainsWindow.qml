@@ -22,15 +22,15 @@ PanelWindow {
     readonly property int fontPx: 28
     readonly property int keyGap: 24
 
-    anchors.left: true
-    anchors.top: true
-    // Отступы считаются от края экрана, а не от зоны панели: центр карточки
-    // совпадает с центром рабочей области 330…3840, как у окна подсказки
-    // клавиш (x = 330 + (3510 − ширина) / 2).
+    anchors.right: true
+    anchors.bottom: true
+    // Карточка стоит в правом нижнем углу экрана с отступом Theme.margin
+    // от обоих краёв (решение пользователя 23.09.2026: сначала вверху
+    // по центру, затем по центру экрана, в итоге — правый нижний угол).
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     exclusiveZone: 0
-    margins.left: Theme.panelWidth + Math.round(((win.screen ? win.screen.width : 3840) - Theme.panelWidth - card.width) / 2)
-    margins.top: Theme.margin
+    margins.right: Theme.margin
+    margins.bottom: Theme.margin
 
     // Пространство имён панели: правило слоя размывает фон под карточкой,
     // как под плитками.
@@ -52,7 +52,7 @@ PanelWindow {
     Binding {
         target: KeyChains
         property: "view"
-        value: "card=" + win.margins.left + "," + win.margins.top + " " + card.width + "x" + card.height
+        value: "card=right-bottom margins=" + win.margins.right + "," + win.margins.bottom + " " + card.width + "x" + card.height
     }
 
     // Ширина колонки клавиш: шрифт моноширинный, поэтому её задаёт самая
