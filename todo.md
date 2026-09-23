@@ -6,43 +6,41 @@
 
 ### Цель
 
-Перевести демон workspaced на новую модель окон по [`docs/window-model.md`](docs/window-model.md). Шаги 1–3 реализованы, проверены пользователем и заархивированы; шаги 4 (общие окна, изменение [`shared-windows`](openspec/changes/shared-windows/tasks.md)) и 5 (переопределения в workspace, изменение [`workspace-overrides`](openspec/changes/workspace-overrides/tasks.md)) реализованы и ждут проверки пользователем; шаг 6 (общее окно в плитках панели, изменение [`panel-shared-windows`](openspec/changes/panel-shared-windows/tasks.md)) тоже реализован и ждёт проверки, дальше шаг 7. Панель Quickshell получила сервер уведомлений вместо dunst (`qs-notifications`, заархивировано 23.09.2026). Серия идёт без пауз и подтверждений (правило в `AGENTS.md`).
+Серия изменений модели окон демона workspaced по [`docs/window-model.md`](docs/window-model.md) реализована целиком: шаги 1–6 проверены пользователем и заархивированы, шаг 7 (экземпляры и общие окна в снимке сессии, изменение [`session-instances`](openspec/changes/session-instances/tasks.md)) реализован, проверки командами пройдены, ждёт проверки перезагрузкой. Дальше изменения вне серии: [`keys-help`](openspec/changes/keys-help/tasks.md) (окно подсказки цепочек клавиш по Shift+Super+/) реализовано и ждёт проверки пользователем, [`live-layout`](openspec/changes/live-layout/tasks.md) (фактическая геометрия окон как раскладка workspace в памяти) спроектировано и идёт в реализацию. Серия и связанные изменения идут без пауз и подтверждений (правило в `AGENTS.md`).
 
 ### Открытые вопросы к пользователю
 
+- Проверка перезагрузкой (изменение `session-instances`, пункт 4.1 [`tasks.md`](openspec/changes/session-instances/tasks.md)): два окна Chromium в `work`, второй neovide, открытый из yazi, окно Chrome AI в `work` и `surf`, сдвинутое в `surf`; Ctrl+Super+S дважды; перезагрузка. После входа состояние должно вернуться с экземплярами и общими окнами: два neovide в ячейке `right`, Chrome AI на месте в `work`, а на столе 2 — там, где его оставили. Второе окно Chromium вернётся, только если браузер сам восстанавливает окна (следующий вопрос). Состояние после входа агент проверяет командами.
+- Включать ли в профилях браузеров (Chromium, Chrome в двух каталогах данных, Яндекс.Браузер) «При запуске: продолжить с того же места», чтобы после перезагрузки возвращались вторые окна браузеров; сейчас настройка не задана ни в одном профиле ([`docs/host-state.md`](docs/host-state.md)).
+- Проверки раздела 6 [`tasks.md`](openspec/changes/keys-help/tasks.md) изменения `keys-help`: Shift+Super+/ при английской и русской раскладке показывает и скрывает окно подсказки, клик мимо карточки скрывает его, вид окна (три колонки, подписи не обрезаны).
 - Каталог `~/.config/dunst` с `dunstrc` остался в `$HOME` после удаления пакета dunst; под chezmoi он не лежит. Удалить или оставить?
 - Отправлять ли черновики запросов из `docs/upstream/` в Hyprland и Chromium.
-- Проверки раздела 4 `tasks.md` изменения `workspace-overrides`: в `surf` Super+B/V/Y ведут себя как раньше; Super+V на столе 1 переводит к `surf` на стол 2; Shift+Super+V на столе 1 забирает окно Chrome AI в `work`, а следующие нажатия Shift+Super+V переключают фокус между ним и прежним окном, не меняя ячеек; Super+Backspace над ним возвращает окно в `surf`.
-- Проверки раздела 4 `tasks.md` изменения `panel-shared-windows`: значок общего окна Chrome AI виден в плитках «1» и «2» одинаковым; клик мышью по нему в плитке «2», когда вы на столе 1, переводит на стол 2, окно стоит на своём месте в `surf` и в фокусе; подсказка у значка в плитке неактивного стола называет оба workspace и стол, где окно стоит; кнопка свёрнутых workspace в переполненной плитке выглядит уместно.
 
 ### Где остановились
 
-- Демон на коммите `e772598` (`~/work/pets/workspaced`, `master`, 114 тестов): шаги 1–3 модели окон; шаг 4 (общие окна: теги состава `ws:<имя>`, следование за столом, `app --pull`, Super+Backspace без закрытия общего окна) и шаг 5 (запись приложения в workspace с `cell`/`rect`, `chain`, `mode`; команда `workspaced key`; Super+B/V/Y — клавиши `surf`, Shift+Super+B/V/Y — собственные клавиши браузеров) реализованы, проверки агента пройдены, ждут проверки пользователем (раздел 4 [`tasks.md`](openspec/changes/shared-windows/tasks.md) и [`tasks.md`](openspec/changes/workspace-overrides/tasks.md)); `move-desktop` (с 23.09.2026 сохраняет прямоугольники окон в обоих режимах и оставляет на прежнем столе активным преемника — прежний активный workspace, иначе предыдущий по списку; изменения `move-desktop-keeps-geometry` и `move-desktop-successor` заархивированы), `arrange`, `detach`, `dialog_title`, `ignore_classes`, снимок сессии только по Ctrl+Super+S (автозаписи нет: после перезапуска демона восстанавливается последний сохранённый вручную снимок).
-- Панель: сервер уведомлений (столбик справа от лаунчера, плитка над треем со счётчиком истории, история, «не беспокоить», Super+Enter), подсказки без задержки; плитка активного стола двойной высоты с табами workspace (`ws-tile-tabs`, проверено пользователем и заархивировано 23.09.2026); ряд плитки строится по составу активного workspace, общее окно видно в плитках обоих столов, клик по нему в плитке другого стола переводит туда и отдаёт окну фокус (`panel-shared-windows`, проверки агента пройдены, ждёт проверки пользователем, раздел 4 [`tasks.md`](openspec/changes/panel-shared-windows/tasks.md)); пакет dunst удалён, скрипты сессии шлют уведомления через `notify-send`.
+- Демон на коммите `b3c1e23` (`~/work/pets/workspaced`, `master`, 131 тест): шаги 1–7 модели окон реализованы, 1–6 заархивированы. Шаг 7: снимок хранит окна экземплярами (номер, состав, прямоугольники `stack`, командная строка у экземпляра с собственным процессом), при старте живые окна не перезапускаются, недостающие экземпляры запускаются при поднятии своего workspace; раздел документации `session-instances` выполнен, открыт только пункт 4.1. README демона изменён этим разделом и ещё не закоммичен в репозитории демона.
+- Снимок сессии пишет только Ctrl+Super+S дважды (автозаписи нет: после перезапуска демона и перезагрузки восстанавливается последний сохранённый снимок).
+- Панель: сервер уведомлений, плитка активного стола с табами workspace, ряд плитки по составу активного workspace с общими окнами в плитках обоих столов; окно подсказки клавиш `keys-help` ждёт проверки пользователем; пакет dunst удалён, скрипты сессии шлют уведомления через `notify-send`.
 - Окно ввода пароля sudo рисует Quickshell (`dot_config/quickshell/askpass`), pinentry — запасной путь; агенты обязаны передавать причину в `sudo -A -p`.
-- VoxType: пауза MPRIS-плееров и тишина на время диктовки проверены; флаг `hardware-media-key-handling` Яндекс.Браузера возвращён в «Default» (`docs/media-and-portals.md`).
-- Клавиши: Ctrl+Super+1..8 перенос workspace, Ctrl+Super+Пробел расстановка, Super+Alt+E/R раскладка, Super+Пробел по кругу без других модификаторов.
 - Диалоги: признака у Hyprland нет, Chromium не вызывает `set_parent` — `docs/window-info-sources.md`; отложенный вопрос `docs/open-questions/hyprland-window-parent.md`, черновики запросов в `docs/upstream/` (не отправлены).
 - Параметр `conceal_vrr_caps` возвращён 22.09.2026, действовать начнёт с ближайшей перезагрузки; до неё DP-2 на 60 Гц ([`0006`](docs/decisions/0006-nvidia-conceal-vrr-caps.md)).
-- Рабочие деревья chezmoi (`main`) и `~/work/pets/workspaced` (`master`) чисты, всё отправлено в `origin`.
 
 ### Следующие шаги
 
-1. Получить от пользователя итоги проверок раздела 4 [`tasks.md`](openspec/changes/shared-windows/tasks.md) шага 4, [`tasks.md`](openspec/changes/workspace-overrides/tasks.md) шага 5 и [`tasks.md`](openspec/changes/panel-shared-windows/tasks.md) шага 6.
-2. Архивировать строго по порядку: `shared-windows` (`openspec archive shared-windows -y`); затем сверить три требования `workspace-overrides`, взятые из его дельт (задача 5.1), и заархивировать `workspace-overrides`; затем сверить, что `openspec/specs/qs-workspaces/spec.md` не менялся (задача 5.1 `panel-shared-windows`), и заархивировать `panel-shared-windows`. Ссылки на изменения в `docs/window-model.md` сменить на архивные.
-3. Шаг 7 — сессии: экземпляры, общие окна и состав workspace в снимке.
-4. Решить с пользователем, отправлять ли запросы из `docs/upstream/` в Hyprland и Chromium.
-5. После ближайшей перезагрузки: `conceal_vrr_caps` действует (команда `status` ниже), DP-2 на 120 Гц, `graphical-session.target` останавливается при выходе (пункт в разделе «Hyprland» ниже), принятые окна восстанавливаются по снимку сессии.
-6. Отложенная проверка: восстановление после перезагрузки — расставить окна, нажать Ctrl+Super+S дважды, перезагрузиться — состояние должно вернуться к сохранённому вместе с принятыми окнами (проверить может только пользователь, отложено 23.09.2026).
+1. Получить итог проверки перезагрузкой (пункт 4.1 `session-instances`), проверить состояние командами (`hyprctl clients -j`, `workspaced status --json`, журнал демона), дописать итог в `docs/host-state.md` (настройка браузеров) и заархивировать `session-instances` (`openspec archive session-instances -y`); ссылки на изменение в `docs/window-model.md` и `AGENTS.md` сменить на архивные.
+2. Получить итоги проверок раздела 6 `keys-help`, выполнить пункт 7.1 и заархивировать `keys-help`.
+3. Реализовать `live-layout` по его [`tasks.md`](openspec/changes/live-layout/tasks.md), пройти проверки и заархивировать.
+4. После той же перезагрузки: `conceal_vrr_caps` действует (команда `status` ниже), DP-2 на 120 Гц, `graphical-session.target` останавливается при выходе (пункт в разделе «Hyprland» ниже).
+5. Решить с пользователем, отправлять ли запросы из `docs/upstream/` в Hyprland и Chromium.
 
 ### Как проверить
 
 ```bash
-openspec list                              # активны shared-windows, workspace-overrides и panel-shared-windows (ждут проверок раздела 4)
+openspec list                              # активны session-instances (ждёт проверки перезагрузкой), keys-help (ждёт проверки), live-layout (в реализации)
 systemctl --user is-active workspaced.service quickshell-panel.service voxtype.service voxtype-mute-others.service
 ss -xp | rg workspaced/sock                # ESTAB — панель подключена к демону
 busctl --user list | rg -i notifications   # имя org.freedesktop.Notifications у qs
-workspaced status --json | jq -c '.pending, (.desktops | to_entries | map({(.key): [.value.workspaces[].name]}) | add)'
+workspaced status --json | jq -c '.pending, .restore, .restore_apps, (.desktops | to_entries | map({(.key): [.value.workspaces[].name]}) | add)'
 workspaced keys --list | rg 'move-desktop|arrange|detach|save-|dismissOldest'
 system/modprobe.d/nvidia-vrr.sh status    # после перезагрузки ожидается conceal_vrr_caps = Y, vrr_capable у DP-2 = 0
 chezmoi status && git status -sb          # расхождений и незакоммиченного быть не должно
@@ -66,7 +64,6 @@ chezmoi status && git status -sb          # расхождений и незак
 
 ### Демон workspaced
 
-- [ ] Новая модель окон: семейства и варианты, цикл по клавише, принятие окон в активный workspace, общие окна. Замысел целиком и серия из семи изменений OpenSpec описаны в [`docs/window-model.md`](docs/window-model.md); там же принятые предложения и две пробные задачи, которые нужны до шагов 1 и 3.
 - [ ] Демон не переживает сессию, в которой у активного workspace нет монитора (экран выключен, Hyprland на выходе FALLBACK): восстановление сессии падает на `hl.dsp.focus({ workspace = … })` с ошибкой «Workspace has no monitor», и юнит после пяти попыток встаёт в `failed`. Обнаружено 22.09.2026 при перезапуске юнита с выключенным экраном; то же случится при перезаходе в сессию без монитора. Нужно либо откладывать восстановление до появления монитора, либо не считать эту ошибку смертельной.
 - [ ] Запускать приложения в отдельный transient scope (`systemd-run --user --scope` или эквивалент через D-Bus), чтобы при `KillMode=process` они не оставались в cgroup демона: systemd при следующем старте пишет «Found left-over process», а память приложений учитывается демону.
 - [ ] `Alt+Tab` обходит окна стола по порядку создания (`stable_id`). Если захочется порядок «по последнему использованию», нужен обработчик с удержанием Alt (флаг `release`) либо команда демона с собственной историей фокуса.
