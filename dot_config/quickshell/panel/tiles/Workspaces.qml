@@ -335,7 +335,8 @@ Item {
     //    workspace ни одного стола (диалоги из ignore_classes, окна стола без
     //    workspace, все окна без демона); скрытое — в плитке стола происхождения.
     // Окна, входящие только в неактивные workspace, не показываются нигде.
-    // Лимит 10 и «+N» считаются по полному ряду после сворачивания.
+    // В ряду без сворачивания действуют лимит 10 и метка «+N»; в свёрнутом
+    // ряду значки не срезаются, лишние закрывает кнопка fold (visibleItems).
     function itemsFor(tile, wsList, withWs) {
         const mem = members;
         const wins = [];
@@ -357,8 +358,9 @@ Item {
     }
     // Иконки workspace плитки неактивного стола и окна: если вместе их больше
     // 10, а неактивных workspace два и больше, неактивные заменяются одной
-    // кнопкой fold в конце ряда, перед блоком номера стола (design D7;
-    // место кнопки — решение пользователя 23.09.2026).
+    // кнопкой fold. В данных она стоит последней, а на экране рисуется поверх
+    // ряда у правого края, перед блоком номера стола (design D7; вид и место
+    // кнопки — решение пользователя 23.09.2026).
     function foldRow(wsList, wins) {
         const inactive = wsList.filter(w => !w.active);
         if (wsList.length + wins.length <= 10 || inactive.length < 2)
@@ -367,13 +369,15 @@ Item {
         const fold = { kind: "fold", list: inactive, desktop: inactive[0].desktop };
         return head.concat(wins, [fold]);
     }
-    // Видимая часть ряда: не более 10 элементов; кнопка свёрнутых workspace
-    // стоит последней и при переполнении не срезается — вместо неё уходит
-    // ещё одно окно (design D7).
+    // Показанная часть ряда. Ряд без сворачивания режется до 10 элементов,
+    // остаток обозначает метка «+N». Свёрнутый ряд (последний элемент — fold)
+    // не режется: значки идут подряд, а те, что не поместились, закрывает
+    // кнопка fold, нарисованная поверх ряда (design D7).
+    function isFolded(items) {
+        return items.length > 0 && items[items.length - 1].kind === "fold";
+    }
     function visibleItems(items) {
-        if (items.length <= 10) return items;
-        const last = items[items.length - 1];
-        if (last.kind === "fold") return items.slice(0, 9).concat([last]);
+        if (isFolded(items) || items.length <= 10) return items;
         return items.slice(0, 10);
     }
     // Ряд плитки для IPC: показанные элементы и метка «+N» (design D9).
@@ -385,7 +389,7 @@ Item {
             if (it.kind === "fold") return { kind: "fold", count: it.list.length, names: it.list.map(w => w.name) };
             return { kind: "win", address: "0x" + it.address, class: it.appId, hidden: it.hidden, away: it.away, at: it.at, workspaces: it.workspaces };
         });
-        if (items.length > 10) out.push({ kind: "more", count: items.length - 10 });
+        if (!isFolded(items) && items.length > 10) out.push({ kind: "more", count: items.length - 10 });
         return JSON.stringify(out);
     }
     function foldMenuFor(f) {
@@ -615,50 +619,37 @@ Item {
                 // У одинарной плитки ряд 24 px стоит с отступами 5 px сверху и
                 // снизу; у двойной — по центру области под полосой табов.
                 Row {
+                    id: iconRow
                     x: 9
                     y: row.active ? strip.height + Math.max(0, (body.height - strip.height - 24) / 2) : (body.height - 24) / 2
                     spacing: 0
                     Repeater {
-                        model: root.visibleItems(row.items)
+                        // Кнопка fold рисуется отдельно, поверх ряда (foldBtn).
+                        model: root.visibleItems(row.items).filter(it => it.kind !== "fold")
                         Rectangle {
                             id: btn
                             required property var modelData
                             readonly property bool isWs: modelData.kind === "ws"
-                            // Кнопка свёрнутых неактивных workspace (design D7).
-                            readonly property bool isFold: modelData.kind === "fold"
                             width: 24; height: 24; radius: 6
                             // Активный workspace подсвечен, неактивный затенён; скрытое окно тоже затенено.
                             // Окно, стоящее на другом столе (away), не приглушается (design D3).
                             color: btnMouse.containsMouse ? Theme.background : (isWs && modelData.active ? Qt.rgba(224/255, 175/255, 104/255, 0.3) : "transparent")
-                            opacity: isFold ? 1 : ((isWs ? !modelData.active : modelData.hidden) ? 0.4 : 1)
+                            opacity: (isWs ? !modelData.active : modelData.hidden) ? 0.4 : 1
                             AppIcon {
-                                visible: !btn.isFold
                                 anchors.centerIn: parent
                                 width: 20; height: 20
-                                sources: btn.isFold ? [] : btn.modelData.icon
-                            }
-                            Text {
-                                visible: btn.isFold
-                                anchors.centerIn: parent
-                                text: btn.isFold ? "+" + btn.modelData.list.length : ""
-                                color: Theme.yellow
-                                font.family: Theme.fontFamily
-                                font.pixelSize: Theme.fontSize
-                                font.bold: true
+                                sources: btn.modelData.icon
                             }
                             MouseArea {
                                 id: btnMouse
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 acceptedButtons: Qt.LeftButton | Qt.RightButton
-                                onEntered: Popups.hoverInfo.show(btn, btn.isFold ? root.foldInfoFor(btn.modelData) : (btn.isWs ? root.wsInfoFor(btn.modelData) : root.infoFor(btn.modelData)), "ws-" + row.wsName)
+                                onEntered: Popups.hoverInfo.show(btn, btn.isWs ? root.wsInfoFor(btn.modelData) : root.infoFor(btn.modelData), "ws-" + row.wsName)
                                 onExited: Popups.hoverInfo.hide(btn)
                                 onClicked: (m) => {
                                     Popups.hoverInfo.hide(btn);
-                                    if (btn.isFold) {
-                                        // Левый и правый клик одинаково открывают меню поднятия.
-                                        Popups.menu.open(btn, root.foldMenuFor(btn.modelData));
-                                    } else if (btn.isWs) {
+                                    if (btn.isWs) {
                                         if (m.button === Qt.RightButton) Popups.menu.open(btn, root.wsMenuFor(btn.modelData));
                                         else Wsd.raise(btn.modelData.name, btn.modelData.desktop);
                                     } else if (m.button === Qt.RightButton) Popups.menu.open(btn, root.menuFor(btn.modelData));
@@ -668,7 +659,7 @@ Item {
                         }
                     }
                     Text {
-                        visible: row.items.length > 10
+                        visible: !root.isFolded(row.items) && row.items.length > 10
                         leftPadding: 4
                         height: 24
                         verticalAlignment: Text.AlignVCenter
@@ -677,6 +668,46 @@ Item {
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.fontSize
                         font.bold: true
+                    }
+                }
+
+                // Кнопка свёрнутых неактивных workspace (design D7): рисуется
+                // поверх ряда у правого края, вплотную к блоку номера стола, и
+                // закрывает значки, которые не поместились. Непрозрачный
+                // чёрный фон прячет значки под кнопкой, а её MouseArea
+                // забирает ввод, поэтому клики до них не доходят.
+                Rectangle {
+                    id: foldBtn
+                    readonly property var fold: root.isFolded(row.items) ? row.items[row.items.length - 1] : null
+                    visible: fold !== null
+                    z: 1
+                    width: foldText.implicitWidth + 12
+                    height: 24
+                    x: body.width - width
+                    y: iconRow.y
+                    radius: 6
+                    color: foldMouse.containsMouse ? Theme.background : "#000000"
+                    Text {
+                        id: foldText
+                        anchors.centerIn: parent
+                        text: foldBtn.fold ? "+" + foldBtn.fold.list.length : ""
+                        color: Theme.wallGreen
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 18
+                        font.bold: true
+                    }
+                    MouseArea {
+                        id: foldMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
+                        onEntered: Popups.hoverInfo.show(foldBtn, root.foldInfoFor(foldBtn.fold), "ws-" + row.wsName)
+                        onExited: Popups.hoverInfo.hide(foldBtn)
+                        onClicked: {
+                            Popups.hoverInfo.hide(foldBtn);
+                            // Левый и правый клик одинаково открывают меню поднятия.
+                            Popups.menu.open(foldBtn, root.foldMenuFor(foldBtn.fold));
+                        }
                     }
                 }
             }
