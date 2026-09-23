@@ -12,7 +12,7 @@
 [`shared-windows`](../archive/2026-09-23-shared-windows/design.md) — своё
 состояние окна в каждом workspace (D6, остаётся), место общего окна
 при записи (D12);
-[`workspace-overrides`](../workspace-overrides/design.md) — режим
+[`workspace-overrides`](../archive/2026-09-23-workspace-overrides/design.md) — режим
 приложения без ячейки (D7, отменяется), сессии не меняются (D11);
 [`session-instances`](../session-instances/design.md) — прямоугольники окна
 только для workspace режима `stack` (D1, расширяется).

@@ -17,7 +17,7 @@
 
 #### Scenario: Режим workspace
 - **WHEN** у workspace `surf` задано `mode = "stack"`, а у `work` поля `mode` нет
-- **THEN** `workspaced check` завершается успешно, `surf` работает подъёмом окон, `work` — обменом ячеек; конфиг с `mode = "stak"` отклоняется с указанием workspace, значения `stak` и допустимых `swap` и `stack`
+- **THEN** `workspaced check` завершается успешно, `surf` работает подъёмом окон, `work` — обменом мест; конфиг с `mode = "stak"` отклоняется с указанием workspace, значения `stak` и допустимых `swap` и `stack`
 
 #### Scenario: Порядок приложений в разделе workspace
 - **WHEN** в разделе `surf` приложения записаны в порядке `chrome`, `yandex-browser`, `chrome-ai`
@@ -61,7 +61,7 @@
 
 #### Scenario: Переопределение клавиши и режима в workspace
 - **WHEN** у приложения `chrome-ai` задано `chain = "SUPER+SHIFT+V"`, в разделе `surf` записано `chrome-ai = { cell = "right", chain = "SUPER+V" }`, а в разделе `work` — `calc = { rect = { x = 2600, y = 1500, w = 600, h = 400 }, mode = "swap" }`
-- **THEN** `workspaced check` завершается успешно; ключ `chrome-ai` в `surf` — Super+V, место — ячейка `right`; `calc` в `work` выбирается обменом ячеек, хотя ячейки у него нет
+- **THEN** `workspaced check` завершается успешно; ключ `chrome-ai` в `surf` — Super+V, место — ячейка `right`; `calc` в `work` выбирается обменом мест, хотя ячейки у него нет
 
 #### Scenario: Запись приложения без места
 - **WHEN** в разделе `surf` записано `chrome-ai = { chain = "SUPER+V" }` либо `chrome-ai = { cell = "right", rect = { x = 0, y = 0, w = 10, h = 10 } }`
