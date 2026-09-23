@@ -403,7 +403,7 @@ workspace; если окно закрыто и других окон у прил
 Значки окон в плитке стола берутся из состава активного workspace по данным
 демона (список `windows` у workspace в состоянии для панели), а не из
 физического расположения окон. Выполнено шагом 6 (изменение
-[`panel-shared-windows`](../openspec/changes/panel-shared-windows/)).
+[`panel-shared-windows`](../openspec/changes/archive/2026-09-23-panel-shared-windows/)).
 Следствия:
 
 - значок окна из состава показывается в плитке стола, где его workspace
@@ -782,8 +782,8 @@ workspace не меняет и опирается на режимы, введё�
 
 ### Шаг 5. Переопределения на уровне workspace
 
-Выполнен 23.09.2026, ждёт проверки пользователем:
-[`workspace-overrides`](../openspec/changes/workspace-overrides/).
+Выполнен 23.09.2026, проверен пользователем и заархивирован:
+[`workspace-overrides`](../openspec/changes/archive/2026-09-23-workspace-overrides/).
 
 - **Входит:** переопределение места, клавиши и режима для приложения внутри
   workspace полями записи приложения (`cell` или `rect`, `chain`, `mode`);
@@ -839,8 +839,8 @@ workspace не меняет и опирается на режимы, введё�
 
 ### Шаг 6. Панель
 
-Выполнен 23.09.2026, ждёт проверки пользователем:
-[`panel-shared-windows`](../openspec/changes/panel-shared-windows/).
+Выполнен 23.09.2026, проверен пользователем и заархивирован:
+[`panel-shared-windows`](../openspec/changes/archive/2026-09-23-panel-shared-windows/).
 
 - **Входит:** значки окон по составу активного workspace из данных демона,
   общее окно в плитках обоих столов, клик по значку окна, стоящего на другом
