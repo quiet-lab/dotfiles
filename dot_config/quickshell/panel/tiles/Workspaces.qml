@@ -143,11 +143,12 @@ Item {
         const all = [];
         const orig = origins;
         const list = Hyprland.toplevels.values;
+        let unplaced = false;
         for (let i = 0; i < list.length; i++) {
             const t = list[i];
             if (!t.address) continue;
             const ws = t.workspace ? t.workspace.name : "";
-            if (!ws) continue;
+            if (!ws) { unplaced = true; continue; }
             // target — плитка по расположению (для свободных окон), at — где окно стоит.
             let target = ws;
             let at = ws;
@@ -181,6 +182,15 @@ Item {
         byAddr = addrs;
         order = all;
         checkPending();
+        // Окно без стола: модуль Hyprland завёл запись по адресу (протокол
+        // toplevel-mapping, события windowtitlev2/activewindowv2), а события
+        // openwindow не получил — окно открылось, пока панель подключалась
+        // к сокету событий, после ответа j/clients. Сам модуль стол такому окну
+        // не назначит до переноса окна или перечитывания конфига композитора,
+        // поэтому список окон запрашивается заново; ответ ставит окну стол,
+        // а сигнал workspaceChanged (см. toplevelWatch) перестраивает ряд.
+        // Повторный запрос, пока ответа нет, модуль сам отбрасывает.
+        if (unplaced) Hyprland.refreshToplevels();
     }
 
     // Ожидание фокуса (design D4): окно закрыто — ожидание снимается; окно
@@ -228,6 +238,17 @@ Item {
     Connections {
         target: Wsd
         function onConnectedChanged() { if (!Wsd.connected) root.pendingFocus = null; }
+    }
+    // Стол окна меняется и без событий, которые ловит onRawEvent: ответ
+    // j/clients на refreshToplevels назначает стол окну, заведённому без него.
+    Instantiator {
+        id: toplevelWatch
+        model: Hyprland.toplevels
+        delegate: Connections {
+            required property var modelData
+            target: modelData
+            function onWorkspaceChanged() { root.rebuild(); }
+        }
     }
     Connections {
         target: Hyprland.toplevels
