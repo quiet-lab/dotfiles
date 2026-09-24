@@ -2,7 +2,7 @@
 
 ## Текущая работа
 
-Снимок на 2026-09-24 (ночь). Файл хранится в git, но в `$HOME` не попадает: он исключён в `.chezmoiignore`.
+Снимок на 2026-09-24 (утро). Файл хранится в git, но в `$HOME` не попадает: он исключён в `.chezmoiignore`.
 
 ### Цель
 
@@ -18,6 +18,7 @@
 - Демон на коммите `1e395ff` (`~/work/pets/workspaced`, `master`, 156 тестов), служба `workspaced.service` работает на этом бинарнике. В нём: шаги 1–7 модели окон, раскладка в памяти, центр по рабочей области, `[sticky.<имя>]` и липкие многошаговые цепочки, `key --new`/`app --new`, `keys --json` с группами и режимами.
 - Панель: плитка активного стола с табами, общее окно в плитках обоих столов, кнопка «+k» поверх ряда, окно подсказки клавиш (Shift+Super+/, 1920 px, одна колонка, плавная прокрутка, клавиши в духе Vim), карточка режима цепочек в правом нижнем углу; оформление `Theme`/`Tile` в общем модуле `dot_config/quickshell/common` (`qs.common`), его же использует окно пароля.
 - Окно пароля sudo — только Quickshell: запасной pinentry удалён, `Path askpass` в `/etc/sudo.conf` (копия `system/sudo/`), `SUDO_ASKPASS` в окружении сессии, правило в общем `CLAUDE.md` и `AGENTS.md`, запись [`0008`](docs/decisions/0008-askpass-quickshell-only.md). Агент polkit на Quickshell — отдельная доработка (раздел «Панель Quickshell» ниже).
+- Панель после старта сессии теряла значки herdr и neovide в плитке `work`: модуль Hyprland в Quickshell 0.3.1 получает ответ `j/clients` раньше, чем подключается к сокету событий, и окно, открытое в этот промежуток, остаётся у него без стола. Исправлено в панели (коммит `b8b19ec`, `tiles/Workspaces.qml`: окно без стола вызывает повторный запрос списка окон, ряд перестраивается по сигналу `workspaceChanged`). Гонка случайная, нарочно не воспроизведена; подтверждение даст следующий старт сессии.
 - Раскладка после диктовки VoxType возвращается перехватом `post_output_command` (обход ошибки Hyprland, вопрос [`hyprland-keymap-group-after-virtual-keyboard.md`](docs/open-questions/hyprland-keymap-group-after-virtual-keyboard.md)); dunst удалён, скрипты на `notify-send`.
 - Проверены пользователем и ждут только архивации: `live-layout` (4.1–4.3), `work-area-center` (5.1–5.2), `askpass-only-quickshell` (5.1–5.2), `sticky-chains` (5.1–5.4). `keys-help`, `shared-windows`, `workspace-overrides`, `panel-shared-windows`, `move-desktop-*`, `ws-tile-*`, `classless-windows-stay-free`, `voxtype-restore-layout`, `dunst-removed` — в архиве.
 - Параметр `conceal_vrr_caps` действует с ближайшей перезагрузки ([`0006`](docs/decisions/0006-nvidia-conceal-vrr-caps.md)).
@@ -26,11 +27,12 @@
 ### Следующие шаги
 
 1. Получить итоги проверки `chains-sticky` нажатиями, отметить 4.1–4.4 в его `tasks.md`; при отказе — исправить и повторить.
-2. Провести проверку перезагрузкой (`session-instances`, 4.1); заодно после перезагрузки проверить `conceal_vrr_caps` (команда `status` ниже, DP-2 на 120 Гц) и остановку `graphical-session.target` при выходе (раздел «Hyprland» ниже). Итог записать в `docs/host-state.md`, отметить 4.1 и 5.4.
+2. Провести проверку перезагрузкой (`session-instances`, 4.1); заодно после перезагрузки проверить, что в плитке стола 1 сразу есть значки herdr и neovide (`qs -c panel ipc call workspaces row 1` — три окна; если нет, снять журнал `qs log -r 'quickshell.hyprland*=true'` до любых перезапусков панели), `conceal_vrr_caps` (команда `status` ниже, DP-2 на 120 Гц) и остановку `graphical-session.target` при выходе (раздел «Hyprland» ниже). Итог записать в `docs/host-state.md`, отметить 4.1 и 5.4.
 3. Архивировать по порядку, после каждого — `openspec validate --specs`: `session-instances` → `live-layout` (пункты 5.1–5.2) → `work-area-center` (6.1; после него проверить, что в `openspec/specs/hyprland-binds/spec.md` есть строки Shift+Super+/ и Alt+Super+Enter) → `askpass-only-quickshell` (6.1) → `sticky-chains` (6.3) → `chains-sticky` (5.2). Ссылки на изменения в `docs/window-model.md` перевести на архивные.
 4. Комментарии в демоне: к запуску записей без workspace ссылка на D16 вместо D17 (`session-instances`, пункт 5.7) — поправить при следующей правке `daemon.rs`.
 5. Агент polkit на Quickshell (`Quickshell.Services.Polkit`) — отдельное изменение по плану D5 из `openspec/changes/askpass-only-quickshell/design.md`.
 6. После 23.10.2026 снова спросить пользователя об отправке черновиков из `docs/upstream/` (условие пересмотра в `docs/open-questions/hyprland-window-parent.md`).
+7. Гонка модуля Hyprland в Quickshell при старте (см. «Где остановились») — ошибка самого Quickshell; при желании пользователя подготовить черновик отчёта в `docs/upstream/` по образцу соседних.
 
 ### Как проверить
 
