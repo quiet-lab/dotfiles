@@ -6,7 +6,7 @@
 
 ### Цель
 
-Серия изменений модели окон демона workspaced по [`docs/window-model.md`](docs/window-model.md) реализована целиком (шаги 1–6 заархивированы, шаг 7 ждёт проверки перезагрузкой). Сверх серии за 23.09.2026 сделаны и ждут закрытия: раскладка workspace в памяти (`live-layout`), центр окон по рабочей области (`work-area-center`), окно пароля только на Quickshell (`askpass-only-quickshell`), цепочки клавиш с выходом (`sticky-chains`) и превращение всех многошаговых цепочек в липкие (`chains-sticky`). Конфиг сессии и поведение остального не меняются: остаётся довести проверки пользователем и заархивировать изменения по порядку.
+Серия изменений модели окон демона workspaced по [`docs/window-model.md`](docs/window-model.md) реализована целиком (шаги 1–6 заархивированы, шаг 7 ждёт проверки перезагрузкой). Сверх серии сделаны и ждут закрытия семь изменений OpenSpec: `session-instances`, `live-layout`, `work-area-center`, `askpass-only-quickshell`, `sticky-chains`, `chains-sticky` и `session-windows-transient` (окна, открытые по ходу работы, входят в workspace, пока открыты, и попадают в конфиг только по Ctrl+Super+W; общие окна остаются общими). Конфиг сессии и поведение остального не меняются: остаётся проверка перезагрузкой и архивация по порядку.
 
 ### Открытые вопросы к пользователю
 
@@ -14,24 +14,26 @@
 
 ### Где остановились
 
-- Демон на коммите `174c748` (`~/work/pets/workspaced`, `master`, 162 теста), служба `workspaced.service` работает на этом бинарнике. В нём: шаги 1–7 модели окон, раскладка в памяти, центр по рабочей области, `[sticky.<имя>]` и липкие многошаговые цепочки, `key --new`/`app --new`, `keys --json` с группами и режимами; запись workspace называет запись сессии семейства по окну варианта (herdr, а не wezterm); окна сессии держат запись workspace, пока открыты (изменение [`session-windows-transient`](openspec/changes/session-windows-transient/tasks.md) по решению пользователя 29.09.2026: пункты 3.1–3.2 проверены, 3.3 и 3.5 покрыты тестами и вживую не проверялись — поднятие `surf` сменило бы стол пользователя, 3.4 — при перезагрузке).
+- Демон на коммите `b37ce35` (`~/work/pets/workspaced`, `master`, 163 теста), служба `workspaced.service` перезапущена на этом бинарнике 29.09.2026. В нём: шаги 1–7 модели окон, раскладка в памяти, центр по рабочей области, `[sticky.<имя>]` и липкие многошаговые цепочки, `key --new`/`app --new`, `keys --json` с группами и режимами, изменение `session-windows-transient` ([`tasks.md`](openspec/changes/session-windows-transient/tasks.md): открыты 3.3, 3.5 — проверки командами, 3.4 — перезагрузкой, 4.1 — архивация).
 - Панель: плитка активного стола с табами, общее окно в плитках обоих столов, кнопка «+k» поверх ряда, окно подсказки клавиш (Shift+Super+/, 1920 px, одна колонка, плавная прокрутка, клавиши в духе Vim), карточка режима цепочек в правом нижнем углу; оформление `Theme`/`Tile` в общем модуле `dot_config/quickshell/common` (`qs.common`), его же использует окно пароля.
 - Окно пароля sudo — только Quickshell: запасной pinentry удалён, `Path askpass` в `/etc/sudo.conf` (копия `system/sudo/`), `SUDO_ASKPASS` в окружении сессии, правило в общем `CLAUDE.md` и `AGENTS.md`, запись [`0008`](docs/decisions/0008-askpass-quickshell-only.md). Агент polkit на Quickshell — отдельная доработка (раздел «Панель Quickshell» ниже).
 - Панель после старта сессии теряла значки herdr и neovide в плитке `work`: модуль Hyprland в Quickshell 0.3.1 получает ответ `j/clients` раньше, чем подключается к сокету событий, и окно, открытое в этот промежуток, остаётся у него без стола. Исправлено в панели (коммит `b8b19ec`, `tiles/Workspaces.qml`: окно без стола вызывает повторный запрос списка окон, ряд перестраивается по сигналу `workspaceChanged`). Гонка случайная, нарочно не воспроизведена; подтверждение даст следующий старт сессии.
 - Раскладка после диктовки VoxType возвращается перехватом `post_output_command` (обход ошибки Hyprland, вопрос [`hyprland-keymap-group-after-virtual-keyboard.md`](docs/open-questions/hyprland-keymap-group-after-virtual-keyboard.md)); dunst удалён, скрипты на `notify-send`.
-- Проверены пользователем и ждут только архивации: `chains-sticky` (4.1–4.4, 29.09.2026), `live-layout` (4.1–4.3), `work-area-center` (5.1–5.2), `askpass-only-quickshell` (5.1–5.2), `sticky-chains` (5.1–5.4). `keys-help`, `shared-windows`, `workspace-overrides`, `panel-shared-windows`, `move-desktop-*`, `ws-tile-*`, `classless-windows-stay-free`, `voxtype-restore-layout`, `dunst-removed` — в архиве.
+- Проверены пользователем и ждут только архивации: `chains-sticky` (4.1–4.4), `live-layout` (4.1–4.3), `work-area-center` (5.1–5.2), `askpass-only-quickshell` (5.1–5.2), `sticky-chains` (5.1–5.4). `keys-help`, `shared-windows`, `workspace-overrides`, `panel-shared-windows`, `move-desktop-*`, `ws-tile-*`, `classless-windows-stay-free`, `voxtype-restore-layout`, `dunst-removed` — в архиве.
 - Параметр `conceal_vrr_caps` действует с ближайшей перезагрузки ([`0006`](docs/decisions/0006-nvidia-conceal-vrr-caps.md)).
-- В `work` добавлены Chrome (общий с `surf`), Steam и Telegram (коммит `a525fdc`); VoxType получил подсказку модели `initial_prompt`: повелительное наклонение и слова dev, prod, type латиницей, проверено пользователем 29.09.2026.
+- При старте демона в журнале предупреждение «исполняемый файл команды … yandex_browser не найден»: это свободное окно «Яндекс Телемост» (процесс браузера в контейнере `fedora-box`), вреда нет, повторяется при каждом старте, пока окно открыто.
 - Рабочие деревья chezmoi (`main`) и `~/work/pets/workspaced` (`master`) чисты, всё отправлено в `origin`.
 
 ### Следующие шаги
 
 1. Провести проверку перезагрузкой (`session-instances`, 4.1, вместе с пунктом 3.4 `session-windows-transient`: окно вне конфига в `surf` запускается после браузеров); заодно после перезагрузки проверить, что в плитке стола 1 сразу есть значки herdr и neovide (`qs -c panel ipc call workspaces row 1` — три окна; если нет, снять журнал `qs log -r 'quickshell.hyprland*=true'` до любых перезапусков панели), `conceal_vrr_caps` (команда `status` ниже, DP-2 на 120 Гц) и остановку `graphical-session.target` при выходе (раздел «Hyprland» ниже). Итог записать в `docs/host-state.md`, отметить 4.1 и 5.4.
 2. Архивировать по порядку, после каждого — `openspec validate --specs`: `session-instances` → `live-layout` (пункты 5.1–5.2) → `work-area-center` (6.1; после него проверить, что в `openspec/specs/hyprland-binds/spec.md` есть строки Shift+Super+/ и Alt+Super+Enter) → `askpass-only-quickshell` (6.1) → `sticky-chains` (6.3) → `chains-sticky` (5.2) → `session-windows-transient` (4.1). Ссылки на изменения в `docs/window-model.md` перевести на архивные.
-3. Комментарии в демоне: к запуску записей без workspace ссылка на D16 вместо D17 (`session-instances`, пункт 5.7) — поправить при следующей правке `daemon.rs`.
-4. Агент polkit на Quickshell (`Quickshell.Services.Polkit`) — отдельное изменение по плану D5 из `openspec/changes/askpass-only-quickshell/design.md`.
-5. После 23.10.2026 снова спросить пользователя об отправке черновиков из `docs/upstream/` (условие пересмотра в `docs/open-questions/hyprland-window-parent.md`).
-6. Гонка модуля Hyprland в Quickshell при старте (см. «Где остановились») — ошибка самого Quickshell; при желании пользователя подготовить черновик отчёта в `docs/upstream/` по образцу соседних.
+3. Проверки 3.3 и 3.5 `session-windows-transient` командами (3.3 поднимает `surf` и меняет стол пользователя — делать, предупредив его).
+4. Комментарии в демоне: к запуску записей без workspace ссылка на D16 вместо D17 (`session-instances`, пункт 5.7) — поправить при следующей правке `daemon.rs`.
+5. Агент polkit на Quickshell (`Quickshell.Services.Polkit`) — отдельное изменение по плану D5 из `openspec/changes/askpass-only-quickshell/design.md`.
+6. После 23.10.2026 снова спросить пользователя об отправке черновиков из `docs/upstream/` (условие пересмотра в `docs/open-questions/hyprland-window-parent.md`).
+7. Гонка модуля Hyprland в Quickshell при старте (см. «Где остановились») — ошибка самого Quickshell; при желании пользователя подготовить черновик отчёта в `docs/upstream/` по образцу соседних.
+8. По желанию пользователя (предложено 29.09.2026, ответа нет): понизить до info предупреждение демона о ненайденном исполняемом файле для процессов из контейнера (`proc_info`, `src/daemon.rs`).
 
 ### Как проверить
 
@@ -60,6 +62,8 @@ chezmoi status && git status -sb          # расхождений и незак
 - Ctrl+Enter как клавиша «не беспокоить»: нужна приложениям (отправка сообщений в Telegram).
 - Окно столбика уведомлений ростом со столбик: композитор анимировал бы каждое изменение размера; окно постоянного размера с областью ввода по карточкам.
 - Отменять обмен мест при запуске приложения без окон (коммит демона 260d88b): пользователь подтвердил действующее правило «запуск без окон переводит приложение на главное место», коммит откачен (eb8b0bb).
+- Замены `[text] replacements` VoxType для слов латиницей (dev, prod): ищут подстроку, «прод» → «prod» испортило бы «продолжить»; вместо них подсказка модели `initial_prompt`.
+- Запускать общее окно при восстановлении сессии вторым экземпляром в workspace, где его приложение не описано в конфиге: пользователь 29.09.2026 велел общим окнам оставаться общими вне зависимости от того, как они запущены.
 - Запасной pinentry у окна пароля, `input:virtualkeyboard:share_states` как лечение раскладки после диктовки, три колонки и центр всего экрана у окна подсказки, карточка режима вверху экрана — отвергнуты пользователем 23.09.2026.
 
 ## Возможные доработки
