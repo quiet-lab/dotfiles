@@ -112,6 +112,14 @@ translate = false
 # When true, model is loaded when recording starts and unloaded after transcription
 # When false, model is kept in memory for faster response times (default)
 on_demand_loading = false
+
+# Подсказка модели: Whisper продолжает текст в стиле подсказки. Без неё модель,
+# обученная в основном на повествовательной речи, записывает повелительное
+# наклонение как похожую по звучанию форму («сделай» → «сделаю», «открой» →
+# «открою»). Подсказка из распоряжений склоняет её к повелительной форме.
+# Длинная подсказка на коротких записях может повторяться в выводе, поэтому
+# она короткая.
+initial_prompt = "Открой файл и проверь настройки. Сделай коммит, запусти проверку, исправь ошибку и покажи результат. Посмотри журнал, перезапусти демон, добавь тест."
 mode = "local"
 flash_attention = true
 gpu_isolation = false
