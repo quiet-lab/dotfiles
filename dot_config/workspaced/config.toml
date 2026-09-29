@@ -231,10 +231,22 @@ class = "(?i)^yandex-browser$"
 # там, где его поставил композитор.
 dialog_title = "^(Диспетчер задач|Task Manager)$|^(DevTools|Инструменты разработчика)( [-–—] |$)"
 
+# Steam и Telegram из пакетов CachyOS; попали в work командой записи
+# workspace. Команды записаны вручную: демон взял из /proc процесс
+# steamwebhelper с аргументами одного запуска и путь /usr/bin/Telegram.
+[apps.steam]
+cmd = "steam"
+class = "^steam$"
+
+[apps.telegram]
+cmd = "Telegram"
+class = '^org\.telegram\.desktop$'
+
 # ---- Workspace ----------------------------------------------------------
 
 # Рабочий workspace: herdr по центру (главный), Chromium слева, neovide
-# справа на шаблоне thirds.
+# справа на шаблоне thirds. Chrome профиля Default встаёт по центру под herdr
+# и остаётся общим с surf; Steam и Telegram — в местах, заданных мышью.
 [workspaces.work]
 chain = "SUPER+TAB w"
 template = "thirds"
@@ -244,6 +256,9 @@ icon = "folder-development"
 herdr = "center"
 chromium = "left"
 neovide = "right"
+chrome = "center"
+steam = { rect = { x = 1445, y = 680, w = 1280, h = 800 } }
+telegram = { rect = { x = 1176, y = 429, w = 1818, h = 1301 } }
 
 # Браузеры на шаблоне overlay: Яндекс.Браузер по центру (главный), Chrome
 # профиля Default слева, AI.dev2026 справа. Живёт на столе 2.
