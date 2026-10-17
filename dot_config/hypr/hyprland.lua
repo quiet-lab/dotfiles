@@ -254,12 +254,13 @@ hl.window_rule({
 })
 -- Браузеры и видеоплееры непрозрачные и без размытия всегда, в фокусе и без него:
 -- страница и видео не должны просвечивать. Браузеры работают нативно под
--- Wayland (класс chromium, google-chrome, yandex-browser), приложения Chrome —
+-- Wayland (класс chromium, google-chrome, google-chrome-ai, google-chrome-ai2,
+-- yandex-browser), приложения Chrome —
 -- crx_<id>; под Xwayland Chromium отдавал класс Chromium-browser.
 hl.window_rule({
     name    = "opaque-media",
     match   = {
-        class = "(?i)^(firefox|zen|cachy-browser|yandex-browser|google-chrome(-ai)?|chromium(-browser)?|crx_.*|mpv|vlc|smplayer|mplayer|gnome-mplayer)$",
+        class = "(?i)^(firefox|zen|cachy-browser|yandex-browser|google-chrome(-ai\\d*)?|chromium(-browser)?|crx_.*|mpv|vlc|smplayer|mplayer|gnome-mplayer)$",
     },
     opacity = "1.0 override",
     no_blur = true,
