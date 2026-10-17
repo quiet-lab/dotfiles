@@ -299,7 +299,8 @@ neovide = "center"
 chrome = "right"
 
 # Браузеры на шаблоне overlay: Яндекс.Браузер (главный) и Chrome профиля
-# Default по центру, Chrome профилей AI.dev2026 и AI2 справа. Живёт на столе 2.
+# Default по центру, Chrome профиля AI.dev2026 слева, профиля AI2 справа
+# (решение пользователя 17.10.2026). Живёт на столе 2.
 # mode = "stack": окна стоят друг поверх друга, и менять их ячейками незачем —
 # клавиша браузера поднимает его окно наверх и даёт ему фокус, не двигая
 # ни одного окна. У work режима нет, там действует обмен ячеек ("swap").
@@ -318,7 +319,7 @@ mode = "stack"
 [workspaces.surf.apps]
 chrome = { cell = "center", chain = "SUPER+B" }
 yandex-browser = { cell = "center", chain = "SUPER+Y" }
-chrome-ai = { cell = "right", chain = "SUPER+V" }
+chrome-ai = { cell = "left", chain = "SUPER+V" }
 chrome-ai2 = { cell = "right", chain = "SUPER+V" }
 # steam = { rect = { x = 1445, y = 680, w = 1280, h = 800 } }
 
