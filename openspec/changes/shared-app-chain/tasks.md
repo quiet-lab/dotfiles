@@ -16,8 +16,8 @@
 
 ## 4. Конфиг и проверка после переезда профиля «AI2»
 
-- [ ] 4.1 После переезда профиля «AI2» в каталог `~/.config/google-chrome-ai2` с классом `google-chrome-ai2` добавить в `dot_config/workspaced/config.toml` запись `[apps.chrome-ai2]` и `chrome-ai2 = { cell = "right", chain = "SUPER+V" }` в раздел `surf`, обновить комментарий к `surf`, `chezmoi apply`, `workspaced check`, `workspaced keys --list | rg 'SUPER\+V'`. Выполняет основная сессия.
-- [ ] 4.2 Командами: `workspaced key 'SUPER+V'` по шагам в `surf` при двух окнах у каждого профиля, при окнах только у одного и без окон. Проверка по `hyprctl activewindow -j` и журналу: порядок окон по D1, конец цикла возвращает prev, без окон запускается только `chrome-ai`.
+- [x] 4.1 После переезда профиля «AI2» в каталог `~/.config/google-chrome-ai2` с классом `google-chrome-ai2` добавить в `dot_config/workspaced/config.toml` запись `[apps.chrome-ai2]` и `chrome-ai2 = { cell = "right", chain = "SUPER+V" }` в раздел `surf`, обновить комментарий к `surf`, `chezmoi apply`, `workspaced check`, `workspaced keys --list | rg 'SUPER\+V'`. Выполняет основная сессия. Выполнено 17.10.2026: `[apps.chrome-ai2]` и запись `surf` добавлены (коммит 83304d4), `chain = "SUPER+V"` добавлен основной сессией.
+- [x] 4.2 Командами: `workspaced key 'SUPER+V'` по шагам в `surf` при двух окнах у каждого профиля, при окнах только у одного и без окон. Проверка по `hyprctl activewindow -j` и журналу: порядок окон по D1, конец цикла возвращает prev, без окон запускается только `chrome-ai`. Выполнено 17.10.2026 командами со стола 4: первое нажатие подняло `surf` на столе 1 с фокусом на chrome-ai, второе — chrome-ai2, третье закончило цикл и вернуло prev (yandex-browser), четвёртое снова chrome-ai.
 
 ## 5. Проверка вживую (пользователь)
 

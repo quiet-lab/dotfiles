@@ -319,7 +319,7 @@ mode = "stack"
 chrome = { cell = "center", chain = "SUPER+B" }
 yandex-browser = { cell = "center", chain = "SUPER+Y" }
 chrome-ai = { cell = "right", chain = "SUPER+V" }
-chrome-ai2 = { cell = "right" }
+chrome-ai2 = { cell = "right", chain = "SUPER+V" }
 # steam = { rect = { x = 1445, y = 680, w = 1280, h = 800 } }
 
 # Поднимается при старте демона после восстановления сессии (стол 1).
