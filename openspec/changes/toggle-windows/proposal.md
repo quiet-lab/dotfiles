@@ -83,4 +83,4 @@ wezterm (herdr), назначить wezterm другую — Super+W».
 - Конфиг `dot_config/workspaced/config.toml`.
 - Документация: `AGENTS.md`, `docs/window-model.md`.
 - Автозапуск Telegram при входе пропадает (он запускался только потому, что
-  входил в `work`); решение о нём — за пользователем, варианты в `design.md`.
+  входил в `work`); по решению пользователя автозапуска нет (`design.md`, D10).
