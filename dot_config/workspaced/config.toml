@@ -250,14 +250,13 @@ class = '^org\.telegram\.desktop$'
 [workspaces.work]
 chain = "SUPER+TAB w"
 template = "thirds"
-main = "herdr"
+main = "neovide"
 icon = "folder-development"
 [workspaces.work.apps]
 herdr = "center"
 chromium = "left"
-neovide = "right"
-chrome = "center"
-steam = { rect = { x = 1445, y = 680, w = 1280, h = 800 } }
+neovide = "center"
+chrome = "right"
 telegram = { rect = { x = 1176, y = 429, w = 1818, h = 1301 } }
 
 # Браузеры на шаблоне overlay: Яндекс.Браузер по центру (главный), Chrome
@@ -278,9 +277,10 @@ main = "yandex-browser"
 icon = "yandex-browser"
 mode = "stack"
 [workspaces.surf.apps]
-chrome = { cell = "left", chain = "SUPER+B" }
+chrome = { cell = "center", chain = "SUPER+B" }
 yandex-browser = { cell = "center", chain = "SUPER+Y" }
 chrome-ai = { cell = "right", chain = "SUPER+V" }
+# steam = { rect = { x = 1445, y = 680, w = 1280, h = 800 } }
 
 # Поднимается при старте демона после восстановления сессии (стол 1).
 [startup]
