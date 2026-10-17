@@ -33,6 +33,19 @@ initramfs, без которой параметр не действует. Фа�
 pacman кладёт рядом `/etc/sudo.conf.pacnew`, и строку надо перенести
 (запись [`decisions/0008-askpass-quickshell-only.md`](decisions/0008-askpass-quickshell-only.md)).
 
+**Служба `avahi-daemon`** (пакет `avahi`) выключена и остановлена
+17.10.2026 по решению пользователя: `systemctl disable --now
+avahi-daemon.socket avahi-daemon.service`. Пакет остаётся, его требуют
+`libcups` (через неё `gtk3` и всё графическое), `pipewire-pulse`, `ostree`,
+`tinysparql`, `vlc-plugin-avahi`, а также явно установленные `mpd`
+и `nss-mdns`. Потребителей у демона нет: `cups` не установлен, имена
+`.local` разрешает `systemd-resolved` со своим клиентом mDNS (модуль `mdns`
+в `/etc/nsswitch.conf` не подключён), браузеры ищут Chromecast собственными
+сокетами на порту 5353, `mpd` не запущен. Включить обратно: `systemctl
+enable --now avahi-daemon.socket`. Запуск по D-Bus (`org.freedesktop.Avahi`)
+после `disable` тоже не срабатывает: ссылка `dbus-org.freedesktop.Avahi.service`
+удалена.
+
 ## Профили и настройки программ
 
 **`~/.config/mozilla/firefox/3e5c3xuj.default-release/user.js`** — настройки
