@@ -233,13 +233,13 @@ google-chrome-ai`, те же ключи Wayland и VA-API, что и у сосе
 профилей по классу (приложения `chrome`, `chrome-ai` и `chrome-ai2`
 в `dot_config/workspaced/config.toml`); под chezmoi каталоги не берутся.
 `~/.config/google-chrome` — профиль `Default` («Alexandr»), класс окон
-`google-chrome`. В нём же лежит `Profile 4` — запасная копия профиля AI2
-после переноса 17.10.2026 вместе с копией `Local State.bak-2026-10-17`;
-в `Local State` этого каталога профиль по-прежнему числится, но
-`profile.last_used` и `profile.last_active_profiles` указывают только
-на `Default`, поэтому окон AI2 этот экземпляр не открывает. Запасную копию
-и копию `Local State` следует удалить, когда пользователь подтвердит, что
-в новом каталоге сохранился вход в учётные записи.
+`google-chrome`. Профиль AI2 (`Profile 4`) жил здесь же до 17.10.2026;
+после переноса его каталог и запись в `profile.info_cache` удалены
+по решению пользователя, `profile.last_used` и
+`profile.last_active_profiles` указывают на `Default`. Запись из
+`Local State` убиралась при работающем Chrome: если «AI2» снова появится
+в меню профилей этого экземпляра, значит Chrome перезаписал файл своей
+копией, и запись надо удалить ещё раз при закрытом браузере.
 `~/.config/google-chrome-ai` — профиль AI.dev2026, класс `google-chrome-ai`.
 `~/.config/google-chrome-ai2` — профиль AI2, перенесённый 17.10.2026 копией
 каталога `Profile 4` в `Default` нового каталога; `Local State` сделан
