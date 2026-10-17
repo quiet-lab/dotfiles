@@ -46,6 +46,32 @@ enable --now avahi-daemon.socket`. Запуск по D-Bus (`org.freedesktop.Ava
 после `disable` тоже не срабатывает: ссылка `dbus-org.freedesktop.Avahi.service`
 удалена.
 
+**Выключенное 17.10.2026 по решению пользователя** (после разбора служб
+без потребителей; пакеты остаются, если не сказано иное):
+- висячая ссылка `multi-user.target.wants/ly@tty2.service` удалённого
+  дисплейного менеджера ly удалена;
+- `ollama.service` (сервер в `/usr/local/bin`, юнит в `/etc/systemd/system`)
+  остановлен и снят с автозапуска: за сутки журнала ни одного запроса
+  к API, потребителей в конфигах нет; модели в каталоге ollama (около
+  45 ГБ) не тронуты, при нужде `ollama serve` вручную;
+- Wi-Fi выключен `nmcli radio wifi off` (NetworkManager помнит состояние):
+  работа идёт по проводу, wlan0 ни разу не подключался, а каждое
+  сканирование эфира порождало тысячи строк в журнале от AmneziaVPN;
+- `upower.service` замаскирован (`systemctl mask --now`): батареи нет,
+  демон поднимал по D-Bus, вероятно, Chromium ради Battery Status API;
+  `power-profiles-daemon` оставлен (его поднимает Telegram через
+  GPowerProfileMonitor из GLib; демон выставляет EPP под профиль
+  `balanced`, без него значение не проверено);
+- `AmneziaVPN.service` и `sshd-unix-local.socket` оставлены по решению
+  пользователя.
+
+**`/etc/systemd/coredump.conf.d/50-size-limit.conf`** — предел размера
+дампа памяти 4 ГиБ для всех программ (`ProcessSizeMax`, `ExternalSizeMax`);
+причина — десять дампов безоконных Chromium по 32 ГиБ при ночном прогоне
+тестов 17.10.2026 и вызванный ими OOM. Копия и установка —
+`system/systemd/`. В самом проекте прогонов (`monorepo-ocp`) предел core
+для процессов прогона задан нулевым отдельно.
+
 ## Профили и настройки программ
 
 **`~/.config/mozilla/firefox/3e5c3xuj.default-release/user.js`** — настройки
