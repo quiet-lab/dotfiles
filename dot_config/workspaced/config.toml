@@ -256,7 +256,7 @@ toggle = true
 chain = "SUPER+T"
 cmd = "Telegram"
 class = '^org\.telegram\.desktop$'
-rect = { w = 1000, h = 1000 }
+rect = { w = 1500, h = 1500 }
 
 # ---- Workspace ----------------------------------------------------------
 

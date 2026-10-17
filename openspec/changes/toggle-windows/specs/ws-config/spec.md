@@ -17,8 +17,8 @@
 Сводка `workspaced check` MUST помечать переключатель словами «окно-переключатель».
 
 #### Scenario: Telegram — переключатель по центру
-- **WHEN** в конфиге `[apps.telegram]` с `toggle = true`, `chain = "SUPER+T"`, `cmd = "Telegram"`, `class = '^org\.telegram\.desktop$'` и `rect = { w = 1000, h = 1000 }`, панель резервирует 330 px слева на мониторе 3840×2160
-- **THEN** `workspaced check` сообщает, что конфиг корректен, и печатает «приложение telegram (окно-переключатель)»; место окна — 1585,580 1000×1000
+- **WHEN** в конфиге `[apps.telegram]` с `toggle = true`, `chain = "SUPER+T"`, `cmd = "Telegram"`, `class = '^org\.telegram\.desktop$'` и `rect = { w = 1500, h = 1500 }`, панель резервирует 330 px слева на мониторе 3840×2160
+- **THEN** `workspaced check` сообщает, что конфиг корректен, и печатает «приложение telegram (окно-переключатель)»; место окна — 1335,330 1500×1500
 
 #### Scenario: Переключатель в разделе workspace
 - **WHEN** в таблицу `[workspaces.work.apps]` добавлена запись `telegram = "left"`
