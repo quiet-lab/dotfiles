@@ -172,13 +172,14 @@ class = "^neovide$"
 # декодирование видео Chromium под Wayland включает только по флагу
 # --enable-features (AcceleratedVideoDecodeLinuxGL, VaapiOnNvidiaGPUs), без него
 # 4K на YouTube идёт рывками; переменные NVIDIA приходят из окружения сессии.
-# Два профиля — два отдельных экземпляра Chrome: chrome работает с каталогом
+# Три профиля — три отдельных экземпляра Chrome: chrome работает с каталогом
 # данных по умолчанию ~/.config/google-chrome (профиль Default, Alexandr),
 # chrome-ai — с каталогом ~/.config/google-chrome-ai (профиль AI.dev2026)
-# и собственным классом окна google-chrome-ai. Класс задаёт ключ --class,
-# его получают и окна, открытые по Ctrl+N, поэтому окна профилей различаются
-# по классу. Каталог в аргументе пишется через $HOME: `~` демон подставляет
-# только в начале строки.
+# и собственным классом окна google-chrome-ai, chrome-ai2 — с каталогом
+# ~/.config/google-chrome-ai2 (профиль AI2) и классом google-chrome-ai2.
+# Класс задаёт ключ --class, его получают и окна, открытые по Ctrl+N,
+# поэтому окна профилей различаются по классу. Каталог в аргументе пишется
+# через $HOME: `~` демон подставляет только в начале строки.
 [apps.chrome]
 chain = "SUPER+SHIFT+B"
 cmd = "distrobox-enter"
@@ -213,6 +214,29 @@ args = [
   "--class=google-chrome-ai",
 ]
 class = "(?i)^google-chrome-ai$"
+# Заголовки собственных диалогов браузера: диспетчер задач и отстыкованное
+# окно средств разработки приходят с классом самого браузера, и отличить их
+# можно только заголовком. Такое окно в workspace не принимается и остаётся
+# там, где его поставил композитор.
+dialog_title = "^(Диспетчер задач|Task Manager)$|^(DevTools|Инструменты разработчика)( [-–—] |$)"
+
+# Профиль AI2 перенесён 17.10.2026 из Profile 4 каталога ~/.config/google-chrome,
+# где осталась его запасная копия. Собственной клавиши у приложения нет:
+# в surf оно отзывается на клавишу chrome-ai.
+[apps.chrome-ai2]
+cmd = "distrobox-enter"
+args = [
+  "-n",
+  "fedora-box",
+  "--",
+  "/usr/bin/google-chrome-stable",
+  "--ozone-platform=wayland",
+  "--enable-features=AcceleratedVideoDecodeLinuxGL,VaapiOnNvidiaGPUs,VaapiIgnoreDriverChecks",
+  "--user-data-dir=$HOME/.config/google-chrome-ai2",
+  "--profile-directory=Default",
+  "--class=google-chrome-ai2",
+]
+class = "(?i)^google-chrome-ai2$"
 # Заголовки собственных диалогов браузера: диспетчер задач и отстыкованное
 # окно средств разработки приходят с классом самого браузера, и отличить их
 # можно только заголовком. Такое окно в workspace не принимается и остаётся
@@ -274,8 +298,8 @@ chromium = "left"
 neovide = "center"
 chrome = "right"
 
-# Браузеры на шаблоне overlay: Яндекс.Браузер по центру (главный), Chrome
-# профиля Default слева, AI.dev2026 справа. Живёт на столе 2.
+# Браузеры на шаблоне overlay: Яндекс.Браузер (главный) и Chrome профиля
+# Default по центру, Chrome профилей AI.dev2026 и AI2 справа. Живёт на столе 2.
 # mode = "stack": окна стоят друг поверх друга, и менять их ячейками незачем —
 # клавиша браузера поднимает его окно наверх и даёт ему фокус, не двигая
 # ни одного окна. У work режима нет, там действует обмен ячеек ("swap").
@@ -295,6 +319,7 @@ mode = "stack"
 chrome = { cell = "center", chain = "SUPER+B" }
 yandex-browser = { cell = "center", chain = "SUPER+Y" }
 chrome-ai = { cell = "right", chain = "SUPER+V" }
+chrome-ai2 = { cell = "right" }
 # steam = { rect = { x = 1445, y = 680, w = 1280, h = 800 } }
 
 # Поднимается при старте демона после восстановления сессии (стол 1).
