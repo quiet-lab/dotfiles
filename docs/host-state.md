@@ -64,6 +64,12 @@ enable --now avahi-daemon.socket`. Запуск по D-Bus (`org.freedesktop.Ava
   `balanced`, без него значение не проверено);
 - `AmneziaVPN.service` и `sshd-unix-local.socket` оставлены по решению
   пользователя.
+- пакет `lvm2` удалён вместе с `thin-provisioning-tools` и `libaio`
+  (`pacman -Rns lvm2`): томов LVM нет ни на одном диске, хука `lvm2`
+  в initramcpio не было; юниты `lvm2-monitor`, `lvm2-lvmpolld.socket`
+  ушли с пакетом, `dm-event.socket` пакета device-mapper остался
+  статическим и без lvm2 не запускается. Упавшие юниты
+  `systemd-coredump@` сброшены `systemctl reset-failed`.
 
 **`/etc/systemd/coredump.conf.d/50-size-limit.conf`** — предел размера
 дампа памяти 4 ГиБ для всех программ (`ProcessSizeMax`, `ExternalSizeMax`);
