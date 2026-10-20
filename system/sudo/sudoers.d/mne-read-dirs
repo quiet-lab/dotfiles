@@ -1,8 +1,11 @@
-# Чтение любых каталогов пользователем mne без пароля: списки файлов,
-# подсчёт размеров, сведения о подтомах BTRFS. Команды, которые меняют
-# файловую систему (find с -delete, rm, cat для чтения секретов), сюда
-# намеренно не входят. Копия — system/sudo/sudoers.d/ в репозитории chezmoi.
+# Чтение любых каталогов и файлов пользователем mne без пароля: списки
+# файлов, подсчёт размеров, поиск, вывод содержимого, сведения о подтомах
+# BTRFS. find с -delete и -exec тоже проходит без пароля: правило доверяет
+# пользователю, а не ограничивает аргументы. Команды записи (rm, cp, mv,
+# install, tee) сюда не входят и идут через sudo -A -p.
+# Копия — system/sudo/sudoers.d/ в репозитории chezmoi.
 Cmnd_Alias READ_DIRS = /usr/bin/du, /usr/bin/ls, /usr/bin/stat, /usr/bin/tree, \
+    /usr/bin/find, /usr/bin/cat, \
     /usr/bin/btrfs filesystem du *, /usr/bin/btrfs filesystem usage *, \
     /usr/bin/btrfs subvolume list *, /usr/bin/btrfs subvolume show *
 mne ALL=(root) NOPASSWD: READ_DIRS
