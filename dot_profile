@@ -7,6 +7,11 @@ export MAIL=thunderbird
 # Программа запроса пароля для `sudo -A` — окно Quickshell askpass; тот же
 # путь записан в /etc/sudo.conf (system/sudo/sudo.conf в репозитории chezmoi).
 export SUDO_ASKPASS="$HOME/.local/bin/handmade-scripts/sudo-askpass"
+# Docker без root: демон — пользовательская служба docker.service
+# (пакет docker-rootless-extras), сокет в $XDG_RUNTIME_DIR. Тот же адрес
+# задаёт контекст rootless в ~/.docker/config.json; переменная нужна
+# программам, которые контексты docker не читают.
+export DOCKER_HOST="unix://${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/docker.sock"
 # Shims mise: инструменты из mise (herdr, nvim, jq, yazi) нужны и вне
 # интерактивной оболочки — greetd читает этот файл, а .bashrc нет.
 export PATH="$HOME/.bun/bin:$HOME/.local/bin:$HOME/.local/bin/handmade-scripts:$HOME/.local/share/mise/shims:$PATH"

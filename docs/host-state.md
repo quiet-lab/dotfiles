@@ -78,6 +78,20 @@ enable --now avahi-daemon.socket`. Запуск по D-Bus (`org.freedesktop.Ava
 `system/systemd/`. В самом проекте прогонов (`monorepo-ocp`) предел core
 для процессов прогона задан нулевым отдельно.
 
+**Docker без root.** Системные `docker.service` и `docker.socket`
+выключены (`systemctl disable --now`), пакет `docker` остаётся; демон —
+пользовательская служба из пакета AUR `docker-rootless-extras` (собран
+`makepkg`, зависимость `rootlesskit` из `extra`). Включены
+`systemctl --user enable --now docker.socket docker.service`, контекст
+`rootless` в `~/.docker/config.json` (`docker context use rootless`),
+переменная `DOCKER_HOST` — в `dot_profile`. Настройка сети —
+`~/.config/systemd/user/docker.service.d/override.conf` (под chezmoi; pasta, порты
+через pesto, петля машины из контейнеров открыта); почему так и как
+вернуть демон с root — документ `docs/dev-stand.md` монорепозитория
+`monorepo-ocp`, раздел «Docker без root». Образы прежнего демона лежат
+в `/var/lib/docker`, новый хранит свои в `~/.local/share/docker`.
+Контейнер `distrobox` работает на podman и от смены не зависит.
+
 ## Профили и настройки программ
 
 **`~/.config/mozilla/firefox/3e5c3xuj.default-release/user.js`** — настройки
