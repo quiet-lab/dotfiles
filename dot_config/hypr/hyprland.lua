@@ -159,8 +159,6 @@ hl.config({
             enabled        = true,
             size           = 3,
             passes         = 3,
-            -- Насыщенность цветов под размытием (по умолчанию 0.17).
-            vibrancy       = 0.6,
             ignore_opacity = true,
             popups         = false,
         },
