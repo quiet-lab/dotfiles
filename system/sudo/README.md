@@ -58,3 +58,21 @@ sudo -A -p 'Установка правила sudoers для чтения кат
 pam_faillock на 10 минут: sudo отвечает «Попробуйте ещё раз» и на верный
 пароль. Состояние — `faillock --user mne`, сброс раньше срока —
 `faillock --user mne --reset` с правами root.
+
+# /etc/sudoers.d/mne-prlimit
+
+`sudoers.d/mne-prlimit` — правило, по которому пользователь `mne` без
+пароля выполняет `prlimit` с правами root: замеры служб на io_uring снимают
+предел заблокированной памяти (`RLIMIT_MEMLOCK`) уже запущенному процессу,
+а поднять предел выше жёсткого потолка может только root. Аргументы правило
+не ограничивает.
+
+Установка:
+
+```bash
+visudo -c -f system/sudo/sudoers.d/mne-prlimit
+sudo -A -p 'Установка правила sudoers для prlimit' \
+    install -m 0440 -o root -g root system/sudo/sudoers.d/mne-prlimit /etc/sudoers.d/mne-prlimit
+```
+
+Проверка: `sudo -n prlimit --pid $$ --memlock` печатает пределы без окна пароля.
