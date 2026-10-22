@@ -1,25 +1,25 @@
-// Плитки рабочих столов (спецификация qs-workspaces): восемь плиток шириной
-// 274 px, иконки окон слева, номер справа. Плитка неактивного стола — 274×36,
-// плитка активного стола (того, на котором композитор) — двойной высоты 274×82:
-// ровно две плитки и зазор, поэтому плитки ниже неё сдвигаются на целую плитку,
-// а высота всего блока не меняется. Окна и их положение — из модуля Hyprland
-// (события сокета), workspace и их состав — от демона workspaced (синглтон Wsd).
-// Плитка активного стола: верхний ряд — табы workspace в порядке списка стола;
-// активный таб чёрный и сливается с нижним рядом, неактивные лежат
-// на тёмно-серой полосе. Нижний ряд — окна активного workspace и свободные окна
-// стола. Плитка неактивного стола — один ряд: иконки workspace (активный
-// подсвечен, неактивные затенены), затем окна активного workspace и свободные
-// окна. Клик по табу или иконке workspace поднимает его на этом столе.
+// Плитки рабочих столов (спецификация qs-workspaces): по плитке на каждый стол
+// из состояния демона workspaced, в порядке номеров, шириной 274 px, номер
+// справа. Все плитки одной высоты 82 px с зазором 10 px (изменение
+// four-desktops), поэтому высота блока зависит только от числа столов, а при
+// переходе на другой стол плитки не сдвигаются. Плитка активного стола (того,
+// на котором композитор) отличается только жёлтым блоком номера. Окна и их
+// положение — из модуля Hyprland (события сокета), workspace и их состав —
+// от демона (синглтон Wsd).
+// Верхний ряд плитки — табы workspace в порядке списка стола: активный таб
+// чёрный и сливается с нижним рядом, неактивные лежат на тёмно-серой полосе.
+// Нижний ряд — окна активного workspace и свободные окна стола. Клик по табу
+// поднимает workspace на этом столе.
 // Ряд окон строится по составу активного workspace (изменение
 // panel-shared-windows): окно из списка windows демона показывается, где бы
 // оно ни стояло, поэтому общее окно видно в плитках всех столов, где активен
 // его workspace. Окна неактивных workspace не показываются нигде. Свободные
 // окна (не входящие ни в один workspace) показываются по расположению,
-// скрытые — в плитке стола происхождения. При переполнении плитки неактивного
-// стола иконки неактивных workspace сворачиваются в одну кнопку «+k». Клик
-// по окну, стоящему на другом столе, переводит на стол плитки, а фокус окно
-// получает по событию композитора о своём приходе туда (ожидание pendingFocus).
-// Ряды и клик доступны по IPC: qs -c panel ipc call workspaces row|activate.
+// скрытые — в плитке стола происхождения. В ряду не больше 10 значков,
+// остаток обозначает метка «+N». Клик по окну, стоящему на другом столе,
+// переводит на стол плитки, а фокус окно получает по событию композитора
+// о своём приходе туда (ожидание pendingFocus).
+// Столы, ряды и клик доступны по IPC: qs -c panel ipc call workspaces desktops|row|activate.
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
@@ -31,21 +31,39 @@ import qs.common
 Item {
     id: root
     width: 274
-    // Семь одинарных плиток и одна двойная (шаг плиток 46 px, зазор 10 px).
-    height: count * 46 - 10 + 46
+    // Плитки по 82 px с зазором 10 px (шаг 92 px).
+    height: count > 0 ? count * 92 - 10 : 0
 
-    // Номер активного стола среди плиток (0…7) или -1, если композитор на столе
-    // вне 1…8: тогда двойной плитки нет, и блок снизу остаётся пустым.
-    readonly property int activeIndex: {
-        const n = Number(focusedName);
-        return Number.isInteger(n) && n >= 1 && n <= count ? n - 1 : -1;
+    // Номера столов по состоянию демона (ключи desktops в status, ключ
+    // desktops конфига демона) по возрастанию. Без связи с демоном остаются
+    // столы последнего полученного состояния, а до первого состояния —
+    // обычные столы композитора (в hyprland.lua столы 1…4 постоянные).
+    // Список меняется только при другом наборе столов: новый массив
+    // пересоздал бы все плитки.
+    property var numbers: []
+    function sortedNumbers(names) {
+        return names.map(Number).filter(n => Number.isInteger(n) && n >= 1).sort((a, b) => a - b);
     }
+    readonly property var liveNumbers: sortedNumbers(Object.keys(Wsd.desktops || {}))
+    readonly property var hyprNumbers: sortedNumbers(Hyprland.workspaces.values.map(w => w.name))
+    property bool fromDaemon: false
+    function takeNumbers() {
+        let next = null;
+        if (liveNumbers.length) { next = liveNumbers; fromDaemon = true; }
+        else if (!fromDaemon && hyprNumbers.length) next = hyprNumbers;
+        if (next && next.join(",") !== numbers.join(",")) numbers = next;
+    }
+    onLiveNumbersChanged: takeNumbers()
+    onHyprNumbersChanged: takeNumbers()
+    readonly property int count: numbers.length
+    // Позиция активного стола среди плиток или -1, если композитор на столе,
+    // которого среди плиток нет: тогда жёлтого блока номера нет ни у одной.
+    readonly property int activeIndex: numbers.indexOf(Number(focusedName))
     // Лимит табов: при ширине полосы 230 px и наименьшей ширине таба 24 px
     // с зазором 2 px помещается восемь; при большем числе показываются семь
     // и метка «+N».
     readonly property int tabLimit: 8
 
-    readonly property int count: 8
     readonly property string hiddenWs: "special:hidden"
     readonly property var shells: ["bash", "zsh", "fish", "sh", "dash", "nu"]
     // Класс окна wezterm: имя программы берётся из заголовка «<программа> · …».
@@ -261,7 +279,7 @@ Item {
         target: DesktopEntries.applications
         function onValuesChanged() { root.rebuild(); }
     }
-    Component.onCompleted: { Hyprland.refreshToplevels(); rebuild(); }
+    Component.onCompleted: { takeNumbers(); Hyprland.refreshToplevels(); rebuild(); }
 
     // --- Действия ---
     function dispatch(lua) { Hyprland.dispatch(lua); }
@@ -318,7 +336,7 @@ Item {
         items.push({ separator: true });
         // Все столы, кроме того, где окно стоит; для скрытого — кроме стола плитки.
         const skip = w.hidden ? w.ws : w.at;
-        for (let n = 1; n <= count; n++) {
+        for (const n of numbers) {
             if (String(n) === skip) continue;
             items.push({ label: "На стол " + n, action: () => moveTo(w, n) });
         }
@@ -344,22 +362,18 @@ Item {
         if (!d || !d.workspaces) return [];
         return d.workspaces.map(w => ({ kind: "ws", name: w.name, icon: candidates([w.icon || "folder"]), active: !!w.active, apps: w.apps || [], windows: w.windows || [], desktop: Number(wsName) }));
     }
-    // Ряд иконок плитки стола tile (design D1, D2, D5, D7, D8):
-    // 1. workspace стола по порядку списка — только у плитки неактивного стола
-    //    (withWs; у активного они стоят табами); при переполнении неактивные
-    //    сворачиваются в элемент fold (foldRow);
-    // 2. окна активного workspace по его составу (адреса windows от демона)
+    // Ряд иконок плитки стола tile (design D1, D2, D5, D8; workspace стола
+    // показываются табами, в ряд не входят):
+    // 1. окна активного workspace по его составу (адреса windows от демона)
     //    в порядке композитора, где бы окно ни стояло: на этом столе, на другом
     //    (away — придёт при переходе на стол плитки), на special:hidden
     //    (приглушено) или на special:pool, пока демон его переносит; адрес,
     //    которого у композитора нет, пропускается;
-    // 3. свободные окна стола по расположению — окна, не входящие ни в один
+    // 2. свободные окна стола по расположению — окна, не входящие ни в один
     //    workspace ни одного стола (диалоги из ignore_classes, окна стола без
     //    workspace, все окна без демона); скрытое — в плитке стола происхождения.
     // Окна, входящие только в неактивные workspace, не показываются нигде.
-    // В ряду без сворачивания действуют лимит 10 и метка «+N»; в свёрнутом
-    // ряду значки не срезаются, лишние закрывает кнопка fold (visibleItems).
-    function itemsFor(tile, wsList, withWs) {
+    function itemsFor(tile, wsList) {
         const mem = members;
         const wins = [];
         const act = wsList.find(w => w.active);
@@ -376,61 +390,32 @@ Item {
             if (mem[norm(rec.address)]) continue;
             wins.push(Object.assign({}, rec, { kind: "win", ws: tile, away: false, workspaces: [] }));
         }
-        return withWs ? foldRow(wsList, wins) : wins;
+        return wins;
     }
-    // Иконки workspace плитки неактивного стола и окна: если вместе их больше
-    // 10, а неактивных workspace два и больше, неактивные заменяются одной
-    // кнопкой fold. В данных она стоит последней, а на экране рисуется поверх
-    // ряда у правого края, перед блоком номера стола (design D7; вид и место
-    // кнопки — решение пользователя 23.09.2026).
-    function foldRow(wsList, wins) {
-        const inactive = wsList.filter(w => !w.active);
-        if (wsList.length + wins.length <= 10 || inactive.length < 2)
-            return wsList.concat(wins);
-        const head = wsList.filter(w => w.active);
-        const fold = { kind: "fold", list: inactive, desktop: inactive[0].desktop };
-        return head.concat(wins, [fold]);
-    }
-    // Показанная часть ряда. Ряд без сворачивания режется до 10 элементов,
-    // остаток обозначает метка «+N». Свёрнутый ряд (последний элемент — fold)
-    // не режется: значки идут подряд, а те, что не поместились, закрывает
-    // кнопка fold, нарисованная поверх ряда (design D7).
-    function isFolded(items) {
-        return items.length > 0 && items[items.length - 1].kind === "fold";
-    }
+    // Показанная часть ряда: не больше 10 значков, остаток обозначает
+    // метка «+N».
     function visibleItems(items) {
-        if (isFolded(items) || items.length <= 10) return items;
-        return items.slice(0, 10);
+        return items.length <= 10 ? items : items.slice(0, 10);
     }
     // Ряд плитки для IPC: показанные элементы и метка «+N» (design D9).
     function rowJson(tile) {
-        const n = Number(tile);
-        const items = itemsFor(String(tile), wsListFor(String(tile)), activeIndex !== n - 1);
-        const out = visibleItems(items).map(it => {
-            if (it.kind === "ws") return { kind: "ws", name: it.name, active: it.active };
-            if (it.kind === "fold") return { kind: "fold", count: it.list.length, names: it.list.map(w => w.name) };
-            return { kind: "win", address: "0x" + it.address, class: it.appId, hidden: it.hidden, away: it.away, at: it.at, workspaces: it.workspaces };
-        });
-        if (!isFolded(items) && items.length > 10) out.push({ kind: "more", count: items.length - 10 });
+        const items = itemsFor(String(tile), wsListFor(String(tile)));
+        const out = visibleItems(items).map(it => ({ kind: "win", address: "0x" + it.address, class: it.appId, hidden: it.hidden, away: it.away, at: it.at, workspaces: it.workspaces }));
+        if (items.length > 10) out.push({ kind: "more", count: items.length - 10 });
         return JSON.stringify(out);
-    }
-    function foldMenuFor(f) {
-        return f.list.map(w => ({ label: "Поднять " + w.name, action: () => Wsd.raise(w.name, w.desktop) }));
-    }
-    function foldInfoFor(f) {
-        return ["Свёрнутые workspace стола " + f.desktop].concat(f.list.map(w => "  " + w.name));
     }
 
     // Управление рядами без мыши, для проверок (design D9).
-    // Вызов: qs -c panel ipc call workspaces row <стол> | activate <стол> <адрес>.
+    // Вызов: qs -c panel ipc call workspaces desktops | row <стол> | activate <стол> <адрес>.
     IpcHandler {
         target: "workspaces"
-        // Ряд плитки стола строкой JSON: элементы ws, fold, win и метка more.
+        // Номера столов, по которым построены плитки, строкой JSON.
+        function desktops(): string { return JSON.stringify(root.numbers); }
+        // Ряд плитки стола строкой JSON: элементы win и метка more.
         function row(desktop: string): string { return root.rowJson(desktop); }
         // Левый клик по иконке окна с адресом address в плитке стола desktop.
         function activate(desktop: string, address: string): void {
-            const n = Number(desktop);
-            const items = root.itemsFor(String(desktop), root.wsListFor(String(desktop)), root.activeIndex !== n - 1);
+            const items = root.itemsFor(String(desktop), root.wsListFor(String(desktop)));
             const w = items.find(it => it.kind === "win" && root.norm(it.address) === root.norm(address));
             if (w) root.activate(w);
             else console.warn("workspaces: в плитке стола", desktop, "нет окна", address);
@@ -450,16 +435,17 @@ Item {
 
     // --- Плитки ---
     Repeater {
-        model: root.count
+        model: root.numbers
         Rectangle {
             id: row
             required property int index
-            readonly property string wsName: String(index + 1)
+            required property int modelData
+            readonly property string wsName: String(modelData)
             readonly property var wsList: root.wsListFor(wsName)
             readonly property bool active: root.activeIndex === index
-            readonly property var items: root.itemsFor(wsName, wsList, !active)
+            readonly property var items: root.itemsFor(wsName, wsList)
 
-            // Табы активного стола: при переполнении — первые tabLimit − 1 и «+N».
+            // Табы: при переполнении — первые tabLimit − 1 и «+N».
             readonly property bool tabsOverflow: wsList.length > root.tabLimit
             readonly property var tabs: tabsOverflow ? wsList.slice(0, root.tabLimit - 1) : wsList
             // Ширина таба: 36 px, пока табы помещаются в полосу 230 px, иначе уже,
@@ -472,16 +458,13 @@ Item {
             }
             readonly property int activeTab: tabs.findIndex(t => t.active)
 
-            // Плитки ниже активной сдвинуты на целую плитку с зазором.
-            y: index * 46 + (root.activeIndex >= 0 && index > root.activeIndex ? 46 : 0)
+            y: index * 92
             width: 274
-            height: active ? 82 : 36
+            height: 82
             color: "transparent"
             border.color: Theme.tileBorder
             border.width: 1
             radius: Theme.tileRadius
-            Behavior on y { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
-            Behavior on height { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
 
             MouseArea {
                 id: rowMouse
@@ -490,8 +473,8 @@ Item {
                 onClicked: root.focusWs(row.wsName)
             }
 
-            // Содержимое с фоном плитки, левые углы под рамку. Обрезка нужна на
-            // время анимации высоты: полоса табов не выходит за плитку.
+            // Содержимое с фоном плитки, левые углы под рамку; обрезка держит
+            // содержимое внутри рамки.
             Rectangle {
                 id: body
                 x: 1; y: 1
@@ -502,14 +485,13 @@ Item {
                 bottomLeftRadius: 11
                 clip: true
 
-                // ---- Полоса табов (только у активного стола) ----
+                // ---- Полоса табов ----
                 // Высота полосы 38 px: табы 32 px от y = 5 до линии основания
                 // на y = 37. Серая заливка покрывает полосу везде, кроме
                 // активного таба; жёлтая линия 1 px идёт по основанию и обводит
                 // активный таб сверху и с боков, как вкладку браузера.
                 Item {
                     id: strip
-                    visible: row.active
                     width: body.width
                     height: 38
 
@@ -637,26 +619,23 @@ Item {
                     }
                 }
 
-                // ---- Ряд иконок ----
-                // У одинарной плитки ряд 24 px стоит с отступами 5 px сверху и
-                // снизу; у двойной — по центру области под полосой табов.
+                // ---- Ряд иконок окон ----
+                // Ряд 24 px по центру области под полосой табов.
                 Row {
                     id: iconRow
                     x: 9
-                    y: row.active ? strip.height + Math.max(0, (body.height - strip.height - 24) / 2) : (body.height - 24) / 2
+                    y: strip.height + Math.max(0, (body.height - strip.height - 24) / 2)
                     spacing: 0
                     Repeater {
-                        // Кнопка fold рисуется отдельно, поверх ряда (foldBtn).
-                        model: root.visibleItems(row.items).filter(it => it.kind !== "fold")
+                        model: root.visibleItems(row.items)
                         Rectangle {
                             id: btn
                             required property var modelData
-                            readonly property bool isWs: modelData.kind === "ws"
                             width: 24; height: 24; radius: 6
-                            // Активный workspace подсвечен, неактивный затенён; скрытое окно тоже затенено.
-                            // Окно, стоящее на другом столе (away), не приглушается (design D3).
-                            color: btnMouse.containsMouse ? Theme.background : (isWs && modelData.active ? Qt.rgba(224/255, 175/255, 104/255, 0.3) : "transparent")
-                            opacity: (isWs ? !modelData.active : modelData.hidden) ? 0.4 : 1
+                            // Скрытое окно затенено; окно, стоящее на другом столе
+                            // (away), не приглушается (design D3).
+                            color: btnMouse.containsMouse ? Theme.background : "transparent"
+                            opacity: modelData.hidden ? 0.4 : 1
                             AppIcon {
                                 anchors.centerIn: parent
                                 width: 20; height: 20
@@ -667,21 +646,18 @@ Item {
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 acceptedButtons: Qt.LeftButton | Qt.RightButton
-                                onEntered: Popups.hoverInfo.show(btn, btn.isWs ? root.wsInfoFor(btn.modelData) : root.infoFor(btn.modelData), "ws-" + row.wsName)
+                                onEntered: Popups.hoverInfo.show(btn, root.infoFor(btn.modelData), "ws-" + row.wsName)
                                 onExited: Popups.hoverInfo.hide(btn)
                                 onClicked: (m) => {
                                     Popups.hoverInfo.hide(btn);
-                                    if (btn.isWs) {
-                                        if (m.button === Qt.RightButton) Popups.menu.open(btn, root.wsMenuFor(btn.modelData));
-                                        else Wsd.raise(btn.modelData.name, btn.modelData.desktop);
-                                    } else if (m.button === Qt.RightButton) Popups.menu.open(btn, root.menuFor(btn.modelData));
+                                    if (m.button === Qt.RightButton) Popups.menu.open(btn, root.menuFor(btn.modelData));
                                     else root.activate(btn.modelData);
                                 }
                             }
                         }
                     }
                     Text {
-                        visible: !root.isFolded(row.items) && row.items.length > 10
+                        visible: row.items.length > 10
                         leftPadding: 4
                         height: 24
                         verticalAlignment: Text.AlignVCenter
@@ -690,46 +666,6 @@ Item {
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.fontSize
                         font.bold: true
-                    }
-                }
-
-                // Кнопка свёрнутых неактивных workspace (design D7): рисуется
-                // поверх ряда у правого края, вплотную к блоку номера стола, и
-                // закрывает значки, которые не поместились. Непрозрачный
-                // чёрный фон прячет значки под кнопкой, а её MouseArea
-                // забирает ввод, поэтому клики до них не доходят.
-                Rectangle {
-                    id: foldBtn
-                    readonly property var fold: root.isFolded(row.items) ? row.items[row.items.length - 1] : null
-                    visible: fold !== null
-                    z: 1
-                    width: foldText.implicitWidth + 12
-                    height: 24
-                    x: body.width - width
-                    y: iconRow.y
-                    radius: 6
-                    color: foldMouse.containsMouse ? Theme.background : "#000000"
-                    Text {
-                        id: foldText
-                        anchors.centerIn: parent
-                        text: foldBtn.fold ? "+" + foldBtn.fold.list.length : ""
-                        color: Theme.wallGreen
-                        font.family: Theme.fontFamily
-                        font.pixelSize: 18
-                        font.bold: true
-                    }
-                    MouseArea {
-                        id: foldMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        acceptedButtons: Qt.LeftButton | Qt.RightButton
-                        onEntered: Popups.hoverInfo.show(foldBtn, root.foldInfoFor(foldBtn.fold), "ws-" + row.wsName)
-                        onExited: Popups.hoverInfo.hide(foldBtn)
-                        onClicked: {
-                            Popups.hoverInfo.hide(foldBtn);
-                            // Левый и правый клик одинаково открывают меню поднятия.
-                            Popups.menu.open(foldBtn, root.foldMenuFor(foldBtn.fold));
-                        }
                     }
                 }
             }

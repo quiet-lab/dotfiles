@@ -218,9 +218,10 @@ hl.animation({ leaf = "zoomFactor",    enabled = true, speed = 7,    bezier = "q
 ---- РАБОЧИЕ СТОЛЫ ----
 -----------------------
 
--- Восемь столов «1»…«8» на DP-2, как в Openbox. persistent: стол существует
--- до первого перехода на него.
-for i = 1, 8 do
+-- Четыре стола «1»…«4» на DP-2: столько же, сколько столов у демона workspaced
+-- (ключ desktops в ~/.config/workspaced/config.toml). persistent: стол
+-- существует до первого перехода на него.
+for i = 1, 4 do
     hl.workspace_rule({
         workspace  = tostring(i),
         monitor    = "DP-2",

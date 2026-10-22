@@ -18,6 +18,13 @@
 # же правилу, отступ 2·gap = 10 px.
 gap = 5
 
+# Число столов сессии (1…8, без ключа — 8): столы Hyprland 1…4. По нему демон
+# проверяет стол в [startup], desktop и move в [[binds]] и серию range
+# переноса workspace; status отдаёт панели только эти столы, и плиток столов
+# в панели столько же. Серии Super+$n, Shift+Super+$n и Ctrl+Super+$n ниже
+# идут по тем же столам: range = [1, 4].
+desktops = 4
+
 # Классы окон, которые никогда не входят в workspace. Сюда записываются
 # диалоги, приходящие отдельным классом: выбор файла через портал
 # (termfilechooser у yazi, xdg-desktop-portal-gtk у «Сохранить как»), запрос
@@ -563,13 +570,13 @@ dispatch = "window.fullscreen({ mode = \"fullscreen\", action = \"toggle\" })"
 [[binds]]
 chain = "SUPER+$n"
 desc = "Перейти на стол $n"
-range = [1, 8]
+range = [1, 4]
 dispatch = "focus({ workspace = $n })"
 
 [[binds]]
 chain = "SUPER+SHIFT+$n"
 desc = "Перенести окно на стол $n и перейти за ним"
-range = [1, 8]
+range = [1, 4]
 dispatch = "window.move({ workspace = $n, follow = true })"
 
 # Перенос активного workspace текущего стола на стол $n с переходом за ним:
@@ -579,7 +586,7 @@ dispatch = "window.move({ workspace = $n, follow = true })"
 # Номер стола в действии подставляется из range, как и в цепочке.
 [[binds]]
 chain = "CTRL+SUPER+$n"
-range = [1, 8]
+range = [1, 4]
 action = { move = "$n" }
 
 # Мышь: перемещение и изменение размера с удержанием Super.
