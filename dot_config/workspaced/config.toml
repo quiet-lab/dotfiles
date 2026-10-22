@@ -285,17 +285,17 @@ rect = { w = 1500, h = 1500 }
 # ---- Workspace ----------------------------------------------------------
 
 # Рабочий workspace: herdr по центру (главный), Chromium слева, neovide
-# справа на шаблоне thirds. Chrome профиля Default встаёт по центру под herdr
+# справа на шаблоне thirds. Chrome профиля Default встаёт справа под neovide
 # и остаётся общим с surf.
 [workspaces.work]
 chain = "SUPER+TAB w"
 template = "thirds"
-main = "neovide"
+main = "herdr"
 icon = "folder-development"
 [workspaces.work.apps]
 herdr = "center"
 chromium = "left"
-neovide = "center"
+neovide = "right"
 chrome = "right"
 
 # Браузеры на шаблоне overlay: Яндекс.Браузер (главный) и Chrome профиля
