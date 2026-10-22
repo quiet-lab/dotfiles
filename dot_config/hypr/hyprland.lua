@@ -259,7 +259,7 @@ hl.window_rule({
     no_blur = false,
 })
 -- Браузеры без размытия всегда; в фокусе непрозрачные (страница не должна
--- просвечивать), без фокуса 0.8 (решение пользователя 23.10.2026),
+-- просвечивать), без фокуса 0.7, как у всех окон (решение пользователя 23.10.2026),
 -- в полноэкранном режиме непрозрачные. Браузеры узнаются по подстроке
 -- класса (chrom — google-chrome, google-chrome-ai, google-chrome-ai2, chromium,
 -- Chromium-browser под Xwayland и любой новый профиль с собственным классом;
@@ -271,7 +271,7 @@ hl.window_rule({
     match   = {
         class = "(?i)^(.*(chrom|firefox|yandex).*|zen(-.*)?|cachy-browser|crx_.*)$",
     },
-    opacity = "1.0 override 0.8 override 1.0 override",
+    opacity = "1.0 override 0.7 override 1.0 override",
     no_blur = true,
 })
 -- Видеоплееры непрозрачные и без размытия всегда: видео не должно просвечивать.
