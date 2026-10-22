@@ -244,22 +244,18 @@ hl.window_rule({
 
 -- Прозрачность и размытие как в picom. Правила применяются сверху вниз,
 -- нижнее перекрывает верхнее.
--- Размытие у всех окон без фокуса (они полупрозрачные, 0.7) и у терминалов
--- и neovide в фокусе; обычное окно в фокусе размытия не имеет (решение
--- пользователя 23.10.2026). Непрозрачные окна ниже размытие отключают.
+-- Окно без фокуса: прозрачность 0.7 без размытия; окно в фокусе: 0.9
+-- с размытием (decoration.blur выше) — у всех обычных окон, не только
+-- у терминалов (решение пользователя 23.10.2026). Непрозрачные окна ниже
+-- размытие отключают.
 hl.window_rule({
     name    = "no-blur-default",
     match   = { class = ".*" },
     no_blur = true,
 })
 hl.window_rule({
-    name    = "blur-unfocused",
-    match   = { class = ".*", focus = false },
-    no_blur = false,
-})
-hl.window_rule({
-    name    = "blur-terminal-focused",
-    match   = { class = "^(org\\.wezfurlong\\.wezterm|wezterm-herdr|termfilechooser|neovide)$", focus = true },
+    name    = "blur-focused",
+    match   = { class = ".*", focus = true },
     no_blur = false,
 })
 -- Браузеры и видеоплееры непрозрачные и без размытия всегда, в фокусе и без него:
@@ -298,7 +294,7 @@ hl.window_rule({
 })
 
 -- Окно yazi для выбора файла (xdg-desktop-portal-termfilechooser): по центру.
--- Прозрачность и размытие как у wezterm: класс входит в blur-terminal-focused.
+-- Прозрачность и размытие как у wezterm: правило blur-focused общее.
 hl.window_rule({
     name   = "termfilechooser",
     match  = { class = "^termfilechooser$" },
