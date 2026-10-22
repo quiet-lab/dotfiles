@@ -20,11 +20,11 @@ QtObject {
     readonly property color cyan:       "#7DCFFF"
     readonly property color white:      "#FFFFFF"
 
-    // Плитка: чёрная заливка с непрозрачностью 0.7 (правила слоя Hyprland не задают
+    // Плитка: чёрная заливка с непрозрачностью 0.8 (правила слоя Hyprland не задают
     // непрозрачность слоя, поэтому альфу несёт заливка; промежутки прозрачные и
     // лежат ниже порога ignore_alpha правила слоя panel), жёлтая рамка 1 px,
     // скругление 12 px, внутренний отступ 9 px (плюс рамка — 10 px до содержимого).
-    readonly property color tileBg:     Qt.rgba(0, 0, 0, 0.7)
+    readonly property color tileBg:     Qt.rgba(0, 0, 0, 0.8)
     readonly property color tileBorder: yellow
     readonly property int   tileRadius: 12
     readonly property int   tilePadding: 9
