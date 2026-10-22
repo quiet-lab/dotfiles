@@ -244,11 +244,18 @@ hl.window_rule({
 
 -- Прозрачность и размытие как в picom. Правила применяются сверху вниз,
 -- нижнее перекрывает верхнее.
--- Размытие ни у кого, кроме терминалов и neovide в фокусе.
+-- Размытие у всех окон без фокуса (они полупрозрачные, 0.7) и у терминалов
+-- и neovide в фокусе; обычное окно в фокусе размытия не имеет (решение
+-- пользователя 23.10.2026). Непрозрачные окна ниже размытие отключают.
 hl.window_rule({
     name    = "no-blur-default",
     match   = { class = ".*" },
     no_blur = true,
+})
+hl.window_rule({
+    name    = "blur-unfocused",
+    match   = { class = ".*", focus = false },
+    no_blur = false,
 })
 hl.window_rule({
     name    = "blur-terminal-focused",
