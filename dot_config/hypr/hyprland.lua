@@ -258,18 +258,26 @@ hl.window_rule({
     match   = { class = ".*", focus = true },
     no_blur = false,
 })
--- Браузеры и видеоплееры непрозрачные и без размытия всегда, в фокусе и без него:
--- страница и видео не должны просвечивать. Браузеры узнаются по подстроке
+-- Браузеры без размытия всегда; в фокусе непрозрачные (страница не должна
+-- просвечивать), без фокуса 0.8 (решение пользователя 23.10.2026),
+-- в полноэкранном режиме непрозрачные. Браузеры узнаются по подстроке
 -- класса (chrom — google-chrome, google-chrome-ai, google-chrome-ai2, chromium,
 -- Chromium-browser под Xwayland и любой новый профиль с собственным классом;
 -- firefox; yandex — yandex-browser), приложения Chrome — crx_<id>. Zen —
 -- только по началу класса (zen, zen-browser): подстрока zen зацепила бы
 -- zenity, окно запроса пароля.
 hl.window_rule({
-    name    = "opaque-media",
+    name    = "browsers",
     match   = {
-        class = "(?i)^(.*(chrom|firefox|yandex).*|zen(-.*)?|cachy-browser|crx_.*|mpv|vlc|smplayer|mplayer|gnome-mplayer)$",
+        class = "(?i)^(.*(chrom|firefox|yandex).*|zen(-.*)?|cachy-browser|crx_.*)$",
     },
+    opacity = "1.0 override 0.8 override 1.0 override",
+    no_blur = true,
+})
+-- Видеоплееры непрозрачные и без размытия всегда: видео не должно просвечивать.
+hl.window_rule({
+    name    = "opaque-media",
+    match   = { class = "(?i)^(mpv|vlc|smplayer|mplayer|gnome-mplayer)$" },
     opacity = "1.0 override",
     no_blur = true,
 })
