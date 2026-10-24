@@ -1,9 +1,9 @@
 // Карточка уведомления на экране (спецификация qs-notifications). Рисует
 // запись истории: значок, заголовок, тело с разметкой, полосу по подсказке
-// `value` и кнопки действий. Клики: левый — пометить просмотренным и убрать
-// с экрана, правый — действие по умолчанию и удаление из истории, средний —
-// пометить просмотренными все. Карточку создаёт и расставляет
-// NotificationStack.qml, она же растворяется при уходе.
+// `value` и кнопки действий. Клики: левый — действие по умолчанию, пометить
+// просмотренным и убрать с экрана, правый — действие по умолчанию и удаление
+// из истории, средний — пометить просмотренными все. Карточку создаёт
+// и расставляет NotificationStack.qml, она же растворяется при уходе.
 import Quickshell
 import Quickshell.Services.Notifications
 import QtQuick
@@ -19,6 +19,12 @@ Rectangle {
     // Отступ до содержимого 10 px складывается из рамки и tilePadding.
     readonly property int pad: Theme.tilePadding + 1
     readonly property int iconSize: 48
+    // Размеры шрифтов карточки в пикселях: заголовок, имя приложения, тело
+    // и подписи кнопок действий. Подстраиваются здесь одной правкой.
+    readonly property int summarySize: 22
+    readonly property int appNameSize: 16
+    readonly property int bodySize: 18
+    readonly property int actionSize: 18
     readonly property var notification: card.record.notification
     readonly property var buttons: NotificationService.buttons(card.notification)
     readonly property bool critical: card.record.urgency === NotificationUrgency.Critical
@@ -29,18 +35,17 @@ Rectangle {
     // пусто — просто исчезнуть (карточку убрали не действием пользователя).
     property string pendingKind: ""
 
-    // Смещение верхнего края карточки от нижнего края окна столбика.
+    // Смещение верхнего края карточки от верхнего края окна столбика.
     // Расстановку задаёт столбик, а едет к ней карточка сама, поэтому
     // появление снизу, подъём и опускание — одна и та же анимация положения.
     property int moveDuration: 200
-    property real targetOffset: 0
     property real offset: 0
     Behavior on offset {
         NumberAnimation { duration: card.moveDuration; easing.type: Easing.OutQuad }
     }
-    onTargetOffsetChanged: card.offset = card.targetOffset
+    y: card.offset
 
-    implicitHeight: row.implicitHeight + 2 * card.pad
+    implicitHeight: content.implicitHeight + 2 * card.pad
     color: Theme.tileBg
     border.color: card.critical ? Theme.red : Theme.tileBorder
     border.width: 1
@@ -105,33 +110,46 @@ Rectangle {
         // карточку сам.
     }
 
-    RowLayout {
-        id: row
+    // Вёрстка под ширину плитки (320 px): сверху значок и рядом с ним имя
+    // приложения и заголовок, ниже на всю ширину карточки — тело, полоса
+    // заполнения и кнопки действий. Длинные строки переносятся.
+    ColumnLayout {
+        id: content
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.margins: card.pad
-        spacing: Theme.gap
+        spacing: 6
 
-        Image {
-            visible: card.record.icon !== ""
-            Layout.preferredWidth: card.iconSize
-            Layout.preferredHeight: card.iconSize
-            Layout.alignment: Qt.AlignTop
-            source: card.record.icon
-            sourceSize: Qt.size(card.iconSize * 2, card.iconSize * 2)
-            fillMode: Image.PreserveAspectFit
-            asynchronous: true
-        }
-
-        ColumnLayout {
+        RowLayout {
             Layout.fillWidth: true
-            spacing: 4
+            spacing: Theme.gap
 
-            RowLayout {
+            Image {
+                visible: card.record.icon !== ""
+                Layout.preferredWidth: card.iconSize
+                Layout.preferredHeight: card.iconSize
+                Layout.alignment: Qt.AlignTop
+                source: card.record.icon
+                sourceSize: Qt.size(card.iconSize * 2, card.iconSize * 2)
+                fillMode: Image.PreserveAspectFit
+                asynchronous: true
+            }
+
+            ColumnLayout {
                 Layout.fillWidth: true
-                spacing: Theme.gap
+                Layout.alignment: Qt.AlignTop
+                spacing: 2
 
+                Text {
+                    visible: text !== ""
+                    Layout.fillWidth: true
+                    text: card.record.appName
+                    elide: Text.ElideRight
+                    color: Theme.gray
+                    font.family: Theme.fontFamily
+                    font.pixelSize: card.appNameSize
+                }
                 Text {
                     Layout.fillWidth: true
                     text: card.record.summary
@@ -141,82 +159,77 @@ Rectangle {
                     wrapMode: Text.Wrap
                     color: card.critical ? Theme.red : Theme.yellow
                     font.family: Theme.fontFamily
-                    font.pixelSize: 18
+                    font.pixelSize: card.summarySize
                     font.bold: true
                 }
-                Text {
-                    visible: text !== ""
-                    Layout.alignment: Qt.AlignTop
-                    text: card.record.appName
-                    color: Theme.gray
-                    font.family: Theme.fontFamily
-                    font.pixelSize: 13
-                }
             }
+        }
 
-            Text {
-                visible: text !== ""
-                Layout.fillWidth: true
-                text: NotificationService.markup(card.record.body)
-                // Безопасное подмножество разметки: StyledText не ходит в сеть
-                // и не открывает ссылок, неизвестные теги отбрасывает (design D10).
-                textFormat: Text.StyledText
-                wrapMode: Text.Wrap
-                color: Theme.foreground
-                font.family: Theme.fontFamily
-                font.pixelSize: 15
-            }
+        Text {
+            visible: text !== ""
+            Layout.fillWidth: true
+            text: NotificationService.markup(card.record.body)
+            // Безопасное подмножество разметки: StyledText не ходит в сеть
+            // и не открывает ссылок, неизвестные теги отбрасывает (design D10).
+            textFormat: Text.StyledText
+            wrapMode: Text.Wrap
+            color: Theme.foreground
+            font.family: Theme.fontFamily
+            font.pixelSize: card.bodySize
+        }
 
-            // Полоса заполнения по подсказке value.
+        // Полоса заполнения по подсказке value.
+        Rectangle {
+            visible: card.record.progress >= 0
+            Layout.fillWidth: true
+            Layout.topMargin: 2
+            implicitHeight: 6
+            radius: 3
+            color: Theme.background
             Rectangle {
-                visible: card.record.progress >= 0
-                Layout.fillWidth: true
-                Layout.topMargin: 2
-                implicitHeight: 5
-                radius: 2.5
-                color: Theme.background
-                Rectangle {
-                    width: parent.width * Math.max(0, card.record.progress) / 100
-                    height: parent.height
-                    radius: parent.radius
-                    color: Theme.yellow
-                }
+                width: parent.width * Math.max(0, card.record.progress) / 100
+                height: parent.height
+                radius: parent.radius
+                color: Theme.yellow
             }
+        }
 
-            // Кнопки действий.
-            Flow {
-                visible: card.buttons.length > 0
-                Layout.fillWidth: true
-                Layout.topMargin: 2
-                spacing: 6
-                Repeater {
-                    model: card.buttons
-                    delegate: Rectangle {
-                        id: button
-                        required property var modelData
-                        implicitWidth: label.implicitWidth + 20
-                        implicitHeight: label.implicitHeight + 8
-                        radius: 8
-                        color: buttonMouse.containsMouse ? Theme.yellow : "transparent"
-                        border.color: Theme.yellow
-                        border.width: 1
-                        Text {
-                            id: label
-                            anchors.centerIn: parent
-                            text: button.modelData.text
-                            color: buttonMouse.containsMouse ? "#000000" : Theme.yellow
-                            font.family: Theme.fontFamily
-                            font.pixelSize: 15
-                            font.bold: true
-                        }
-                        MouseArea {
-                            id: buttonMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            onClicked: {
-                                button.modelData.invoke();
-                                NotificationService.requestSeen(card.record);
-                            }
+        // Кнопки действий: переносятся на следующую строку, когда не
+        // умещаются в ширину карточки; длинная подпись сокращается.
+        Flow {
+            visible: card.buttons.length > 0
+            Layout.fillWidth: true
+            Layout.topMargin: 2
+            spacing: 6
+            Repeater {
+                model: card.buttons
+                delegate: Rectangle {
+                    id: button
+                    required property var modelData
+                    implicitWidth: Math.min(label.implicitWidth + 20, content.width)
+                    implicitHeight: label.implicitHeight + 8
+                    radius: 8
+                    color: buttonMouse.containsMouse ? Theme.yellow : "transparent"
+                    border.color: Theme.yellow
+                    border.width: 1
+                    Text {
+                        id: label
+                        anchors.centerIn: parent
+                        width: Math.min(implicitWidth, button.width - 20)
+                        text: button.modelData.text
+                        elide: Text.ElideRight
+                        color: buttonMouse.containsMouse ? "#000000" : Theme.yellow
+                        font.family: Theme.fontFamily
+                        font.pixelSize: card.actionSize
+                        font.bold: true
+                    }
+                    MouseArea {
+                        id: buttonMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onClicked: {
+                            button.modelData.invoke();
+                            NotificationService.requestSeen(card.record);
                         }
                     }
                 }

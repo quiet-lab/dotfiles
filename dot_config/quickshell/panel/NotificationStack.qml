@@ -1,14 +1,17 @@
 // Столбик непросмотренных уведомлений (спецификация qs-notifications,
 // требования «Окно всплывающих уведомлений» и «Движение столбика»): окно
-// layer-shell справа от колонки панели на уровне плитки лаунчера — левый край
-// в 10 px от колонки, нижний край нижней карточки в 10 px от низа экрана.
-// Пространство имён слоя — panel, как у колонки: правило panel-blur
-// в hyprland.lua размывает фон и под карточками.
+// layer-shell поверх колонки панели — левый край карточек на x = 10 px, как
+// у плиток, верхний край первой карточки в 10 px от верха экрана. Ширина
+// карточки равна ширине плитки. Слой Overlay лежит выше колонки, поэтому
+// карточки перекрывают её плитки. Пространство имён слоя — panel, как
+// у колонки: правило panel-blur в hyprland.lua размывает фон и под карточками.
 //
 // Окно занимает экран по высоте целиком (от 10 px сверху до нижнего края)
 // и размера не меняет: карточки ездят внутри него, каждая анимирует своё
-// смещение от нижнего края. Карточки столбик создаёт и уничтожает сам,
-// по одной на запись: так закрытие одной не задевает анимации соседних.
+// смещение от верхнего края. Самое старое уведомление стоит сверху, новое
+// добавляется вниз и выезжает из-за нижнего края экрана, прежние стоят
+// на месте. Карточки столбик создаёт и уничтожает сам, по одной на запись:
+// так закрытие одной не задевает анимации соседних.
 import Quickshell
 import Quickshell.Wayland
 import QtQuick
@@ -20,19 +23,24 @@ PanelWindow {
     required property var modelData
     screen: modelData
 
-    readonly property int cardWidth: 444
+    readonly property int cardWidth: Theme.tileWidth
     // Длительность переездов столбика — чуть больше растворения карточки
     // (150 мс), чтобы движение читалось глазом, а не мелькало.
     readonly property int moveDuration: 200
 
     anchors.left: true
-    anchors.bottom: true
+    anchors.top: true
     margins.left: Theme.margin
-    margins.bottom: 0
-    exclusiveZone: 0
+    margins.top: Theme.margin
+    // Зону окно не резервирует и чужие зоны не учитывает (layer-shell
+    // получает exclusive zone −1): иначе композитор отодвинул бы его вправо
+    // за 330 px колонки, а столбик стоит поверх неё. Свойство exclusiveZone
+    // не задаётся: его установка возвращает режим Normal.
+    exclusionMode: ExclusionMode.Ignore
 
     WlrLayershell.namespace: "panel"
-    // Слой Overlay: уведомление видно и поверх полноэкранного окна.
+    // Слой Overlay: уведомление видно поверх плиток колонки и поверх
+    // полноэкранного окна.
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
@@ -45,16 +53,16 @@ PanelWindow {
     implicitWidth: stack.cardWidth
     implicitHeight: stack.screen ? stack.screen.height - Theme.margin : 2150
 
-    // Ввод принимает только занятая карточками часть окна: всё остальное окно
-    // прозрачно и не должно перехватывать клики по окнам под ним.
+    // Ввод принимает только занятая карточками верхняя часть окна: всё, что
+    // ниже столбика, прозрачно, и клики уходят плиткам колонки под ним.
     mask: Region {
         x: 0
-        y: Math.max(0, stack.height - stack.extent)
+        y: 0
         width: stack.width
         height: Math.min(stack.extent, stack.height)
     }
 
-    // Высота занятой части столбика снизу вверх; ездит с той же анимацией,
+    // Высота занятой части столбика сверху вниз; ездит с той же анимацией,
     // что и карточки, поэтому область ввода следует за ними.
     property real extent: 0
     Behavior on extent {
@@ -76,10 +84,13 @@ PanelWindow {
         for (const rec of list) {
             live[rec.key] = true;
             if (stack.cards[rec.key]) continue;
+            // Новая карточка начинает путь за нижним краем окна, то есть
+            // за нижним краем экрана, и выезжает оттуда на своё место.
             const card = cardComponent.createObject(field, {
                 record: rec,
                 width: stack.cardWidth,
                 moveDuration: stack.moveDuration,
+                offset: stack.height,
                 x: 0
             });
             if (!card) continue;
@@ -98,10 +109,10 @@ PanelWindow {
     function schedule() { Qt.callLater(stack.relayout); }
 
     // Расстановка: каждой карточке задаётся смещение её верхнего края
-    // от нижнего края окна, а карточка сама едет к нему с анимацией.
+    // от верхнего края окна, а карточка сама едет к нему с анимацией.
     // Растворяющаяся карточка остаётся на экране до конца анимации и место
-    // своё сохраняет, поэтому при закрытии никто не двигается; вышележащие
-    // опускаются уже после того, как она исчезла.
+    // своё сохраняет, поэтому при закрытии никто не двигается; нижележащие
+    // поднимаются уже после того, как она исчезла, а вышележащие стоят.
     function relayout() {
         const list = NotificationService.onScreen;
         for (const rec of list) {
@@ -112,33 +123,34 @@ PanelWindow {
             if (!card || card.implicitHeight <= 1) return;
         }
 
-        let offset = Theme.margin;
-        let total = Theme.margin;
-        for (let i = list.length - 1; i >= 0; --i) {
-            const card = stack.cards[list[i].key];
-            card.y = Qt.binding(() => stack.height - card.offset);
-            offset += card.implicitHeight;
-            card.targetOffset = offset;
-            total = offset;
-            offset += Theme.gap;
+        let offset = 0;
+        let total = 0;
+        for (const rec of list) {
+            const card = stack.cards[rec.key];
+            card.offset = offset;
+            total = offset + card.implicitHeight;
+            offset = total + Theme.gap;
         }
         stack.extent = total;
         stack.dropOverflow(list, total);
     }
 
-    // Столбик дошёл до верхнего края экрана: самое старое уведомление, которое
-    // ещё не растворяется, помечается просмотренным — растворяется так же, как
-    // по клику, уходит с экрана и остаётся в истории. За один раз выбирается
-    // одно: его место освободится, когда растворение кончится, и новая
-    // расстановка при необходимости выберет следующее.
+    // Нижняя карточка не умещается выше отступа 10 px от низа экрана:
+    // самое старое (верхнее) уведомление, которое ещё не растворяется,
+    // помечается просмотренным — растворяется так же, как по клику, уходит
+    // с экрана и остаётся в истории. За один раз выбирается одно: его место
+    // освободится, когда растворение кончится, остальные поднимутся,
+    // и новая расстановка при необходимости выберет следующее. Пока какая-то
+    // карточка растворяется, новое не выбирается: её место ещё занято,
+    // и расстановка, вызванная приходом очередного уведомления, иначе
+    // сбросила бы лишние карточки.
     function dropOverflow(list, total) {
-        if (list.length <= 1 || total <= stack.height) return;
+        if (list.length <= 1 || total <= stack.height - Theme.margin) return;
         for (const rec of list) {
             const card = stack.cards[rec.key];
-            if (!card || card.closing) continue;
-            NotificationService.requestSeen(rec);
-            return;
+            if (card && card.closing) return;
         }
+        NotificationService.requestSeen(list[0]);
     }
 
     Connections {
