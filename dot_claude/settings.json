@@ -1,6 +1,5 @@
 {
   "permissions": {
-    "defaultMode": "bypassPermissions",
     "allow": [
       "Bash",
       "Read",
@@ -10,9 +9,12 @@
       "WebSearch",
       "Agent"
     ],
-    "additionalDirectories": ["~"]
+    "defaultMode": "bypassPermissions",
+    "additionalDirectories": [
+      "~"
+    ]
   },
-  "model": "claude-fable-5-1[1m]",
+  "model": "fable",
   "hooks": {
     "SessionStart": [
       {
@@ -21,6 +23,16 @@
             "type": "command",
             "command": "bash \"$HOME/.claude/hooks/session-handoff.sh\" start",
             "timeout": 20
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash '/home/mne/.claude/hooks/herdr-agent-state.sh' session",
+            "timeout": 10
           }
         ]
       }
@@ -44,9 +56,21 @@
     "browser-use@claude-plugins-official": true
   },
   "language": "Русский",
+  "sandbox": {
+    "enabled": false
+  },
+  "feedbackDrafts": "off",
+  "modelSettings": {
+    "claude-fable-5-1": {
+      "autoCompactWindow": 400000
+    },
+    "claude-opus-4-8": {
+      "autoCompactWindow": 400000
+    }
+  },
+  "skipDangerousModePermissionPrompt": true,
   "theme": "dark",
   "editorMode": "vim",
   "switchModelsOnFlag": false,
-  "agentPushNotifEnabled": true,
-  "skipDangerousModePermissionPrompt": true
+  "agentPushNotifEnabled": true
 }

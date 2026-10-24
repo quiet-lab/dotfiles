@@ -39,3 +39,9 @@ export PULSE_SERVER=unix:/run/user/1000/pulse/native
 export PATH="$PATH:/home/mne/.lmstudio/bin"
 # End of LM Studio CLI section
 
+
+# AsyncAPI CLI Autocomplete
+
+ASYNCAPI_AC_BASH_SETUP_PATH=/home/mne/.cache/@asyncapi/cli/autocomplete/bash_setup && test -f $ASYNCAPI_AC_BASH_SETUP_PATH && source $ASYNCAPI_AC_BASH_SETUP_PATH; # asyncapi autocomplete setup
+
+
