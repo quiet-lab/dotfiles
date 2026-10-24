@@ -3,7 +3,7 @@
 #
 # Режимы (первый аргумент):
 #   start — хук SessionStart: отдаёт модели раздел «Текущая работа»
-#           из todo.md, перечень отложенных вопросов из docs/open-questions/
+#           из todo.local.md, перечень отложенных вопросов из docs/open-questions/
 #           и сообщение о прошлых сессиях, завершившихся без /handoff,
 #           а пользователю показывает выжимку из того же;
 #   end   — хук SessionEnd: запоминает, что сессия что-то изменила
@@ -19,6 +19,10 @@
 # пользовательских настроек. Копии обязаны совпадать байт в байт; поэтому
 # скрипт не знает ничего проектного.
 #
+# Снимок лежит в корне репозитория в todo.local.md: файл этой машины,
+# исключённый через .gitignore (строка *.local.md), у каждой машины свой.
+# Где файла нет, хук говорит об этом одной строкой и печатает остальное.
+#
 # Простой stdout хука SessionStart достаётся только модели, в терминале его
 # нет. Пользователю текст показывает поле systemMessage ответа в JSON,
 # поэтому ответ собирает jq. Без jq хук не молчит, а предлагает его
@@ -30,11 +34,11 @@ set -uo pipefail
 mode=${1:-start}
 
 # Сессия агента duty:worker ведёт одну задачу в своём workspace herdr:
-# снимок todo.md и учёт пропущенного /handoff принадлежат главной сессии,
+# снимок todo.local.md и учёт пропущенного /handoff принадлежат главной сессии,
 # а задача рабочего агента — в его каталоге. Режим done не затрагивается.
 if [ "${DUTY_ROLE:-}" = 'worker' ] && [ "$mode" != 'done' ]; then
     [ "$mode" = 'start' ] &&
-        printf 'Сессия роли worker: снимок todo.md и сверка родителей пропущены, задача — %s\n' "${DUTY_TASK:-не задана}"
+        printf 'Сессия роли worker: снимок todo.local.md и сверка родителей пропущены, задача — %s\n' "${DUTY_TASK:-не задана}"
     exit 0
 fi
 
@@ -92,14 +96,16 @@ handoff_done_at() {
 # сессия и должна начинаться. Порог задаёт только предупреждение: разросшийся
 # снимок означает, что в нём копится сделанное или отложенное, и лечится это
 # разбором раздела, а не сокращением вывода.
+snapshot_missing='Местного снимка todo.local.md нет'
+
 current_work() {
     local threshold=150
-    local file section lines
+    local file="$root/todo.local.md" section lines
 
-    for file in "$root/todo.md" "$root/TODO.md"; do
-        [ -f "$file" ] && break
-    done
-    [ -f "$file" ] || return 0
+    if [ ! -f "$file" ]; then
+        printf '%s\n' "$snapshot_missing"
+        return 0
+    fi
 
     section=$(awk '
         /^## / {
@@ -253,18 +259,20 @@ subsection() {
 # Выжимка для пользователя: цель, вопросы к нему и первый шаг. Снимок целиком
 # занимает полтораста строк, и в терминале перед приглашением он вытеснил бы
 # с экрана всё остальное; полный текст получает модель, а человеку он доступен
-# в todo.md.
+# в todo.local.md.
 digest() {
     local work=$1 questions=$2 missed=$3
     local goal asks step steps deferred
 
-    if [ -n "$work" ]; then
+    if [ "$work" = "$snapshot_missing" ]; then
+        printf '%s\n' "$work"
+    elif [ -n "$work" ]; then
         goal=$(subsection "$work" '^### (Цель|Goal)' first)
         asks=$(subsection "$work" '^### (Открытые вопросы|Open questions)')
         step=$(subsection "$work" '^### (Следующие шаги|Next steps)' first)
         steps=$(subsection "$work" '^### (Следующие шаги|Next steps)' | grep -c '^[0-9]\+\. ')
 
-        printf 'Снимок незавершённой работы (todo.md, «Текущая работа»)\n'
+        printf 'Снимок незавершённой работы (todo.local.md, «Текущая работа»)\n'
         [ -z "$goal" ] || printf '\nЦель:\n%s\n' "$goal"
         [ -z "$asks" ] || printf '\nВопросы к пользователю:\n%s\n' "$asks"
         [ -z "$step" ] || printf '\nПервый шаг из %s:\n%s\n' "$steps" "$step"
@@ -283,7 +291,7 @@ digest() {
 # произвольный текст снимка без jq нечем.
 jq_missing_reply() {
     cat << 'JSON'
-{"systemMessage":"Хук передачи работы не нашёл jq и не может показать выжимку снимка незавершённой работы. Установка: mise use -g jq либо пакет jq из дистрибутива (pacman -S jq, apt install jq, dnf install jq, brew install jq).","hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"Хук передачи работы не нашёл jq и снимок не передал. Прочитай раздел «Текущая работа» в корневом todo.md и файлы docs/open-questions/ либо запусти session-handoff.sh start вручную из .claude/hooks проекта или из ~/.claude/hooks: без данных сессии он печатает сводку обычным текстом. Пользователю предложение установить jq уже показано."}}
+{"systemMessage":"Хук передачи работы не нашёл jq и не может показать выжимку снимка незавершённой работы. Установка: mise use -g jq либо пакет jq из дистрибутива (pacman -S jq, apt install jq, dnf install jq, brew install jq).","hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"Хук передачи работы не нашёл jq и снимок не передал. Прочитай раздел «Текущая работа» в todo.local.md в корне репозитория и файлы docs/open-questions/ либо запусти session-handoff.sh start вручную из .claude/hooks проекта или из ~/.claude/hooks: без данных сессии он печатает сводку обычным текстом. Пользователю предложение установить jq уже показано."}}
 JSON
 }
 
