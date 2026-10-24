@@ -2,43 +2,39 @@
 
 ## Текущая работа
 
-Снимок на 2026-09-29. Файл хранится в git, но в `$HOME` не попадает: он исключён в `.chezmoiignore`.
+Снимок на 2026-10-24. Файл хранится в git, но в `$HOME` не попадает: он исключён в `.chezmoiignore`.
 
 ### Цель
 
-Серия изменений модели окон демона workspaced по [`docs/window-model.md`](docs/window-model.md) реализована целиком (шаги 1–6 заархивированы, шаг 7 ждёт проверки перезагрузкой). Сверх серии сделаны и ждут закрытия семь изменений OpenSpec: `session-instances`, `live-layout`, `work-area-center`, `askpass-only-quickshell`, `sticky-chains`, `chains-sticky` и `session-windows-transient` (окна, открытые по ходу работы, входят в workspace, пока открыты, и попадают в конфиг только по Ctrl+Super+W; общие окна остаются общими). Конфиг сессии и поведение остального не меняются: остаётся проверка перезагрузкой и архивация по порядку.
+Сессия Hyprland с демоном workspaced и панелью Quickshell доведена до нынешнего вида: четыре стола, `work` на шаблоне `thirds-split` в режиме `home`, `surf` на `overlay`, окно-переключатель Telegram, размытие и прозрачность окон подобраны. Серия изменений модели окон по [`docs/window-model.md`](docs/window-model.md) реализована целиком; ждут закрытия семь изменений OpenSpec (`session-instances`, `live-layout`, `work-area-center`, `askpass-only-quickshell`, `sticky-chains`, `chains-sticky`, `session-windows-transient`) и одна проверка перезагрузкой. Конфиг сессии и поведение остального не меняются.
 
 ### Открытые вопросы к пользователю
 
-- Проверка перезагрузкой изменения `session-instances` (пункт 4.1 его [`tasks.md`](openspec/changes/session-instances/tasks.md)); отложена пользователем 29.09.2026, от неё зависит архивация всех семи активных изменений. Перед ней открыть второе окно Chromium в `work` и второй neovide, нажать Ctrl+Super+S, затем S, перезагрузиться — после входа состояние должно вернуться с экземплярами и общими окнами; во всех четырёх профилях браузеров включено «продолжить с того же места», поэтому вторые окна браузеров должны вернуться. Итог дописать в `docs/host-state.md` (пункт 5.4 того же `tasks.md`).
+- Проверка перезагрузкой изменений `snapshot-stale-rects` и `snapshot-stale-section` (предложена 24.10.2026, пользователь делает её, когда удобно): снимок сессии по-прежнему от 17.10.2026, после входа окна `work` должны встать по `thirds-split` (Chromium слева вверху, Chrome слева внизу, herdr в центре, neovide справа), а при поднятии `surf` по Super+V Chrome AI слева и Chrome AI2 справа. Той же перезагрузкой закрывается пункт 4.1 `session-instances` (ниже).
+- Проверка перезагрузкой изменения `session-instances` (пункт 4.1 его [`tasks.md`](openspec/changes/session-instances/tasks.md)); отложена пользователем 29.09.2026, от неё зависит архивация всех семи активных изменений. Перед ней открыть второе окно Chromium в `work` и второй neovide, нажать Ctrl+Super+S, затем S, перезагрузиться — после входа состояние должно вернуться с экземплярами и общими окнами. Итог дописать в `docs/host-state.md` (пункт 5.4 того же `tasks.md`).
+- Отправка черновиков из `docs/upstream/` (отчёты Hyprland и Chromium о родителе окна): срок, на который пользователь отложил решение, истёк 23.10.2026, вопрос задаётся снова ([`hyprland-window-parent.md`](docs/open-questions/hyprland-window-parent.md)).
 
 ### Где остановились
 
-- Демон на коммите `b37ce35` (`~/work/pets/workspaced`, `master`, 163 теста), служба `workspaced.service` перезапущена на этом бинарнике 29.09.2026. В нём: шаги 1–7 модели окон, раскладка в памяти, центр по рабочей области, `[sticky.<имя>]` и липкие многошаговые цепочки, `key --new`/`app --new`, `keys --json` с группами и режимами, изменение `session-windows-transient` ([`tasks.md`](openspec/changes/session-windows-transient/tasks.md): открыты 3.3, 3.5 — проверки командами, 3.4 — перезагрузкой, 4.1 — архивация).
-- Панель: четыре плитки столов одной высоты с табами (изменение `four-desktops`), общее окно в плитках обоих столов, окно подсказки клавиш (Shift+Super+/, 1920 px, одна колонка, плавная прокрутка, клавиши в духе Vim), карточка режима цепочек в правом нижнем углу; оформление `Theme`/`Tile` в общем модуле `dot_config/quickshell/common` (`qs.common`), его же использует окно пароля.
-- Окно пароля sudo — только Quickshell: запасной pinentry удалён, `Path askpass` в `/etc/sudo.conf` (копия `system/sudo/`), `SUDO_ASKPASS` в окружении сессии, правило в общем `CLAUDE.md` и `AGENTS.md`, запись [`0008`](docs/decisions/0008-askpass-quickshell-only.md). Агент polkit на Quickshell — отдельная доработка (раздел «Панель Quickshell» ниже).
-- Панель после старта сессии теряла значки herdr и neovide в плитке `work`: модуль Hyprland в Quickshell 0.3.1 получает ответ `j/clients` раньше, чем подключается к сокету событий, и окно, открытое в этот промежуток, остаётся у него без стола. Исправлено в панели (коммит `b8b19ec`, `tiles/Workspaces.qml`: окно без стола вызывает повторный запрос списка окон, ряд перестраивается по сигналу `workspaceChanged`). Гонка случайная, нарочно не воспроизведена; подтверждение даст следующий старт сессии.
-- Раскладка после диктовки VoxType возвращается перехватом `post_output_command` (обход ошибки Hyprland, вопрос [`hyprland-keymap-group-after-virtual-keyboard.md`](docs/open-questions/hyprland-keymap-group-after-virtual-keyboard.md)); dunst удалён, скрипты на `notify-send`.
-- Проверены пользователем и ждут только архивации: `chains-sticky` (4.1–4.4), `live-layout` (4.1–4.3), `work-area-center` (5.1–5.2), `askpass-only-quickshell` (5.1–5.2), `sticky-chains` (5.1–5.4). `keys-help`, `shared-windows`, `workspace-overrides`, `panel-shared-windows`, `move-desktop-*`, `ws-tile-*`, `classless-windows-stay-free`, `voxtype-restore-layout`, `dunst-removed` — в архиве.
-- Расстановка Ctrl+Super+Пробел возвращает раскладку к файлу конфига целиком (демон `7a0aab8`, 171 тест): изменение `arrange-restores-config` в архиве, задачи — [`tasks.md`](openspec/changes/archive/2026-10-22-arrange-restores-config/tasks.md). Требование «Расстановка по команде» заменено требованием «Возврат раскладки к конфигу по команде», дельты старого требования в `live-layout` и `work-area-center` сняты.
-- `work` на шаблоне `thirds-split` в режиме `home` — раскладка по домам (демон `41abe4d`, 181 тест): изменение `home-mode-layout` в архиве, задачи — [`tasks.md`](openspec/changes/archive/2026-10-23-home-mode-layout/tasks.md). Дельты «Цепочка приложения», «Расстановка окон» и «Файл конфига и его разделы» из `live-layout`, `work-area-center`, `shared-app-chain` перенесены в него.
-- Четыре стола вместо восьми и плитки столов полной высоты (демон `6860bbb`): изменение `four-desktops` проверено пользователем и заархивировано — [`tasks.md`](openspec/changes/archive/2026-10-24-four-desktops/tasks.md).
-- Окно-переключатель (Telegram), потерявшее фокус, прячется само (демон `5aee0c7`, 182 теста): изменение `toggle-hide-on-blur` в архиве, задачи — [`tasks.md`](openspec/changes/archive/2026-10-23-toggle-hide-on-blur/tasks.md). Дельты ws-daemon и hyprland-binds изменения `toggle-windows` согласованы с новым правилом.
-- Полноэкранное окно, выбранное клавишей, поверх окон своего стола (демон `8f51cd2`, 185 тестов): изменение `fullscreen-raise` в архиве, задачи — [`tasks.md`](openspec/changes/archive/2026-10-23-fullscreen-raise/tasks.md). Ждёт проверки пользователем нажатиями: в `surf` при полноэкранном видео в Яндекс.Браузере Super+B, затем Super+Y — видео поверх Chrome и не прерывается.
-- Параметр `conceal_vrr_caps` действует с ближайшей перезагрузки ([`0006`](docs/decisions/0006-nvidia-conceal-vrr-caps.md)).
-- При старте демона в журнале предупреждение «исполняемый файл команды … yandex_browser не найден»: это свободное окно «Яндекс Телемост» (процесс браузера в контейнере `fedora-box`), вреда нет, повторяется при каждом старте, пока окно открыто.
-- Рабочие деревья chezmoi (`main`) и `~/work/pets/workspaced` (`master`) чисты, всё отправлено в `origin`.
+- Демон на коммите `00bbb71` (`~/work/pets/workspaced`, `master`, 188 тестов), служба `workspaced.service` работает на этом бинарнике. Сверх снимка от 29.09: расстановка Ctrl+Super+Пробел возвращает раскладку к конфигу ([`tasks.md`](openspec/changes/archive/2026-10-22-arrange-restores-config/tasks.md)), режим `home` и шаблон `thirds-split` у `work` ([`tasks.md`](openspec/changes/archive/2026-10-23-home-mode-layout/tasks.md)), окно-переключатель прячется при потере фокуса ([`tasks.md`](openspec/changes/archive/2026-10-23-toggle-hide-on-blur/tasks.md)), ключ `desktops = 4` ([`tasks.md`](openspec/changes/archive/2026-10-24-four-desktops/tasks.md)).
+- Полноэкранное окно, выбранное клавишей, поверх окон своего стола: окна с признаком `allowedOverFullscreen` демон опускает диспетчером `alter_zorder bottom`, полноэкранный режим не трогает ([`tasks.md`](openspec/changes/archive/2026-10-23-fullscreen-raise/tasks.md)); проверено пользователем 24.10.2026 на видео в Яндекс.Браузере.
+- Раскладка снимка сессии считается устаревшей и собирается из конфига, если изменились ячейки шаблона (снимок пишет `grid`) или раздел workspace (снимок пишет `homes` и `homes_main`); вместе с ней не действуют прямоугольники окон этого workspace, прямоугольники других workspace у общего окна остаются ([`tasks.md`](openspec/changes/archive/2026-10-24-snapshot-stale-rects/tasks.md), [`tasks.md`](openspec/changes/archive/2026-10-24-snapshot-stale-section/tasks.md)). Проверено перезапуском демона и циклом Super+V; перезагрузкой — вопрос выше.
+- Панель: четыре плитки столов одной высоты 82 px с табами на 1462…1820 px, правая колонка вровень (уведомления 1462, трей 1508 высотой 266, раскладка 1784), средняя группа опущена (датчики 704, сеть 814, диски 931, избранное 1176); вид проверен пользователем 24.10.2026. Заливка плиток 0.8 (`Theme.tileBg`).
+- Размытие и прозрачность в `hyprland.lua`: `blur size = 1, passes = 4`, `vibrancy` по умолчанию; обычные окна в фокусе 0.8 с размытием, без фокуса 0.6 без размытия; браузеры в фокусе 1.0, без фокуса 0.6, без размытия; плееры, игры и модальные окна непрозрачны. Варианты размытия ждут Hyprland 0.57 в pacman ([`hyprland-blur-variants.md`](docs/open-questions/hyprland-blur-variants.md); сейчас в репозитории 0.56.2).
+- Super+Shift+Пробел намеренно свободен (решение пользователя 22.10.2026).
+- Окно пароля sudo — только Quickshell ([`0008`](docs/decisions/0008-askpass-quickshell-only.md)); раскладка после диктовки VoxType возвращается перехватом `post_output_command` ([`hyprland-keymap-group-after-virtual-keyboard.md`](docs/open-questions/hyprland-keymap-group-after-virtual-keyboard.md)); гонка модуля Hyprland в Quickshell при старте обойдена в панели (`tiles/Workspaces.qml`, повторный запрос списка окон), подтверждение даст следующий старт сессии.
+- Рабочие деревья chezmoi (`main`) и `~/work/pets/workspaced` (`master`) чисты, всё отправлено в `origin`. Фоновые оболочки с тестами `~/work/telecom/axata` принадлежат другой сессии и не трогались.
 
 ### Следующие шаги
 
-1. Провести проверку перезагрузкой (`session-instances`, 4.1, вместе с пунктом 3.4 `session-windows-transient`: окно вне конфига в `surf` запускается после браузеров); заодно после перезагрузки проверить, что в плитке стола 1 сразу есть значки herdr и neovide (`qs -c panel ipc call workspaces row 1` — три окна; если нет, снять журнал `qs log -r 'quickshell.hyprland*=true'` до любых перезапусков панели), `conceal_vrr_caps` (команда `status` ниже, DP-2 на 120 Гц) и остановку `graphical-session.target` при выходе (раздел «Hyprland» ниже). Итог записать в `docs/host-state.md`, отметить 4.1 и 5.4.
-2. Архивировать по порядку, после каждого — `openspec validate --specs`: `session-instances` → `live-layout` (пункты 5.1–5.2) → `work-area-center` (6.1; после него проверить, что в `openspec/specs/hyprland-binds/spec.md` есть строки Shift+Super+/ и Alt+Super+Enter) → `askpass-only-quickshell` (6.1) → `sticky-chains` (6.3) → `chains-sticky` (5.2) → `session-windows-transient` (4.1). Ссылки на изменения в `docs/window-model.md` перевести на архивные.
+1. После перезагрузки пользователя снять итог: окна `work` и `surf` по конфигу (`hyprctl clients -j`, журнал демона — строки «собирается заново из конфига»), пункт 4.1 `session-instances` и 3.4 `session-windows-transient`, плитка стола 1 сразу с значками herdr и neovide (`qs -c panel ipc call workspaces row 1`), `conceal_vrr_caps` (команда `status` ниже). Итог — в `docs/host-state.md`, отметить 4.1 и 5.4.
+2. Архивировать по порядку, после каждого — `openspec validate --specs`: `session-instances` → `live-layout` (5.1–5.2) → `work-area-center` (6.1; после него проверить в `openspec/specs/hyprland-binds/spec.md` строки Shift+Super+/ и Alt+Super+Enter) → `askpass-only-quickshell` (6.1) → `sticky-chains` (6.3) → `chains-sticky` (5.2) → `session-windows-transient` (4.1). Перед каждой архивацией сверить дельты с нынешним текстом спецификаций: поздние изменения (`four-desktops`, `fullscreen-raise`, снимок) правили те же требования. Ссылки в `docs/window-model.md` перевести на архивные.
 3. Проверки 3.3 и 3.5 `session-windows-transient` командами (3.3 поднимает `surf` и меняет стол пользователя — делать, предупредив его).
-4. Комментарии в демоне: к запуску записей без workspace ссылка на D16 вместо D17 (`session-instances`, пункт 5.7) — поправить при следующей правке `daemon.rs`.
-5. Агент polkit на Quickshell (`Quickshell.Services.Polkit`) — отдельное изменение по плану D5 из `openspec/changes/askpass-only-quickshell/design.md`.
-6. После 23.10.2026 снова спросить пользователя об отправке черновиков из `docs/upstream/` (условие пересмотра в `docs/open-questions/hyprland-window-parent.md`).
-7. Гонка модуля Hyprland в Quickshell при старте (см. «Где остановились») — ошибка самого Quickshell; при желании пользователя подготовить черновик отчёта в `docs/upstream/` по образцу соседних.
-8. По желанию пользователя (предложено 29.09.2026, ответа нет): понизить до info предупреждение демона о ненайденном исполняемом файле для процессов из контейнера (`proc_info`, `src/daemon.rs`).
+4. Дефект демона: поднятие workspace и `workspaced arrange` при полноэкранном окне в нём завершаются ошибкой композитора «Window is fullscreen» (демон двигает такое окно), окна при этом расставляются верно — пропускать полноэкранные окна при расстановке или снимать ошибку; найден 23.10.2026, не исправлялся.
+5. Дефект демона: правка геометрии ячеек шаблона при работающем демоне раскладку не пересобирает (`keep_layout` сравнивает только разделы workspace), новая геометрия действует после перезапуска — учесть шаблон в сравнении; записан в `design.md` изменения `snapshot-stale-rects`.
+6. Комментарии в демоне: к запуску записей без workspace ссылка на D16 вместо D17 (`session-instances`, пункт 5.7) — при следующей правке `daemon.rs`.
+7. Агент polkit на Quickshell (`Quickshell.Services.Polkit`) — отдельное изменение по плану D5 из `openspec/changes/askpass-only-quickshell/design.md`.
+8. По желанию пользователя (предложено 29.09.2026, ответа нет): понизить до info предупреждение демона «исполняемый файл команды … не найден» для процессов из контейнера distrobox (`proc_info`, `src/daemon.rs`); сейчас оно повторяется при каждом захвате окна браузера из `fedora-box`.
 
 ### Как проверить
 
@@ -46,10 +42,11 @@
 openspec list                              # активны: chains-sticky, session-instances, live-layout, sticky-chains, askpass-only-quickshell, work-area-center, session-windows-transient
 openspec validate --specs                  # 20 passed
 systemctl --user is-active workspaced.service quickshell-panel.service voxtype.service voxtype-mute-others.service
-workspaced check && workspaced keys --list | rg 'SUPER\+TAB|SUPER\+CTRL\+s|SUPER\+S '   # цепочки с exit, режим sticky.apps
-workspaced status --json | jq -c '.desktops | to_entries | map({(.key): [.value.active, [.value.workspaces[].name]]}) | add'
-qs -c panel ipc call keys state; qs -c panel ipc call chains state; qs -c panel ipc call workspaces row 1
-journalctl --user -t voxtype-restore-layout -n 3   # вызовы после диктовки
+workspaced check && workspaced status --json | jq -c '.desktops | to_entries | map({(.key): [.value.active, [.value.workspaces[].name]]}) | add'   # столы 1…4
+journalctl --user -u workspaced.service -b | rg 'собирается заново из конфига|не действуют'   # раскладка снимка по конфигу
+SIG=$(ls -t $XDG_RUNTIME_DIR/hypr | head -1); HYPRLAND_INSTANCE_SIGNATURE=$SIG hyprctl clients -j | jq -c '.[] | {class, ws: .workspace.name, at, size, fullscreen, allowedOverFullscreen}'
+qs -c panel ipc call workspaces desktops; qs -c panel ipc call workspaces row 1
+cd ~/work/pets/workspaced && cargo test 2>&1 | tail -3   # 188 passed
 env -u SUDO_ASKPASS sudo -A -p 'Проверка окна пароля' true   # окно Quickshell, Escape даёт код 1
 system/modprobe.d/nvidia-vrr.sh status    # после перезагрузки ожидается conceal_vrr_caps = Y
 chezmoi status && git status -sb          # расхождений и незакоммиченного быть не должно
@@ -57,19 +54,11 @@ chezmoi status && git status -sb          # расхождений и незак
 
 ### Что пробовали и отвергли
 
-- Относить окно браузера, открытое по Ctrl+N, к приложению активного окна: признак ненадёжен, подробности в `docs/window-model.md`.
-- Правило окна `focus_on_activate = false` для Telegram: отключило бы переход к топику по клику на уведомление.
-- Таймеры вместо событий (подсказки, переподключение панели, срок показа уведомлений, ожидание клавиши в режиме): пользователь велел обходиться событиями (`docs/decisions/0007-no-timers.md`).
-- Судить о загрузке новой карты XKB по `hyprctl devices` или по работе нового сочетания: список раскладок берётся из старой карты.
-- Хранить `~/.claude/settings.json` сценарием `modify_`: пользователь решил держать файл целиком.
-- Брать текущий стол для команд демона из кэша событий композитора: отставшее событие возвращает прежний стол.
-- Плагин Hyprland ради признака диалога: для браузеров бесполезен (Chromium не сообщает родителя), стоит сборки под каждую версию.
-- Ctrl+Enter как клавиша «не беспокоить»: нужна приложениям (отправка сообщений в Telegram).
-- Окно столбика уведомлений ростом со столбик: композитор анимировал бы каждое изменение размера; окно постоянного размера с областью ввода по карточкам.
-- Отменять обмен мест при запуске приложения без окон (коммит демона 260d88b): пользователь подтвердил действующее правило «запуск без окон переводит приложение на главное место», коммит откачен (eb8b0bb).
-- Замены `[text] replacements` VoxType для слов латиницей (dev, prod): ищут подстроку, «прод» → «prod» испортило бы «продолжить»; вместо них подсказка модели `initial_prompt`.
-- Запускать общее окно при восстановлении сессии вторым экземпляром в workspace, где его приложение не описано в конфиге: пользователь 29.09.2026 велел общим окнам оставаться общими вне зависимости от того, как они запущены.
-- Запасной pinentry у окна пароля, `input:virtualkeyboard:share_states` как лечение раскладки после диктовки, три колонки и центр всего экрана у окна подсказки, карточка режима вверху экрана — отвергнуты пользователем 23.09.2026.
+- Снимать и снова ставить fullscreen или `bring_to_top` для полноэкранного окна: браузер выходит из полноэкранного видео, `bring_to_top` ставит признак самому окну, соседям не снимает; `misc:on_focus_under_fullscreen` касается только неплавающих окон ([`design.md`](openspec/changes/archive/2026-10-23-fullscreen-raise/design.md)).
+- Считать прямоугольник окна из снимка устаревшим, если он не совпадает ни с ячейкой, ни с `moved`: второй экземпляр, сдвинутый мышью, законно стоит вне обоих ([`design.md`](openspec/changes/archive/2026-10-24-snapshot-stale-rects/design.md)); устаревание раскладки по правке `chain` и `mode` — раскладка от них не зависит.
+- Размытие `size 9, passes 1` двоит картинку, большие шаги вообще — заменено малым шагом в несколько проходов; `hyprland-git` из AUR ради вариантов размытия пользователь отверг.
+- Таймеры вместо событий — пользователь велел обходиться событиями ([`0007`](docs/decisions/0007-no-timers.md)); правило окна `focus_on_activate = false` для Telegram отключило бы переход к топику по клику на уведомление; Ctrl+Enter как клавиша «не беспокоить» нужна приложениям.
+- Запускать общее окно при восстановлении сессии вторым экземпляром там, где его приложение не описано в конфиге: общие окна остаются общими (решение пользователя 29.09.2026); запасной pinentry у окна пароля отвергнут 23.09.2026.
 
 ## Возможные доработки
 
