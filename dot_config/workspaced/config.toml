@@ -405,9 +405,10 @@ dispatch = "window.close()"
 
 # Отделить активное окно от активного workspace текущего стола: окно выходит
 # из его состава и закрывается — в другие workspace окно пока не входит.
-# Super+Delete закрывает любое окно, не трогая состав workspace.
+# Shift+Super+Delete рядом с Super+Delete, которое закрывает любое окно,
+# не трогая состав workspace.
 [[binds]]
-chain = "SUPER+BackSpace"
+chain = "SUPER+SHIFT+Delete"
 action = "detach"
 
 # Замена сворачивания: Super+Z прячет окно в специальный стол «hidden»,
@@ -504,8 +505,8 @@ action = { half = "down" }
 # Позиции окна: команда демона `place`, те же отступы. Верхний ряд (окно в
 # половину ширины и высоты): Home — слева, PageDown — по центру, End — справа.
 # Нижний ряд с Ctrl: Z — слева, X — по центру, V — справа. C с Ctrl — по центру
-# на всю высоту, PageUp — развернуть с возвратом (maximize), Enter — окно 1920×1080 по центру
-# рабочей области (размер Full HD), Menu — полноэкранный режим.
+# на всю высоту, PageUp — развернуть с возвратом (maximize; то же на Shift+Super+Enter),
+# Menu — полноэкранный режим.
 [[binds]]
 chain = "ALT+SUPER+Home"
 action = { place = "top-left" }
@@ -552,14 +553,18 @@ action = "maximize"
 chain = "CTRL+SUPER+space"
 action = "arrange"
 
+# Super+Enter ставит окну размер 1920×1080 (Full HD) по центру рабочей области,
+# Shift+Super+Enter разворачивает окно; оба сочетания возвращают прежнюю
+# геометрию при повторном нажатии и делят запомненную геометрию.
 [[binds]]
-chain = "ALT+SUPER+Return"
-desc = "Окно 1920×1080 по центру рабочей области"
-dispatch = [
-  "window.float({ action = \"on\" })",
-  "window.resize({ x = 1920, y = 1080, relative = false })",
-  "window.center()",
-]
+chain = "SUPER+Return"
+desc = "Окно 1920×1080 по центру; повторно — вернуть прежнюю геометрию"
+action = { fit = "1920x1080" }
+
+[[binds]]
+chain = "SUPER+SHIFT+Return"
+desc = "Развернуть окно; повторно — вернуть прежнюю геометрию"
+action = "maximize"
 
 [[binds]]
 chain = "ALT+SUPER+Menu"
@@ -632,18 +637,13 @@ chain = "CTRL+Escape"
 desc = "Окно истории уведомлений"
 exec = "qs -c panel ipc call notifications history"
 
-# Super+Enter делает с верхним уведомлением столбика то же, что левый клик
-# по нему: помечает просмотренным и убирает с экрана, из истории не удаляет.
-# Shift+Super+Enter — то же, что правый клик: выполняет действие по умолчанию
-# и удаляет уведомление из истории. Ctrl+Enter под это не занят намеренно:
-# он нужен приложениям (отправка сообщения, формы).
+# Super+Backspace делает с верхним уведомлением столбика то же, что правый
+# клик по нему: выполняет действие по умолчанию и удаляет уведомление
+# из истории. Сочетаний с Enter у уведомлений нет: Super+Enter и Shift+Super+Enter
+# заняты размером окна, а Ctrl+Enter не занят намеренно, он нужен приложениям
+# (отправка сообщения, формы).
 [[binds]]
-chain = "SUPER+Return"
-desc = "Верхнее уведомление: действие, убрать с экрана"
-exec = "qs -c panel ipc call notifications dismissOldest"
-
-[[binds]]
-chain = "SUPER+SHIFT+Return"
+chain = "SUPER+BackSpace"
 desc = "Верхнее уведомление: действие, удалить из истории"
 exec = "qs -c panel ipc call notifications invokeOldest"
 
@@ -657,16 +657,10 @@ chain = "CTRL+SHIFT+space"
 desc = "Пометить просмотренными все уведомления"
 exec = "qs -c panel ipc call notifications closeAll"
 
-# Super+Ctrl+Enter помечает просмотренными все уведомления (то же, что средний
-# клик по карточке), Super+Ctrl+Alt+Enter очищает историю целиком (то же, что
-# кнопка «Очистить» в окне истории).
+# Shift+Super+Backspace очищает историю целиком (то же, что кнопка «Очистить»
+# в окне истории).
 [[binds]]
-chain = "SUPER+CTRL+Return"
-desc = "Пометить просмотренными все уведомления"
-exec = "qs -c panel ipc call notifications closeAll"
-
-[[binds]]
-chain = "SUPER+CTRL+ALT+Return"
+chain = "SUPER+SHIFT+BackSpace"
 desc = "Очистить историю уведомлений"
 exec = "qs -c panel ipc call notifications clear"
 
