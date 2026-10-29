@@ -50,6 +50,19 @@ upstream там, где он запрашивался. Установки AppIma
 `.desktop` и совпадением идентификатора с именем пакета; cargo и AppImage
 для пакетов pacman не искались. Строки отсортированы по алфавиту.
 
+Охват. Строки собраны по командам, по ним же полноту можно проверить
+заново: `pacman -Qeq` (явные пакеты, 283), `pacman -Qm` (AUR, 4),
+`mise ls` (51 запись, включая закреплённые версии и установки вне
+`[tools]`: groovy, java, poetry, pipx:poetry, ruff, rust, vault, yarn),
+`cargo install --list` (3), `uv tool list` (py-spy), `bun pm ls -g`
+(OpenSpec), `npm ls -g` (corepack и npm входят в node, отдельных строк
+нет), `flatpak list --app` (2), AppImage и бинарники в `~/.local/bin`,
+`/usr/local/bin` и `/opt`. Пусто и в таблице не представлено: deno
+(глобальные пакеты), pip --user, go, gem, snap, pipx. Свои скрипты
+в `~/.local/bin` и `/usr/local/bin` (mkinitcpio, remove-nvidia и подобные)
+программами не считаются. Вне таблицы остаются плагины Neovim (lazy.nvim,
+85 штук) и плагины Claude Code: они зависимости своих конфигов.
+
 | Программа | pacman | AUR | mise | cargo | flatpak | AppImage | git |
 |---|---|---|---|---|---|---|---|
 | accountsservice | [x] 26.27.3-1.1 | — | — | н/и | н/и | н/и | н/и |
@@ -115,6 +128,7 @@ upstream там, где он запрашивался. Установки AppIma
 | cpupower | [x] 7.2.10-1 | — | — | н/и | н/и | н/и | н/и |
 | cryptsetup | [x] 2.8.8-1.1 | — | — | н/и | н/и | н/и | н/и |
 | cuda | [x] 13.4.3-1 | — | — | н/и | н/и | н/и | н/и |
+| dbeaver | [ ] 26.2.2-1.1 | — | — | н/и | [x] io.dbeaver.DBeaverCommunity 26.2.2 | н/и | н/и |
 | deno | [ ] 2.9.7 | [ ] deno-stable-bin 2.9.7 | [x] 2.9.6 → 2.9.8 | н/и | н/и | н/и | н/и |
 | device-mapper | [x] 2.03.43-2.1 | — | — | н/и | н/и | н/и | н/и |
 | dex | [x] 0.10.1-1 | — | — | н/и | н/и | н/и | н/и |
@@ -285,6 +299,7 @@ upstream там, где он запрашивался. Установки AppIma
 | poetry 1.8 | — | — | [x] 1.8.2, 1.8.3, pipx:poetry 1.8.3 | н/и | н/и | н/и | н/и |
 | poetry 2.x | [ ] python-poetry 2.5.1 | — | [x] 2.4.2 → 2.5.1 | н/и | н/и | н/и | н/и |
 | poppler-glib | [x] 26.08.0-1.1 | — | — | н/и | н/и | н/и | н/и |
+| postman | — | [ ] postman-bin 12.33.4-1 | — | н/и | [x] com.getpostman.Postman 12.25.6 | н/и | н/и |
 | power-profiles-daemon | [x] 0.30-3 | — | — | н/и | н/и | н/и | н/и |
 | pv | [x] 1.12.0-1.1 | — | — | н/и | н/и | н/и | н/и |
 | py-spy | — | [ ] py-spy-bin 0.4.2 | — | [ ] 0.4.2 | н/и | — | [x] 0.4.2 → v0.4.2 |
@@ -393,14 +408,14 @@ upstream там, где он запрашивался. Установки AppIma
 
 ## Итог
 
-Строк: 338. Отмечено сейчас: pacman 283, AUR 4, mise 44, cargo 3, flatpak 0, AppImage 3, git (ручные установки) 10. Программа может быть отмечена в нескольких колонках сразу (дубли mise и pacman). Доступны для выбора: pacman 318, AUR 34, mise 53, cargo 20, flatpak 14, AppImage 5, git 19. Пакетов pacman, ждущих обновления репозитория: 3 (`dotnet-runtime-9.0`, `dotnet-sdk-9.0`, `rootlesskit`).
+Строк: 340. Отмечено сейчас: pacman 283, AUR 4, mise 44, cargo 3, flatpak 2, AppImage 3, git (ручные установки) 10. Программа может быть отмечена в нескольких колонках сразу (дубли mise и pacman). Доступны для выбора: pacman 319, AUR 35, mise 53, cargo 20, flatpak 16, AppImage 5, git 19. Пакетов pacman, ждущих обновления репозитория: 3 (`dotnet-runtime-9.0`, `dotnet-sdk-9.0`, `rootlesskit`).
 
 ## Рекомендации по правилу
 
 Не меняет таблицу: показывает, куда правило переводит программы, стоящие не там.
 
-**По правилу на pacman** (33 программы):
-atuin, bun, cargo-binstall, chezmoi, claude-code (cachyos), deno, groovy
+**По правилу на pacman** (34 программы):
+atuin, bun, cargo-binstall, chezmoi, claude-code (cachyos), dbeaver (сейчас Flatpak), deno, groovy
 (в репозитории 6.0.0, установленная 4.0.33 — нужность ветки 4.x проверить),
 java (`jdk21-openjdk`), just, lazygit, lsd, mise, neovide, neovim, node 26
 (`nodejs`), ollama, oha, opencode, poetry 2.x (`python-poetry`), resvg,
@@ -410,13 +425,13 @@ starship, television, tuicr, usage, uv, vault (в репозитории 2.1.1, 
 стоят через pacman и дублируются в mise: снять дубль у bat, btop, fd, ffmpeg,
 fzf, imagemagick, jq, python.
 
-**По правилу на AUR** (16 программ):
+**По правилу на AUR** (17 программ):
 - нет в репозиториях: herdr (`herdr-bin`), hunk (`hunk-bin`), oh-my-pi
   (`oh-my-pi-bin`), oxker (`oxker-bin`), openspec, python 3.12
   (`python312`), py-spy (`py-spy-bin`), wezterm (`wezterm-nightly-bin`;
   репозиторий отстаёт на два года, релизных пакетов AUR нет), yarn 4
   (`yarn-berry`, конфликтует с `yarn`), AmneziaVPN (`amneziavpn-bin`),
-  Handy (`handy-bin`), LM Studio (`lmstudio-bin`), Vial (`vial-appimage`);
+  Handy (`handy-bin`), postman (`postman-bin`, сейчас Flatpak), LM Studio (`lmstudio-bin`), Vial (`vial-appimage`);
 - пакеты pacman, у которых AUR новее репозитория на минорную версию и
   больше: firefox (стоит 158.0-1.1, AUR `firefox-bin` 159.0-1); paru (стоит 2.1.0-3, AUR `paru-bin` 2.2.0-1); yay (стоит 13.0.1-1, AUR `yay-bin` 13.1.0-1).
 
