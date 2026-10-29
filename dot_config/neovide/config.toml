@@ -4,7 +4,7 @@ vsync = false
 srgb = false
 idle = true
 frame = "none"
-fork = true
+# Форк не включается: программы, вызывающие редактор (git, Claude Code по Ctrl-G), ждут завершения процесса; отрыв от терминала — флагом --fork там, где он нужен.
 startup-message-capture = false
 
 [font]

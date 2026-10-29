@@ -3,6 +3,7 @@
 #
 
 export PATH="$HOME/.bun/bin:$HOME/.local/bin:$HOME/.local/bin/handmade-scripts:$PATH"
+# Для входа без графики (ssh, tty); в сессии Hyprland редактор задаёт ~/.config/hypr/hyprland.lua.
 export EDITOR=nvim
 [[ -f ~/.bashrc ]] && . ~/.bashrc
 

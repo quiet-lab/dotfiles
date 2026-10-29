@@ -56,6 +56,12 @@ hl.env("LESSHISTFILE", "/dev/null")
 -- qs-askpass). Тот же путь записан строкой «Path askpass» в /etc/sudo.conf
 -- (system/sudo/sudo.conf), переменная нужна программам, которые читают только её.
 hl.env("SUDO_ASKPASS", HOME .. "/.local/bin/handmade-scripts/sudo-askpass")
+-- Редактор для всей сессии: привязок Hyprland, демона workspaced и его приложений,
+-- оболочек в терминалах (greetd даёт EDITOR=/usr/bin/vim, .bash_profile до
+-- приложений вне login-оболочки не доходит). VISUAL без --fork: Neovide
+-- по умолчанию блокирующий, как ждут git и Claude Code по Ctrl-G.
+hl.env("EDITOR", "nvim")
+hl.env("VISUAL", "neovide")
 -- greetd не задаёт тип сессии, а Hyprland 0.56 эту переменную не выставляет;
 -- по ней клиенты (Qt, Electron, портал) отличают Wayland-сессию.
 hl.env("XDG_SESSION_TYPE", "wayland")
@@ -464,7 +470,7 @@ hl.on("hyprland.start", function()
     -- XDG_CURRENT_DESKTOP). Демон workspaced и его приложения (браузеры, neovide)
     -- живут в этом окружении, поэтому без передачи они не видели ни типа сессии,
     -- ни переменных NVIDIA, ни настроек Qt и портала, ни программы запроса пароля sudo.
-    hl.exec_cmd("systemctl --user import-environment XDG_SESSION_TYPE LIBVA_DRIVER_NAME __GLX_VENDOR_LIBRARY_NAME NVD_BACKEND ELECTRON_OZONE_PLATFORM_HINT MOZ_DISABLE_RDD_SANDBOX QT_QPA_PLATFORMTHEME GTK_USE_PORTAL SUDO_ASKPASS")
+    hl.exec_cmd("systemctl --user import-environment XDG_SESSION_TYPE LIBVA_DRIVER_NAME __GLX_VENDOR_LIBRARY_NAME NVD_BACKEND ELECTRON_OZONE_PLATFORM_HINT MOZ_DISABLE_RDD_SANDBOX QT_QPA_PLATFORMTHEME GTK_USE_PORTAL SUDO_ASKPASS EDITOR VISUAL")
     hl.exec_cmd("systemctl --user start hyprland-session.target")
     -- Апплет NetworkManager как StatusNotifier: значок появится с панелью,
     -- агент секретов работает и без неё.

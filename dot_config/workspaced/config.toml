@@ -43,9 +43,8 @@ desktops = 4
 # неописанной программы на столе без workspace и без того свободно.
 ignore_classes = ["termfilechooser", "xdg-desktop-portal-gtk", "pinentry.*", "zenity", "hyprland-dialog"]
 
-# Общее окружение для всех приложений; переопределяется в workspace и приложении.
+# Общее окружение для всех приложений; переопределяется в workspace и приложении. Редактор задаёт hyprland.lua.
 [env]
-EDITOR = "neovide"
 
 # Служебные цепочки. Super+Tab — префикс действий с workspace (Super можно
 # не отпускать): w/s — поднять, Tab — следующий workspace стола.
