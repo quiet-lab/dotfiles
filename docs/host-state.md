@@ -50,10 +50,10 @@ enable --now avahi-daemon.socket`. Запуск по D-Bus (`org.freedesktop.Ava
 без потребителей; пакеты остаются, если не сказано иное):
 - висячая ссылка `multi-user.target.wants/ly@tty2.service` удалённого
   дисплейного менеджера ly удалена;
-- `ollama.service` (сервер в `/usr/local/bin`, юнит в `/etc/systemd/system`)
+- `ollama.service` (пакеты `ollama` и `ollama-cuda`, юнит пакета)
   остановлен и снят с автозапуска: за сутки журнала ни одного запроса
-  к API, потребителей в конфигах нет; модели в каталоге ollama (около
-  45 ГБ) не тронуты, при нужде `ollama serve` вручную;
+  к API, потребителей в конфигах нет; модели (около 45 ГБ) лежат
+  в `/var/lib/ollama`, при нужде `sudo systemctl start ollama`;
 - Wi-Fi выключен `nmcli radio wifi off` (NetworkManager помнит состояние):
   работа идёт по проводу, wlan0 ни разу не подключался, а каждое
   сканирование эфира порождало тысячи строк в журнале от AmneziaVPN;
@@ -183,11 +183,10 @@ VA-API для Firefox на NVIDIA: без них аппаратный декод
 
 ## Сборки из исходников и ссылки
 
-**`~/builds/wezterm`** — wezterm собран из исходников с поддержкой Wayland
-(в репозиториях пакета нет; версия 20260805-104032-4b1c3c15). Ссылки
-`~/.local/bin/wezterm`, `wezterm-gui`, `wezterm-mux-server` указывают
-в `target/release/`. Восстановление — клон wezterm и `cargo build
---release`.
+**`~/builds/wezterm`** — прежняя сборка wezterm из исходников (версия
+20260805-104032-4b1c3c15). Сейчас wezterm стоит из AUR
+(`wezterm-nightly-bin`), ссылок на сборку в `~/.local/bin` нет; каталог
+оставлен до решения пользователя.
 
 **`~/.local/bin/workspaced`** — ссылка на
 `~/work/pets/workspaced/target/release/workspaced`. Сам проект — отдельный
@@ -265,10 +264,9 @@ fedora-box`, поле `restart_policy` в базе podman; проверяетс�
 и Shift+Super+B, Shift+Super+V, Shift+Super+Y — собственные клавиши
 браузеров) от ярлыков не зависит.
 
-Ярлык `~/.local/share/applications/com.getpostman.Postman.desktop`, наоборот,
-под chezmoi (`dot_local/share/applications/`, рядом с переопределением
-flatpak `dot_local/share/flatpak/overrides/com.getpostman.Postman`),
-и он намеренно перекрывает ярлык, экспортированный flatpak.
+Ярлык `~/.local/share/applications/postman.desktop`, наоборот, под chezmoi
+(`dot_local/share/applications/`), и он намеренно перекрывает ярлык пакета
+`postman-bin`.
 
 **`~/.local/share/applications/fedora-box-google-chrome-ai.desktop`** —
 ярлык отдельного экземпляра Chrome с профилем `AI.dev2026`, заведённого

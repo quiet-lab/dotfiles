@@ -1,0 +1,14 @@
+[Desktop Entry]
+Name=Postman
+Comment=Build, test, and document your APIs faster
+# Копия ярлыка пакета postman-bin с масштабом интерфейса 1.5 и нативным Wayland:
+# под Wayland Electron берёт масштаб только у монитора (в Hyprland он равен 1),
+# и на экране 4K интерфейс слишком мелкий.
+Path=/opt/postman
+Exec=/opt/postman/Postman --force-device-scale-factor=1.5 --ozone-platform-hint=auto %U
+Icon=postman
+Type=Application
+StartupNotify=true
+Categories=Development;Utility;
+StartupWMClass=postman
+MimeType=x-scheme-handler/postman
