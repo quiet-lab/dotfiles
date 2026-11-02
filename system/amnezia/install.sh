@@ -4,9 +4,12 @@
 #
 # Действия:
 #   files   разложить сценарии в /usr/local/sbin, списки и шаблон
-#           в /etc/amnezia, настройку NetworkManager в conf.d, правило
+#           в /etc/amnezia, drop-in awg-quick@amn0 (журнал рукопожатий,
+#           действует со следующего перезапуска службы), настройку
+#           NetworkManager в conf.d, правило
 #           /etc/sudoers.d/amn-switch и собрать
 #           /etc/amnezia/amneziawg/amn0.conf из хранилища AmneziaVPN
+#           (если страна не выбрана через amn-country)
 #   switch  перейти с приложения AmneziaVPN на awg-quick@amn0 — то же, что
 #           sudo /usr/local/sbin/amn-switch (запускается пользователем
 #           из терминала, пароль не спрашивается)
@@ -39,12 +42,16 @@ files)
     need_root "$@"
     install -d -m 0755 /etc/amnezia
     install -d -m 0700 /etc/amnezia/amneziawg
-    for f in amn-export-config amn-zones-update amn-route amn-switch; do
+    for f in amn-export-config amn-apply-config amn-zones-update amn-route amn-switch; do
         install -m 0755 -o root -g root "$here/$f" "/usr/local/sbin/$f"
     done
     for f in amn.nft amn0.conf.template countries.txt domains.txt bypass.txt; do
         install -m 0644 -o root -g root "$here/$f" "/etc/amnezia/$f"
     done
+    install -D -m 0644 -o root -g root \
+        "$here/awg-quick@amn0.service.d/50-log-verbose.conf" \
+        /etc/systemd/system/awg-quick@amn0.service.d/50-log-verbose.conf
+    systemctl daemon-reload
     install -D -m 0644 -o root -g root \
         "$here/../NetworkManager/conf.d/90-amn0-unmanaged.conf" \
         /etc/NetworkManager/conf.d/90-amn0-unmanaged.conf
@@ -52,7 +59,13 @@ files)
     sudoers="$here/../sudo/sudoers.d/amn-switch"
     visudo -c -f "$sudoers"
     install -m 0440 -o root -g root "$sudoers" /etc/sudoers.d/amn-switch
-    /usr/local/sbin/amn-export-config
+    # Страну, выбранную через amn-country (файл country.json), конфиг из
+    # приложения не перезаписывает: в хранилище приложения остаётся прежняя.
+    if [ -e /etc/amnezia/country.json ]; then
+        echo "страна выбрана через amn-country, amn0.conf из приложения не переносится"
+    else
+        /usr/local/sbin/amn-export-config
+    fi
     ;;
 switch)
     # Без need_root: правило sudoers.d/amn-switch пускает только сам сценарий.

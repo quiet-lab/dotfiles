@@ -1,0 +1,305 @@
+#!/usr/bin/env python3
+"""Страна туннеля AmneziaWG amn0: текущая, список доступных, смена.
+
+Подписка Amnezia Premium хранится в хранилище приложения AmneziaVPN
+(~/.config/AmneziaVPN.ORG/AmneziaVPN.conf, файл пользователя): ключ api_key,
+список стран available_countries, страна, для которой приложение получило
+конфиг. Смена страны повторяет запрос приложения 5.0.3.0 к шлюзу Amnezia
+(SubscriptionController::updateServiceFromGateway, GatewayController::post
+в github.com/amnezia-vpn/amnezia-client):
+
+  POST http://gw.amnezia.org:80/v1/config
+  {"key_payload": base64(RSA-PKCS1(публичный ключ шлюза, {aes_key, aes_iv, aes_salt})),
+   "api_payload": base64(AES-256-CBC(aes_key, aes_iv[:16], JSON запроса))}
+
+Ответ — AES-256-CBC тем же ключом; в нём поле config «vpn://» + base64url
+сжатого qCompress JSON сервера, где у контейнера awg в last_config.config
+лежит текст awg-quick с подстановкой $WIREGUARD_CLIENT_PRIVATE_KEY. Пара
+ключей клиента создаётся заново (awg genkey), публичный ключ уходит
+в запросе. Публичный ключ шлюза читается из исполняемого файла
+приложения (/opt/AmneziaVPN/bin/AmneziaVPN): ключей там два, рабочий
+определяется ответом шлюза.
+
+Собранный конфиг и выбранная страна передаются через stdin сценарию root
+/usr/local/sbin/amn-apply-config (правило sudoers.d/amn-switch, без
+аргументов): он проверяет конфиг, ставит его, перезапускает
+awg-quick@amn0 и при отказе возвращает прежний. Хранилище приложения
+не меняется: выбранная страна записывается в /etc/amnezia/country.json.
+
+    amn-country current       страна сейчас, JSON {code, name, source}
+    amn-country list          доступные страны, JSON [{code, name, current}]
+    amn-country set КОД       сменить страну (например de)
+    amn-country fetch КОД     только запросить конфиг и проверить его,
+                              ничего не устанавливая
+
+Ключи, api_key и текст конфига на экран не выводятся.
+"""
+
+from __future__ import annotations
+
+import base64
+import ctypes
+import importlib.util
+import json
+import os
+import re
+import subprocess
+import sys
+import tempfile
+import urllib.error
+import urllib.request
+import uuid
+import zlib
+from importlib.machinery import SourceFileLoader
+from pathlib import Path
+
+STORAGE = Path.home() / ".config/AmneziaVPN.ORG/AmneziaVPN.conf"
+STATE = Path("/etc/amnezia/country.json")
+APP_BINARY = Path("/opt/AmneziaVPN/bin/AmneziaVPN")
+EXPORT = "/usr/local/sbin/amn-export-config"
+APPLY = "/usr/local/sbin/amn-apply-config"
+GATEWAY = "http://gw.amnezia.org:80/v1/config"
+# Версия приложения, чей запрос повторяется (поле app_version).
+APP_VERSION = "5.0.3.0"
+# Предел ожидания ответа шлюза — как у приложения (apiDefs::requestTimeoutMsecs).
+REQUEST_TIMEOUT_S = 12
+CODE_RE = re.compile(r"^[a-z]{2}(-[a-z]+)?$")
+
+
+def die(message: str) -> None:
+    print(f"amn-country: {message}", file=sys.stderr)
+    sys.exit(1)
+
+
+def exporter():
+    """Разбор хранилища и проверка конфига — общие с amn-export-config."""
+    loader = SourceFileLoader("amn_export_config", EXPORT)
+    spec = importlib.util.spec_from_loader(loader.name, loader)
+    module = importlib.util.module_from_spec(spec)
+    loader.exec_module(module)
+    return module
+
+
+def load_server() -> dict:
+    servers, default_id = exporter().read_servers_list(STORAGE)
+    index = int(default_id) if default_id and default_id.isdigit() else 0
+    if not 0 <= index < len(servers):
+        die(f"сервера с номером {index} нет в хранилище")
+    server = servers[index]
+    if "api_config" not in server or "auth_data" not in server:
+        die("сервер по умолчанию — не подписка Amnezia (нет api_config)")
+    return server
+
+
+def installation_uuid() -> str:
+    for line in STORAGE.read_text(encoding="latin-1").split("\n"):
+        if line.startswith("installationUuid="):
+            return line.split("=", 1)[1].strip().strip("{}")
+    die("в хранилище нет installationUuid")
+    return ""
+
+
+def countries(server: dict) -> list[dict]:
+    return [
+        {"code": c.get("server_country_code", ""), "name": c.get("server_country_name", "")}
+        for c in server["api_config"].get("available_countries", [])
+        if "awg" in c.get("available_protocols", ["awg"])
+    ]
+
+
+def current(server: dict | None = None) -> dict:
+    """Страна из /etc/amnezia/country.json, иначе — из хранилища приложения."""
+    try:
+        state = json.loads(STATE.read_text())
+        return {"code": state["code"], "name": state["name"], "source": "state"}
+    except (OSError, ValueError, KeyError):
+        pass
+    server = server or load_server()
+    api = server["api_config"]
+    return {
+        "code": api.get("server_country_code", ""),
+        "name": api.get("server_country_name", ""),
+        "source": "app",
+    }
+
+
+# --- Шифрование: AES-256-CBC через libcrypto (ctypes), RSA — openssl pkeyutl
+# со входом из stdin, чтобы ключи не попадали в аргументы процессов. ---
+_crypto = ctypes.CDLL("libcrypto.so.3")
+_crypto.EVP_CIPHER_CTX_new.restype = ctypes.c_void_p
+_crypto.EVP_aes_256_cbc.restype = ctypes.c_void_p
+_crypto.EVP_CipherInit_ex.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int,
+]
+_crypto.EVP_CipherUpdate.argtypes = [
+    ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_int), ctypes.c_char_p, ctypes.c_int,
+]
+_crypto.EVP_CipherFinal_ex.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_int)]
+_crypto.EVP_CIPHER_CTX_free.argtypes = [ctypes.c_void_p]
+
+
+def aes_cbc(data: bytes, key: bytes, iv: bytes, encrypt: bool) -> bytes:
+    """AES-256-CBC с дополнением PKCS#7, как CryptoUtils приложения
+    (из 32 байт iv OpenSSL берёт первые 16)."""
+    ctx = _crypto.EVP_CIPHER_CTX_new()
+    try:
+        if not _crypto.EVP_CipherInit_ex(ctx, _crypto.EVP_aes_256_cbc(), None, key, iv[:16], 1 if encrypt else 0):
+            raise ValueError("EVP_CipherInit_ex")
+        out = ctypes.create_string_buffer(len(data) + 32)
+        n1, n2 = ctypes.c_int(0), ctypes.c_int(0)
+        if not _crypto.EVP_CipherUpdate(ctx, out, ctypes.byref(n1), data, len(data)):
+            raise ValueError("EVP_CipherUpdate")
+        tail = ctypes.create_string_buffer(32)
+        if not _crypto.EVP_CipherFinal_ex(ctx, tail, ctypes.byref(n2)):
+            raise ValueError("EVP_CipherFinal_ex: неверный ключ или повреждённые данные")
+        return out.raw[: n1.value] + tail.raw[: n2.value]
+    finally:
+        _crypto.EVP_CIPHER_CTX_free(ctx)
+
+
+def gateway_keys() -> list[bytes]:
+    """Публичные ключи PEM из исполняемого файла приложения."""
+    blob = APP_BINARY.read_bytes()
+    keys = re.findall(rb"-----BEGIN PUBLIC KEY-----[A-Za-z0-9+/=\s]+-----END PUBLIC KEY-----", blob)
+    if not keys:
+        die(f"в {APP_BINARY} нет публичного ключа шлюза")
+    return keys
+
+
+def rsa_encrypt(pem: bytes, data: bytes) -> bytes:
+    with tempfile.NamedTemporaryFile(suffix=".pem") as f:
+        f.write(pem)
+        f.flush()
+        return subprocess.run(
+            ["openssl", "pkeyutl", "-encrypt", "-pubin", "-inkey", f.name, "-pkeyopt", "rsa_padding_mode:pkcs1"],
+            input=data, capture_output=True, check=True,
+        ).stdout
+
+
+def wg_keypair() -> tuple[str, str]:
+    private = subprocess.run(["awg", "genkey"], capture_output=True, check=True, text=True).stdout.strip()
+    public = subprocess.run(["awg", "pubkey"], input=private, capture_output=True, check=True, text=True).stdout.strip()
+    return private, public
+
+
+def os_id() -> str:
+    """QSysInfo::productType() на Linux — поле ID из os-release."""
+    try:
+        for line in Path("/etc/os-release").read_text().split("\n"):
+            if line.startswith("ID="):
+                return line.split("=", 1)[1].strip().strip('"')
+    except OSError:
+        pass
+    return "linux"
+
+
+def post(pem: bytes, payload: dict) -> bytes | None:
+    """Запрос к шлюзу; None — ответ не расшифровался этим ключом."""
+    key, iv, salt = os.urandom(32), os.urandom(32), os.urandom(8)
+    key_payload = json.dumps(
+        {"aes_key": base64.b64encode(key).decode(), "aes_iv": base64.b64encode(iv).decode(),
+         "aes_salt": base64.b64encode(salt).decode()}
+    ).encode()
+    body = json.dumps(
+        {"key_payload": base64.b64encode(rsa_encrypt(pem, key_payload)).decode(),
+         "api_payload": base64.b64encode(aes_cbc(json.dumps(payload).encode(), key, iv, True)).decode()}
+    ).encode()
+    request = urllib.request.Request(
+        GATEWAY, data=body, method="POST",
+        headers={"Content-Type": "application/json", "X-Client-Request-ID": str(uuid.uuid4())},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_S) as reply:
+            raw = reply.read()
+    except urllib.error.HTTPError as e:
+        raw = e.read()
+        try:
+            text = aes_cbc(raw, key, iv, False).decode(errors="replace")
+        except ValueError:
+            return None
+        die(f"шлюз ответил HTTP {e.code}: {text[:200]}")
+    try:
+        return aes_cbc(raw, key, iv, False)
+    except ValueError:
+        return None
+
+
+def fetch(code: str) -> dict:
+    """Запрос конфига страны; возвращает {code, name, config}."""
+    if not CODE_RE.match(code):
+        die(f"неверный код страны: {code!r}")
+    server = load_server()
+    names = {c["code"]: c["name"] for c in countries(server)}
+    if code not in names:
+        die(f"страны {code} нет в списке подписки с протоколом awg")
+    api = server["api_config"]
+    private, public = wg_keypair()
+    payload = {
+        "os_version": os_id(),
+        "app_version": APP_VERSION,
+        "cli_name": "AmneziaVPN",
+        "distribution": "github",
+        "app_language": "ru",
+        "installation_uuid": installation_uuid(),
+        "user_country_code": api.get("user_country_code", ""),
+        "server_country_code": code,
+        "service_type": api.get("service_type", ""),
+        "service_protocol": "awg",
+        "public_key": public,
+        "auth_data": server["auth_data"],
+    }
+    answer = None
+    for pem in gateway_keys():
+        answer = post(pem, payload)
+        if answer is not None:
+            break
+    if answer is None:
+        die("ответ шлюза не расшифровался ни одним ключом приложения")
+    try:
+        vpn = json.loads(answer)["config"]
+    except (ValueError, KeyError):
+        die("в ответе шлюза нет поля config")
+    data = vpn.replace("vpn://", "")
+    blob = base64.urlsafe_b64decode(data + "=" * (-len(data) % 4))
+    # qCompress: четыре байта длины (big-endian), затем поток zlib.
+    try:
+        blob = zlib.decompress(blob[4:])
+    except zlib.error:
+        pass
+    text = blob.decode().replace("$WIREGUARD_CLIENT_PRIVATE_KEY", private)
+    try:
+        container = json.loads(text)["containers"][0]["awg"]
+        config = json.loads(container["last_config"])["config"]
+    except (ValueError, KeyError, IndexError, TypeError):
+        die("в ответе шлюза нет контейнера awg с last_config.config")
+    # Та же проверка, что сделает сценарий root: отказ — до установки.
+    exporter().split_sections(config)
+    return {"code": code, "name": names[code], "config": config}
+
+
+def main() -> int:
+    if len(sys.argv) < 2:
+        print(__doc__)
+        return 2
+    command = sys.argv[1]
+    if command == "current":
+        print(json.dumps(current(), ensure_ascii=False))
+    elif command == "list":
+        server = load_server()
+        now = current(server)["code"]
+        print(json.dumps([dict(c, current=c["code"] == now) for c in countries(server)], ensure_ascii=False))
+    elif command in ("fetch", "set") and len(sys.argv) == 3:
+        result = fetch(sys.argv[2])
+        if command == "fetch":
+            print(f"конфиг для {result['code']} ({result['name']}) получен и прошёл проверку")
+            return 0
+        done = subprocess.run(["sudo", "-n", APPLY], input=json.dumps(result).encode(), check=False)
+        return done.returncode
+    else:
+        print(__doc__)
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

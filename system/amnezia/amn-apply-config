@@ -1,0 +1,141 @@
+#!/usr/bin/env python3
+"""Ставит конфиг AmneziaWG другой страны и перезапускает awg-quick@amn0.
+
+Вход — stdin, JSON {"code": код страны, "name": название, "config": текст
+awg-quick}; его готовит от пользователя amn-country set (запрос к шлюзу
+Amnezia). Сценарий запускается от root по правилу sudoers.d/amn-switch
+без аргументов, поэтому всё, что приходит на вход, считается
+недоверенным:
+
+- код страны — строчные латинские буквы вида «de» или «us-east»,
+  название — до 64 знаков без управляющих;
+- текст awg-quick разбирается той же проверкой, что в amn-export-config:
+  только секции [Interface] и [Peer] и разрешённые ключи, без ловушек
+  PreUp/PostUp/PreDown/PostDown — ловушки и Table, MTU, FwMark подставляет
+  шаблон /etc/amnezia/amn0.conf.template.
+
+Порядок: копии нынешних amn0.conf и country.json (.prev), запись новых,
+systemctl restart awg-quick@amn0, затем проверка — служба активна и запрос
+к ipinfo.io через amn0 отвечает. При отказе прежние файлы возвращаются
+и служба перезапускается снова. Ключи на экран не выводятся.
+
+Код выхода: 0 — страна сменена, 1 — отказ (прежний конфиг возвращён).
+"""
+
+from __future__ import annotations
+
+import fcntl
+import importlib.util
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+from importlib.machinery import SourceFileLoader
+from pathlib import Path
+
+EXPORT = "/usr/local/sbin/amn-export-config"
+CONF = Path("/etc/amnezia/amneziawg/amn0.conf")
+STATE = Path("/etc/amnezia/country.json")
+TEMPLATE = Path("/etc/amnezia/amn0.conf.template")
+LOCK = Path("/run/amn-apply-config.lock")
+UNIT = "awg-quick@amn0.service"
+CODE_RE = re.compile(r"^[a-z]{2}(-[a-z]+)?$")
+MAX_INPUT = 64 * 1024
+# Предел ответа ipinfo.io через туннель — защита от зависания проверки,
+# а не ожидание по расписанию: запрос один.
+CHECK_TIMEOUT_S = 15
+
+
+def log(message: str) -> None:
+    print(f"amn-apply-config: {message}", flush=True)
+
+
+def exporter():
+    loader = SourceFileLoader("amn_export_config", EXPORT)
+    spec = importlib.util.spec_from_loader(loader.name, loader)
+    module = importlib.util.module_from_spec(spec)
+    loader.exec_module(module)
+    return module
+
+
+def read_input() -> tuple[str, str, str]:
+    raw = sys.stdin.buffer.read(MAX_INPUT + 1)
+    if len(raw) > MAX_INPUT:
+        raise SystemExit("amn-apply-config: вход длиннее 64 КиБ")
+    try:
+        data = json.loads(raw)
+        code, name, config = data["code"], data["name"], data["config"]
+    except (ValueError, KeyError, TypeError):
+        raise SystemExit("amn-apply-config: вход — не JSON с полями code, name, config")
+    if not (isinstance(code, str) and CODE_RE.match(code)):
+        raise SystemExit("amn-apply-config: неверный код страны")
+    if not (isinstance(name, str) and 0 < len(name) <= 64 and name.isprintable()):
+        raise SystemExit("amn-apply-config: неверное название страны")
+    if not isinstance(config, str):
+        raise SystemExit("amn-apply-config: config — не строка")
+    return code, name, config
+
+
+def write(path: Path, content: str, mode: int) -> None:
+    tmp = path.with_name(f".{path.name}.new")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, mode)
+    with os.fdopen(fd, "w") as f:
+        f.write(content)
+    os.chmod(tmp, mode)
+    os.replace(tmp, path)
+
+
+def tunnel_works() -> str | None:
+    """Страна выхода через amn0 или None, если туннель не работает."""
+    if subprocess.run(["systemctl", "is-active", "--quiet", UNIT], check=False).returncode != 0:
+        return None
+    done = subprocess.run(
+        ["curl", "-fsS", "--interface", "amn0", "--max-time", str(CHECK_TIMEOUT_S), "https://ipinfo.io/country"],
+        capture_output=True, check=False, text=True,
+    )
+    return done.stdout.strip() if done.returncode == 0 and done.stdout.strip() else None
+
+
+def main() -> int:
+    if os.geteuid() != 0:
+        raise SystemExit("amn-apply-config: нужны права root (sudo -n)")
+    code, name, config = read_input()
+    ex = exporter()
+    interface, peer = ex.split_sections(config)
+    content = ex.render(TEMPLATE.read_text(), interface, peer)
+
+    with open(LOCK, "w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        backups = []
+        for path in (CONF, STATE):
+            prev = path.with_name(path.name + ".prev")
+            if path.exists():
+                shutil.copy2(path, prev)
+                backups.append((path, prev))
+            else:
+                prev.unlink(missing_ok=True)
+                backups.append((path, None))
+        write(CONF, content, 0o600)
+        write(STATE, json.dumps({"code": code, "name": name}, ensure_ascii=False) + "\n", 0o644)
+        log(f"конфиг страны {code} ({name}) записан, перезапуск {UNIT}")
+        subprocess.run(["systemctl", "restart", UNIT], check=False)
+        exit_country = tunnel_works()
+        if exit_country is not None:
+            log(f"туннель поднят, страна выхода {exit_country}")
+            return 0
+        log("туннель с новым конфигом не заработал, возвращаю прежний")
+        for path, prev in backups:
+            if prev is not None:
+                os.replace(prev, path)
+            else:
+                path.unlink(missing_ok=True)
+        subprocess.run(["systemctl", "restart", UNIT], check=False)
+        log(f"прежний конфиг возвращён, {UNIT}: "
+            + subprocess.run(["systemctl", "is-active", UNIT], capture_output=True, check=False, text=True).stdout.strip())
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

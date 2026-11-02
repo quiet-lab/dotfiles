@@ -27,6 +27,8 @@ from pathlib import Path
 
 TEMPLATE = Path("/etc/amnezia/amn0.conf.template")
 OUTPUT = Path("/etc/amnezia/amneziawg/amn0.conf")
+# Страна, выбранная через amn-country (amn-apply-config).
+STATE = Path("/etc/amnezia/country.json")
 # Ключи [Interface], которые задаёт шаблон: значения приложения отбрасываются.
 OWN_INTERFACE_KEYS = {"dns", "table", "mtu", "fwmark", "saveconfig"}
 # Ключи, которые переносятся из приложения. Любой другой ключ (в том числе
@@ -52,6 +54,16 @@ INTERFACE_KEYS = {
     "i3",
     "i4",
     "i5",
+    # Параметры AmneziaWG 2.0 (amneziawg-tools 3.x), которые шлюз Amnezia
+    # отдаёт в конфигах стран: защита заголовков, сроки смены ключей,
+    # добавка к размеру содержимого.
+    "headerprotectionkey",
+    "rekeyaftertime",
+    "rekeytimeout",
+    "rejectaftertime",
+    "keepalivetimeout",
+    "maxhandshakeattempts",
+    "contentpaddingaddition",
 }
 PEER_KEYS = {
     "publickey",
@@ -265,6 +277,10 @@ def main() -> int:
     servers, default_id = read_servers_list(source)
     interface, peer = split_sections(awg_config_text(servers, default_id))
     content = render(args.template.read_text(), interface, peer)
+    if args.output == OUTPUT:
+        # Конфиг снова взят из приложения: страна, выбранная через
+        # amn-country, больше не действует.
+        STATE.unlink(missing_ok=True)
     if write_if_changed(args.output, content):
         print(
             f"{args.output} записан: строк [Interface] {len(interface)},"

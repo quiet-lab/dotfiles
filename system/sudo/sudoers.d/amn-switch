@@ -4,7 +4,9 @@
 # с перечисленными действиями для awg-quick@amn0. Значок amn0 в трее панели
 # (спецификация qs-tray-lang) читает endpoint и время handshake (awg show
 # только с этими полями — без ключей), число элементов набора zones
-# и обновляет списки стран; каждая команда — с точными аргументами.
+# и обновляет списки стран, а смена страны туннеля (amn-country) ставит
+# конфиг сценарием amn-apply-config без аргументов, вход — stdin с проверкой
+# содержимого; каждая команда — с точными аргументами.
 Cmnd_Alias AMN_SWITCH = /usr/local/sbin/amn-switch "", \
                         /usr/local/sbin/amn-switch --signal, \
                         /usr/bin/systemctl restart awg-quick@amn0, \
@@ -13,5 +15,6 @@ Cmnd_Alias AMN_SWITCH = /usr/local/sbin/amn-switch "", \
                         /usr/bin/awg show amn0 endpoints, \
                         /usr/bin/awg show amn0 latest-handshakes, \
                         /usr/local/sbin/amn-zones-update --count, \
-                        /usr/local/sbin/amn-zones-update --force
+                        /usr/local/sbin/amn-zones-update --force, \
+                        /usr/local/sbin/amn-apply-config ""
 mne ALL=(root) NOPASSWD: AMN_SWITCH
