@@ -64,7 +64,10 @@ enable --now avahi-daemon.socket`. Запуск по D-Bus (`org.freedesktop.Ava
   `balanced`, без него значение не проверено);
 - `sshd-unix-local.socket` оставлен по решению пользователя;
   `AmneziaVPN.service` выключен, туннель AmneziaWG поднимает
-  `awg-quick@amn0.service` ([`amnezia-split-tunnel.md`](amnezia-split-tunnel.md)).
+  `awg-quick@amn0.service` ([`amnezia-split-tunnel.md`](amnezia-split-tunnel.md));
+  VPN `axata` поднимает при загрузке `axata-vpn.service`, экран входа ждёт
+  туннелей по `tunnels-before-login.service` (копии и установка —
+  `system/tunnels/`).
 - пакет `lvm2` удалён вместе с `thin-provisioning-tools` и `libaio`
   (`pacman -Rns lvm2`): томов LVM нет ни на одном диске, хука `lvm2`
   в initramcpio не было; юниты `lvm2-monitor`, `lvm2-lvmpolld.socket`

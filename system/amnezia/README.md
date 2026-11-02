@@ -9,7 +9,7 @@
 | `amn-zones-update` | `/usr/local/sbin` | загрузка таблицы nftables `inet amn` с наборами |
 | `amn-route` | `/usr/local/sbin` | правило метки и таблица 100 (ловушки `awg-quick`) |
 | `amn-switch` | `/usr/local/sbin` | переход с приложения на `awg-quick@amn0` с проверкой и откатом |
-| `../sudo/sudoers.d/amn-switch` | `/etc/sudoers.d` (0440) | `amn-switch` и `systemctl start/stop/restart awg-quick@amn0` без пароля |
+| `../sudo/sudoers.d/amn-switch` | `/etc/sudoers.d` (0440) | без пароля: `amn-switch`, `systemctl start/stop/restart awg-quick@amn0`, `awg show amn0 endpoints`, `awg show amn0 latest-handshakes`, `amn-zones-update --count` и `--force` (значок `amn0` в трее панели) |
 | `install.sh` | не ставится | установка файлов, переход, возврат, состояние |
 | `amn0.conf.template` | `/etc/amnezia` | шаблон конфига без ключей |
 | `amn.nft` | `/etc/amnezia` | таблица `inet amn` без элементов наборов |
@@ -49,3 +49,6 @@ system/amnezia/install.sh status
 от пользователя, запустившего `sudo`.
 
 Возврат приложения — `system/amnezia/install.sh revert`.
+
+Автозапуск `axata` при загрузке и ожидание туннелей перед экраном входа —
+`../tunnels/` ([`README.md`](../tunnels/README.md)).

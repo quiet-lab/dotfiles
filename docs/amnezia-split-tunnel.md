@@ -68,6 +68,72 @@
   rootless Docker (его сетью управляет процесс пользователя). Пересылаемый
   трафик (цепочка `forward`) не помечается.
 
+## Автозапуск туннелей
+
+Оба туннеля поднимает система при загрузке, до экрана входа; сессия
+Hyprland VPN не поднимает (спецификация hyprland-autostart, требования
+«Туннели при загрузке системы» и «Вход после туннелей»; устройство
+и отвергнутые варианты — [`design.md`](../openspec/changes/archive/2026-11-02-tunnel-tray-autostart/design.md)
+изменения OpenSpec tunnel-tray-autostart).
+
+- `amn0` — служба `awg-quick@amn0.service` (`WantedBy=multi-user.target`,
+  `After=network-online.target`). Подъём занимает около 14 с, из них 12 с —
+  загрузка списков стран.
+- `axata` — юнит `axata-vpn.service` (`system/tunnels/`): после
+  `network-online.target` и сигнала NetworkManager о завершении запуска
+  (`nm-online -s`) выполняет `nmcli --wait 60 connection up id axata` от
+  root; пароль хранится в профиле, агент секретов не нужен. Уже активное
+  соединение не переподключается (`ExecCondition`), после перезапуска
+  NetworkManager юнит перезапускается вместе с ним (`PartOf`).
+  Автоподключение самого NetworkManager для VPN не реализовано,
+  а `connection.secondaries` при отказе VPN роняет проводное соединение,
+  поэтому `connection.autoconnect` у `axata` остаётся `no`, а
+  `connection.secondaries` пуст.
+- `tunnels-before-login.service` стоит после обоих туннелей и перед
+  `greetd.service`: экран входа и автовход ждут туннелей, поэтому herdr
+  и браузеры, которые открывает демон workspaced, стартуют уже с ними.
+  Предел ожидания — 45 с (`JobTimeoutSec`): по нему systemd снимает
+  только задание этого юнита, туннель продолжает подниматься, вход
+  не задерживается.
+
+Установка — `system/tunnels/install.sh files`, состояние —
+`system/tunnels/install.sh status`. Порядок при загрузке:
+
+```bash
+journalctl -b -o short-monotonic -u awg-quick@amn0 -u axata-vpn \
+    -u tunnels-before-login -u greetd | grep -E 'Starting|Finished|Started'
+```
+
+## Значки в трее
+
+Сверху трея панели стоят значки `amn0` (󰖟) и `axata` (󰦝), состояние —
+цветом: зелёный — поднят, жёлтый — поднимается, серый — не поднят,
+красный — ошибка службы или последнего действия (спецификация
+qs-tray-lang, требования «Значки туннелей» и следующие). Состояние
+обновляется по событиям: `ip monitor link address` и журнал
+`awg-quick@amn0` для `amn0`, общий поток `nmcli monitor` панели для
+`axata`.
+
+- Левый клик — окно сведений, прочитанных при открытии
+  (`scripts/tunnelinfo` панели): для `amn0` — служба, адрес, endpoint,
+  время последнего handshake, число элементов `zones`, возраст
+  `zones.nft`, журнал службы; для `axata` — состояние, адрес `tun0`,
+  маршрут 10.200.0.0/16, сервер, `axata-vpn.service`, журнал `nm-openvpn`.
+- Правый клик — меню: `amn0` — запустить, остановить, перезапустить,
+  обновить списки стран; `axata` — подключить, отключить, «Настройки»
+  (`nm-connection-editor`).
+- Пароль не спрашивается: команды root идут через `sudo -n` по правилу
+  `/etc/sudoers.d/amn-switch` (состав — `system/amnezia/README.md`).
+
+Проверка без мыши:
+
+```bash
+qs -c panel ipc call tunnels state        # состояние обоих туннелей, JSON
+qs -c panel ipc call tunnels info amn0    # окно сведений (без захвата ввода)
+qs -c panel ipc call tunnels shown        # содержимое открытого окна или меню
+qs -c panel ipc call tunnels close
+```
+
 ## Ограничения
 
 - DNS: имена разрешает systemd-resolved через 192.168.1.1, в том числе для

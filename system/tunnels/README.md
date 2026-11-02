@@ -1,8 +1,9 @@
 # Автозапуск туннелей (`/etc/systemd/system`)
 
 Устройство — [`docs/amnezia-split-tunnel.md`](../../docs/amnezia-split-tunnel.md),
-раздел «Автозапуск туннелей»; выбор способа — `design.md` изменения
-OpenSpec tunnel-tray-autostart.
+раздел «Автозапуск туннелей»; выбор способа —
+[`design.md`](../../openspec/changes/archive/2026-11-02-tunnel-tray-autostart/design.md)
+изменения OpenSpec tunnel-tray-autostart.
 
 | Файл | Куда ставится | Что это |
 |---|---|---|
