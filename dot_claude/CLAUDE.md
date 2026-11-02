@@ -298,8 +298,10 @@
   в dotfiles) разрешены сценарий `amn-switch` (без аргументов и
   с `--signal`), `systemctl start|stop|restart awg-quick@amn0`,
   чтение состояния `awg show amn0 endpoints`, `awg show amn0
-  latest-handshakes`, `amn-zones-update --count` и обновление списков
-  стран `amn-zones-update --force`; они запускаются `sudo -n <команда>`.
+  latest-handshakes`, `amn-zones-update --count`, обновление списков
+  стран `amn-zones-update --force` и установка конфига страны
+  `amn-apply-config` без аргументов (конфиг — на стандартном вводе, его
+  готовит `amn-country set <код>`); они запускаются `sudo -n <команда>`.
   Переключение туннеля делает сам пользователь, пока сеть за туннелем
   недоступна, а состояние и действия над туннелем показывает панель.
   Расширение перечня — только по решению пользователя, только командами
