@@ -1,8 +1,11 @@
-// Трей (спецификация qs-tray-lang): значки StatusNotifierItem столбиком, новые
+// Трей (спецификация qs-tray-lang): сверху значки туннелей amn0 и axata
+// (состояние — синглтон Tunnels; левый клик — окно состояния и настроек,
+// правый — меню действий), под ними значки StatusNotifierItem столбиком, новые
 // сверху; левый клик — основное действие, правый — меню DBusMenu, колесо —
 // прокрутка элемента. Внизу кнопка громкости устройства вывода PipeWire по
 // умолчанию с выдвижной панелью-ползунком (design D7).
 import Quickshell
+import Quickshell.Io
 import Quickshell.Services.SystemTray
 import Quickshell.Services.Pipewire
 import QtQuick
@@ -27,6 +30,9 @@ Tile {
     Column {
         x: -2; y: 0
         spacing: 6
+        // Значки туннелей стоят первыми и на постоянных местах: amn0, затем axata.
+        TunnelIcon { id: amnIcon; tunnel: "amn0" }
+        TunnelIcon { id: axataIcon; tunnel: "axata" }
         Repeater {
             model: tile.items
             Item {
@@ -63,6 +69,129 @@ Tile {
     }
 
     TrayMenuPopup { id: trayMenu }
+
+    // --- Значки туннелей ---
+    // Глиф по туннелю, цвет по состоянию: поднят — зелёный, поднимается —
+    // жёлтый, не поднят — серый, ошибка службы или действия — красный.
+    readonly property var tunnelNames: ({ amn0: "Amnezia amn0", axata: "OpenVPN axata" })
+    readonly property var stateNames: ({ up: "поднят", starting: "поднимается", down: "не поднят", failed: "ошибка" })
+    function tunnelState(name) { return name === "amn0" ? Tunnels.amn : Tunnels.axata; }
+    function tunnelColor(s) {
+        if (s.error !== "" || s.state === "failed") return Theme.red;
+        if (s.state === "up") return Theme.green;
+        if (s.state === "starting") return Theme.yellow;
+        return Theme.gray;
+    }
+    function tunnelTip(name) {
+        const s = tunnelState(name);
+        let t = tunnelNames[name] + ": " + stateNames[s.state];
+        if (s.ip !== "") t += ", " + s.ip;
+        if (s.error !== "") t += "\nошибка: " + s.error;
+        return t;
+    }
+    // Действия туннеля: одни и те же для меню правого клика и кнопок окна.
+    function tunnelActions(name) {
+        const s = tunnelState(name);
+        const up = s.state === "up" || s.state === "starting";
+        const items = [];
+        if (name === "amn0") {
+            const ctl = (verb) => ["sudo", "-n", "/usr/bin/systemctl", verb, "awg-quick@amn0"];
+            if (up) {
+                items.push({ label: "Перезапустить", action: () => Tunnels.act("amn0", ctl("restart")) });
+                items.push({ label: "Остановить", action: () => Tunnels.act("amn0", ctl("stop")) });
+            } else {
+                items.push({ label: "Запустить", action: () => Tunnels.act("amn0", ctl("start")) });
+            }
+            items.push({ label: "Обновить списки стран", action: () => Tunnels.act("amn0", ["sudo", "-n", "/usr/local/sbin/amn-zones-update", "--force"]) });
+        } else {
+            if (up) items.push({ label: "Отключить", action: () => Tunnels.act("axata", ["nmcli", "con", "down", "id", "axata"]) });
+            else items.push({ label: "Подключить", action: () => Tunnels.act("axata", ["nmcli", "--wait", "60", "con", "up", "id", "axata"]) });
+            items.push({ label: "Настройки", action: () => Run.detached(s.uuid ? ["nm-connection-editor", "--edit=" + s.uuid] : ["nm-connection-editor"]) });
+        }
+        return items;
+    }
+
+    // Проверка без мыши: `qs -c panel ipc call tunnels state` — состояние обоих
+    // туннелей; info, menu и close — то же, что левый и правый клик по значку
+    // и закрытие окна. Панель одна (только монитор DP-2), имя цели не повторяется.
+    IpcHandler {
+        target: "tunnels"
+        function state(): string { return JSON.stringify({ amn0: Tunnels.amn, axata: Tunnels.axata }); }
+        function info(name: string): void { tile.openInfo(name === "amn0" ? amnIcon : axataIcon, false); }
+        function menu(name: string): void {
+            const icon = name === "amn0" ? amnIcon : axataIcon;
+            Popups.menu.open(icon, tile.tunnelActions(icon.tunnel));
+        }
+        function close(): void { tunnelPopup.close(); Popups.menu.close(); }
+        // Выполнить действие туннеля по подписи пункта меню, как выбор пункта.
+        function run(name: string, label: string): string {
+            const a = tile.tunnelActions(name).find(x => x.label === label);
+            if (!a) return "нет действия " + label;
+            a.action();
+            return "ok";
+        }
+        // Текст окна или меню, открытого сейчас: заголовок и строки.
+        function shown(): string {
+            if (tunnelPopup.visible) return JSON.stringify({ title: tunnelPopup.title, rows: tunnelPopup.rows, log: tunnelPopup.log, actions: tunnelPopup.actions.map(a => a.label) });
+            if (Popups.menu.visible) return JSON.stringify({ menu: Popups.menu.items.map(a => a.label) });
+            return "";
+        }
+    }
+    function openInfo(icon, grab) {
+        // Сведения читаются один раз при открытии окна: клик — событие.
+        infoProc.target = icon;
+        infoProc.grab = grab !== false;
+        infoProc.command = [Quickshell.shellDir + "/scripts/tunnelinfo", icon.tunnel];
+        infoProc.running = true;
+    }
+
+    component TunnelIcon: Item {
+        id: icon
+        required property string tunnel
+        readonly property var st: tile.tunnelState(tunnel)
+        width: 20; height: 20
+        Text {
+            anchors.centerIn: parent
+            text: icon.tunnel === "amn0" ? "󰖟" : "󰦝"
+            color: tile.tunnelColor(icon.st)
+            font.family: Theme.fontFamily
+            font.pixelSize: 20
+        }
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            onEntered: Popups.tooltip.show(icon, tile.tunnelTip(icon.tunnel))
+            onExited: Popups.tooltip.hide(icon)
+            onClicked: (m) => {
+                Popups.tooltip.hide(icon);
+                if (m.button === Qt.RightButton) {
+                    Popups.menu.open(icon, tile.tunnelActions(icon.tunnel));
+                } else if (tunnelPopup.visible && tunnelPopup.target === icon) {
+                    tunnelPopup.close();
+                } else {
+                    tile.openInfo(icon);
+                }
+            }
+        }
+    }
+    Process {
+        id: infoProc
+        property Item target: null
+        property bool grab: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const t = infoProc.target;
+                if (!t) return;
+                try {
+                    tunnelPopup.open(t, tile.tunnelTip(t.tunnel), JSON.parse(text), tile.tunnelActions(t.tunnel), infoProc.grab);
+                } catch (e) {
+                    console.warn("tunnelinfo: не JSON:", text);
+                }
+            }
+        }
+    }
+    TunnelPopup { id: tunnelPopup }
 
     // --- Громкость ---
     PwObjectTracker { objects: [Pipewire.defaultAudioSink] }

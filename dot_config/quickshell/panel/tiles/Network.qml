@@ -1,7 +1,8 @@
 // Плитка сети (спецификация qs-network, design D8): строки ETH, WIFI, VPN из
-// scripts/netstate, перечитываемого только по событиям NetworkManager (поток
-// nmcli monitor); клик по телу — nm-connection-editor, кнопка «⋮» — меню
-// действий, содержимое которого строит scripts/netmenu при каждом открытии.
+// scripts/netstate, перечитываемого только по событиям NetworkManager (общий
+// поток nmcli monitor панели, синглтон NmMonitor); клик по телу —
+// nm-connection-editor, кнопка «⋮» — меню действий, содержимое которого
+// строит scripts/netmenu при каждом открытии.
 import Quickshell
 import Quickshell.Io
 import QtQuick
@@ -18,9 +19,6 @@ Tile {
     // Строка от nmcli monitor пришла во время чтения состояния: прочитать ещё раз,
     // когда текущее чтение закончится, иначе последнее изменение будет потеряно.
     property bool statePending: false
-    // Когда монитор запущен и сколько раз подряд он вышел сразу после запуска.
-    property double monitorStarted: 0
-    property int monitorFailures: 0
     function readState() {
         if (stateProc.running) { tile.statePending = true; return; }
         stateProc.running = true;
@@ -37,26 +35,11 @@ Tile {
         }
         onExited: if (tile.statePending) { tile.statePending = false; stateProc.running = true; }
     }
-    // Поток событий NetworkManager: каждая строка — изменение, по ней состояние
-    // и перечитывается.
-    Process {
-        id: monitor
-        command: ["nmcli", "monitor"]
-        running: true
-        stdout: SplitParser {
-            onRead: tile.readState()
-        }
-        onRunningChanged: if (running) tile.monitorStarted = Date.now()
-        onExited: {
-            // Монитор заканчивается, когда перезапускается NetworkManager: тем же
-            // событием он и поднимается заново. Счёт подряд идущих мгновенных
-            // выходов нужен на случай, когда nmcli не запускается вовсе (нет
-            // NetworkManager, нет прав): иначе выход и запуск пошли бы по кругу.
-            if (Date.now() - tile.monitorStarted >= 1000) tile.monitorFailures = 0;
-            else tile.monitorFailures++;
-            if (tile.monitorFailures < 5) monitor.running = true;
-            else console.warn("network: nmcli monitor не запускается, состояние сети больше не обновляется");
-        }
+    // Поток событий NetworkManager общий для панели (синглтон NmMonitor): каждая
+    // строка — изменение, по ней состояние и перечитывается.
+    Connections {
+        target: NmMonitor
+        function onEvent() { tile.readState(); }
     }
 
     // --- Кнопка меню в заголовке ---

@@ -1,0 +1,36 @@
+#!/bin/sh
+# Краткое состояние туннеля для значка трея (спецификация qs-tray-lang,
+# требование «Значки туннелей»): один объект JSON
+# {"state":"up|starting|down|failed","ip":…,"service":…,"uuid":…}
+# (uuid — только у axata, для редактора соединений).
+# Запускается панелью только в ответ на события: для amn0 — строки
+# ip monitor и журнала awg-quick@amn0, для axata — строки nmcli monitor.
+case "$1" in
+amn0)
+	service=$(systemctl is-active awg-quick@amn0.service 2>/dev/null)
+	ip=$(ip -4 -br addr show dev amn0 2>/dev/null | awk '{ print $3 }' | cut -d/ -f1)
+	case "$service" in
+	active) if [ -n "$ip" ]; then state=up; else state=failed; fi ;;
+	activating | deactivating | reloading) state=starting ;;
+	failed) state=failed ;;
+	*) state=down ;;
+	esac
+	;;
+axata)
+	service=$(systemctl is-active axata-vpn.service 2>/dev/null)
+	nm=$(nmcli -g GENERAL.STATE con show id axata 2>/dev/null)
+	uuid=$(nmcli -g connection.uuid con show id axata 2>/dev/null)
+	ip=$(nmcli -g IP4.ADDRESS con show id axata 2>/dev/null | head -n1 | cut -d/ -f1)
+	case "$nm" in
+	activated) state=up ;;
+	activating) state=starting ;;
+	*) if [ "$service" = failed ]; then state=failed; else state=down; fi ;;
+	esac
+	;;
+*)
+	echo "tunnelstate: неизвестный туннель '$1'" >&2
+	exit 2
+	;;
+esac
+jq -cn --arg state "$state" --arg ip "$ip" --arg service "$service" --arg uuid "${uuid:-}" \
+	'{state:$state,ip:$ip,service:$service,uuid:$uuid}'

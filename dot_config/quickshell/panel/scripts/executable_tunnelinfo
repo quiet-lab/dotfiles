@@ -1,0 +1,73 @@
+#!/bin/sh
+# Подробное состояние туннеля для окна, которое открывает клик по значку
+# трея (спецификация qs-tray-lang, требование «Значки туннелей»): объект JSON
+# {"rows":[[подпись,значение],…],"log":[строка,…]}. Запускается один раз
+# при открытии окна. Сведения, доступные только root (awg show, число
+# элементов набора zones), читаются через sudo -n по правилу
+# /etc/sudoers.d/amn-switch; без правила вместо значения — «нет прав».
+now=$(date +%s)
+
+# Сколько прошло с момента $1 (секунды Unix): «N с», «N мин», «N ч», «N сут».
+ago() {
+	d=$((now - $1))
+	if [ "$d" -lt 120 ]; then echo "$d с назад"
+	elif [ "$d" -lt 7200 ]; then echo "$((d / 60)) мин назад"
+	elif [ "$d" -lt 172800 ]; then echo "$((d / 3600)) ч назад"
+	else echo "$((d / 86400)) сут назад"
+	fi
+}
+# Строки журнала: короткое время и текст, не длиннее 90 знаков.
+log_lines() {
+	journalctl -q --no-pager -o short -n 6 "$@" 2>/dev/null |
+		sed -E 's/^[A-Za-zА-Яа-я]+ [0-9]+ ([0-9:]+) [^ ]+ [^:]+: /\1 /' | cut -c1-90
+}
+rows=""
+row() { rows="$rows$(jq -cn --arg k "$1" --arg v "$2" '[$k,$v]')
+"; }
+
+case "$1" in
+amn0)
+	unit=awg-quick@amn0.service
+	row "Служба" "$(systemctl show -P ActiveState "$unit") ($(systemctl show -P SubState "$unit"))"
+	since=$(systemctl show -P ActiveEnterTimestamp "$unit")
+	[ -n "$since" ] && row "Запущена" "$since"
+	row "Адрес" "$(ip -4 -br addr show dev amn0 2>/dev/null | awk '{ print $3 }' || true)"
+	if endpoints=$(sudo -n /usr/bin/awg show amn0 endpoints 2>/dev/null); then
+		row "Endpoint" "$(printf '%s\n' "$endpoints" | awk '{ print $2; exit }')"
+		hs=$(sudo -n /usr/bin/awg show amn0 latest-handshakes 2>/dev/null | awk '{ print $2; exit }')
+		if [ -n "$hs" ] && [ "$hs" -gt 0 ]; then
+			row "Handshake" "$(ago "$hs")"
+		else
+			row "Handshake" "не было"
+		fi
+	else
+		row "Endpoint" "нет прав или нет устройства"
+	fi
+	row "Элементов zones" "$(sudo -n /usr/local/sbin/amn-zones-update --count 2>/dev/null || echo 'нет прав или нет таблицы')"
+	if mtime=$(stat -c %Y /etc/amnezia/zones.nft 2>/dev/null); then
+		row "Списки стран" "обновлены $(ago "$mtime")"
+	else
+		row "Списки стран" "кэша нет"
+	fi
+	log=$(log_lines -u "$unit")
+	;;
+axata)
+	nm=$(nmcli -g GENERAL.STATE con show id axata 2>/dev/null)
+	row "Соединение" "${nm:-не активно}"
+	row "Адрес tun0" "$(ip -4 -br addr show dev tun0 2>/dev/null | awk '{ print $3 }' || true)"
+	route=$(ip -4 route show 10.200.0.0/16 2>/dev/null | head -n1 | sed -E 's/^[^ ]+ //; s/ proto .*//')
+	row "10.200.0.0/16" "${route:-маршрута нет}"
+	# remote из vpn.data: «remote = адрес\:порт»; секреты в vpn.data не входят.
+	server=$(nmcli -g vpn.data con show id axata 2>/dev/null | tr ',' '\n' |
+		sed -n 's/^ *remote = //p' | sed 's/\\//g')
+	row "Сервер" "${server:-не задан}"
+	enabled=$(systemctl is-enabled axata-vpn.service 2>/dev/null)
+	row "Автоподъём" "axata-vpn.service: ${enabled:-нет юнита}, $(systemctl is-active axata-vpn.service 2>/dev/null)"
+	log=$(log_lines -t nm-openvpn)
+	;;
+*)
+	echo "tunnelinfo: неизвестный туннель '$1'" >&2
+	exit 2
+	;;
+esac
+printf '%s' "$rows" | jq -cs --arg log "$log" '{rows: ., log: ($log | split("\n") | map(select(. != "")))}'

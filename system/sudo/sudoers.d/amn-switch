@@ -1,10 +1,17 @@
 # Переход на туннель awg-quick@amn0 и управление им без пароля
 # (system/amnezia, docs/amnezia-split-tunnel.md). Сценарий amn-switch
 # разрешён только без аргументов и с --signal, systemctl — только
-# с перечисленными действиями для awg-quick@amn0.
+# с перечисленными действиями для awg-quick@amn0. Значок amn0 в трее панели
+# (спецификация qs-tray-lang) читает endpoint и время handshake (awg show
+# только с этими полями — без ключей), число элементов набора zones
+# и обновляет списки стран; каждая команда — с точными аргументами.
 Cmnd_Alias AMN_SWITCH = /usr/local/sbin/amn-switch "", \
                         /usr/local/sbin/amn-switch --signal, \
                         /usr/bin/systemctl restart awg-quick@amn0, \
                         /usr/bin/systemctl stop awg-quick@amn0, \
-                        /usr/bin/systemctl start awg-quick@amn0
+                        /usr/bin/systemctl start awg-quick@amn0, \
+                        /usr/bin/awg show amn0 endpoints, \
+                        /usr/bin/awg show amn0 latest-handshakes, \
+                        /usr/local/sbin/amn-zones-update --count, \
+                        /usr/local/sbin/amn-zones-update --force
 mne ALL=(root) NOPASSWD: AMN_SWITCH
