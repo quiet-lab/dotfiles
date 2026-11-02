@@ -293,6 +293,17 @@
 - Команда с правами root запускается самим агентом и только так:
   `sudo -A -p '<зачем нужны права, по-русски>' команда`; пояснение
   обязательно, знаков процента в нём нет.
+- Исключение — управление туннелями станции: без пароля правилом
+  `/etc/sudoers.d/amn-switch` (источник `system/sudo/sudoers.d/amn-switch`
+  в dotfiles) разрешены сценарий `amn-switch` (без аргументов и
+  с `--signal`), `systemctl start|stop|restart awg-quick@amn0`,
+  чтение состояния `awg show amn0 endpoints`, `awg show amn0
+  latest-handshakes`, `amn-zones-update --count` и обновление списков
+  стран `amn-zones-update --force`; они запускаются `sudo -n <команда>`.
+  Переключение туннеля делает сам пользователь, пока сеть за туннелем
+  недоступна, а состояние и действия над туннелем показывает панель.
+  Расширение перечня — только по решению пользователя, только командами
+  с точными аргументами.
 - Пароль спрашивает окно Quickshell askpass
   (`~/.local/bin/handmade-scripts/sudo-askpass`, путь — в `/etc/sudo.conf`
   и `SUDO_ASKPASS`). `pkexec`, `su`, pinentry, zenity, rofi, отдельный
