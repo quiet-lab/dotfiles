@@ -9,6 +9,7 @@ import Quickshell.Io
 import Quickshell.Services.SystemTray
 import Quickshell.Services.Pipewire
 import QtQuick
+import QtQuick.Shapes
 import qs
 import qs.common
 
@@ -79,15 +80,18 @@ Tile {
     function tunnelState(name) { return name === "amn0" ? Tunnels.amn : Tunnels.axata; }
     function tunnelColor(s) {
         if (s.error !== "" || s.state === "failed") return Theme.red;
+        if (s.state === "up" && s.noLink) return Theme.orange;
         if (s.state === "up") return Theme.green;
         if (s.state === "starting") return Theme.yellow;
         return Theme.gray;
     }
     function tunnelTip(name) {
         const s = tunnelState(name);
-        let t = tunnelNames[name] + ": " + stateNames[s.state];
+        let t = tunnelNames[name] + ": " + (s.state === "up" && s.noLink ? "поднят, связи нет" : stateNames[s.state]);
+        if (s.countryName) t += ", " + s.countryName;
         if (s.ip !== "") t += ", " + s.ip;
         if (name === "amn0" ? Tunnels.amnBusy : Tunnels.axataBusy) t += "\nвыполняется действие";
+        if (s.state === "up" && s.noLink) t += "\nпричина: " + s.noLink;
         if (s.error !== "") t += "\nошибка: " + s.error;
         return t;
     }
@@ -107,6 +111,7 @@ Tile {
             } else {
                 items.push({ label: "Запустить", action: () => Tunnels.act("amn0", ctl("start")) });
             }
+            items.push({ label: "Страна туннеля…", action: () => tile.openCountries() });
             items.push({ label: "Обновить списки стран", action: () => Tunnels.act("amn0", ["sudo", "-n", "/usr/local/sbin/amn-zones-update", "--force"]) });
         } else {
             if (up) items.push({ label: "Отключить", action: () => Tunnels.act("axata", ["nmcli", "con", "down", "id", "axata"]) });
@@ -125,6 +130,18 @@ Tile {
         target: "tunnels"
         function state(): string { return JSON.stringify({ amn0: Tunnels.amn, axata: Tunnels.axata }); }
         function info(name: string): void { tile.openInfo(name === "amn0" ? amnIcon : axataIcon, false); }
+        // Проверка разбора журналов без разрыва туннеля: строка передаётся
+        // тому же обработчику, что строки journalctl -f.
+        function feed(name: string, text: string): void {
+            if (name === "amn0") Tunnels.amnJournal(text);
+            else Tunnels.axataJournal(text);
+        }
+        // Окно выбора страны amn0, как пункт меню «Страна туннеля…».
+        function countries(): void { tile.openCountries(false); }
+        // Сменить страну amn0, как выбор страны в этом окне.
+        function country(code: string): string {
+            return Tunnels.act("amn0", [tile.amnCountry, "set", code]) ? "ok" : "занято: предыдущее действие ещё выполняется";
+        }
         function close(): void { tunnelPopup.close(); Popups.menu.close(); }
         // Выполнить действие туннеля по подписи пункта меню, как выбор пункта.
         function run(name: string, label: string): string {
@@ -166,9 +183,42 @@ Tile {
         required property string tunnel
         readonly property var st: tile.tunnelState(tunnel)
         width: 20; height: 20
+        // amn0 — знак анархии из icons/anarchy.svg (Wikimedia Commons,
+        // общественное достояние). Круг и путь рисуются элементом Shape, а не
+        // Image: у Image нельзя перекрасить штрих, а Shape берёт цвет состояния
+        // из Theme напрямую. Геометрия задана в координатах файла 620×620 и
+        // масштабируется до размера значка; толщина штриха подобрана под глиф
+        // axata 20 px.
+        Item {
+            visible: icon.tunnel === "amn0"
+            width: 620; height: 620
+            scale: icon.width / 620
+            transformOrigin: Item.TopLeft
+            Shape {
+                anchors.fill: parent
+                preferredRendererType: Shape.CurveRenderer
+                ShapePath {
+                    strokeWidth: 62
+                    strokeColor: tile.tunnelColor(icon.st)
+                    fillColor: "transparent"
+                    joinStyle: ShapePath.MiterJoin
+                    capStyle: ShapePath.FlatCap
+                    PathAngleArc { centerX: 310; centerY: 310; radiusX: 269; radiusY: 269; startAngle: 0; sweepAngle: 360 }
+                }
+                ShapePath {
+                    strokeWidth: 62
+                    strokeColor: tile.tunnelColor(icon.st)
+                    fillColor: "transparent"
+                    joinStyle: ShapePath.MiterJoin
+                    capStyle: ShapePath.FlatCap
+                    PathSvg { path: "m113 493 198-412 125 256h-248 248l77 156" }
+                }
+            }
+        }
         Text {
+            visible: icon.tunnel !== "amn0"
             anchors.centerIn: parent
-            text: icon.tunnel === "amn0" ? "󰖟" : "󰦝"
+            text: "󰦝"
             color: tile.tunnelColor(icon.st)
             font.family: Theme.fontFamily
             font.pixelSize: 20
@@ -216,11 +266,41 @@ Tile {
                 let info = null;
                 try { info = JSON.parse(text); } catch (e) { console.warn("tunnelinfo: не JSON:", text); return; }
                 if (info.tunnel !== t.tunnel) return;
+                // Связь известна панели по журналам, а не сценарию: строка
+                // добавляется здесь.
+                const st = tile.tunnelState(t.tunnel);
+                if (st.state === "up") info.rows.unshift(["Связь", st.noLink ? "нет: " + st.noLink : "есть"]);
                 tunnelPopup.open(t, tile.tunnelTip(t.tunnel), info, tile.tunnelActions(t.tunnel), infoProc.grab);
             }
         }
     }
     TunnelPopup { id: tunnelPopup }
+
+    // --- Выбор страны amn0: список из хранилища приложения (amn-country list),
+    // читается при открытии; выбор — amn-country set (запрос конфига у шлюза
+    // Amnezia, установка и перезапуск awg-quick@amn0 сценарием root). ---
+    readonly property string amnCountry: Quickshell.env("HOME") + "/.local/bin/handmade-scripts/amn-country"
+    property bool countriesGrab: true
+    function openCountries(grab) {
+        tile.countriesGrab = grab !== false;
+        if (!countriesProc.running) countriesProc.running = true;
+    }
+    Process {
+        id: countriesProc
+        command: [tile.amnCountry, "list"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let list = null;
+                try { list = JSON.parse(text); } catch (e) { console.warn("amn-country list: не JSON:", text); return; }
+                list.sort((a, b) => a.name.localeCompare(b.name, "ru"));
+                const buttons = list.map(c => ({
+                    label: c.name, current: c.current,
+                    action: () => { if (!c.current) Tunnels.act("amn0", [tile.amnCountry, "set", c.code]); }
+                }));
+                tunnelPopup.open(amnIcon, "Страна туннеля amn0", { rows: [], log: [] }, buttons, tile.countriesGrab, 5);
+            }
+        }
+    }
 
     // --- Громкость ---
     PwObjectTracker { objects: [Pipewire.defaultAudioSink] }

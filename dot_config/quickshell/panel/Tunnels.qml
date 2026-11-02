@@ -3,8 +3,9 @@
 // awg-quick@amn0) и OpenVPN `axata` (соединение NetworkManager).
 // Состояние перечитывается только по событиям (запись docs/decisions/0007):
 // для amn0 — строки потоков `ip monitor link address` (устройство появилось,
-// исчезло, сменило состояние или адрес) и журнала службы `journalctl -f`
-// (служба запущена, готова, остановлена, упала); для axata — общий поток
+// исчезло, сменило состояние или адрес), журнала службы `journalctl -f`
+// (служба запущена, готова, остановлена, упала) и `inotifywait` (сменилась
+// страна туннеля); для axata — общий поток
 // `nmcli monitor` панели (синглтон NmMonitor) и журнал юнита axata-vpn
 // (NetworkManager сообщает об отказе VPN раньше, чем юнит становится failed).
 // Таймеров и опроса нет.
@@ -17,12 +18,14 @@ Singleton {
     id: root
 
     readonly property string scripts: Quickshell.shellDir + "/scripts/"
+    readonly property string home: Quickshell.env("HOME")
 
     // Состояние: state — "up", "down", "starting", "failed"; ip — адрес
     // устройства; service — состояние юнита systemd; error — текст последней
-    // неудачной команды значка (пусто, если ошибки нет).
-    property var amn: ({ state: "down", ip: "", service: "", error: "" })
-    property var axata: ({ state: "down", ip: "", service: "", error: "" })
+    // неудачной команды значка (пусто, если ошибки нет); noLink — причина
+    // состояния «поднят, но связи нет» (строка журнала), пусто — связь есть.
+    property var amn: ({ state: "down", ip: "", service: "", error: "", noLink: "" })
+    property var axata: ({ state: "down", ip: "", service: "", error: "", noLink: "" })
 
     // --- Чтение состояния: один процесс на туннель, событие во время чтения
     // откладывает следующее чтение до конца текущего (как у плитки сети). ---
@@ -43,6 +46,9 @@ Singleton {
             // Туннель поднялся (был не поднят): прежняя ошибка действия больше
             // не актуальна. Ошибка действия над уже поднятым туннелем остаётся.
             if (s.state === "up" && old.state !== "up") s.error = "";
+            // «Связи нет» имеет смысл только у поднятого туннеля и только до его
+            // перезапуска: признак держится, пока туннель остаётся поднятым.
+            s.noLink = s.state === "up" && old.state === "up" ? (old.noLink || "") : "";
             return s;
         } catch (e) {
             console.warn("tunnels: " + label + ": не JSON:", text);
@@ -113,13 +119,72 @@ Singleton {
         // -n 0: только новые строки; -u добавляет и сообщения systemd о юните
         // (запущен, готов, остановлен, упал).
         command: ["journalctl", "-f", "-n", "0", "-q", "-o", "cat", "-u", "awg-quick@amn0.service"]
-        onLine: (text) => root.readAmn()
+        onLine: (text) => root.amnJournal(text)
+    }
+    Stream {
+        label: "journalctl -f nm-openvpn"
+        tunnel: "axata"
+        // Строки OpenVPN соединения axata (идентификатор nm-openvpn): обрыв
+        // по ping-restart и восстановление.
+        command: ["journalctl", "-f", "-n", "0", "-q", "-o", "cat", "-t", "nm-openvpn"]
+        onLine: (text) => root.axataJournal(text)
+    }
+    Stream {
+        label: "inotifywait"
+        // Страна туннеля: хранилище приложения AmneziaVPN (страна из
+        // приложения) и /etc/amnezia (country.json — страна, выбранная через
+        // amn-country). Реагируют строки об этих двух файлах.
+        command: ["inotifywait", "-m", "-q", "-e", "close_write,moved_to,delete", "--format", "%w%f",
+            root.home + "/.config/AmneziaVPN.ORG/", "/etc/amnezia/"]
+        onLine: (text) => { if (text === "" || /AmneziaVPN\.conf$|country\.json$/.test(text)) root.readAmn(); }
     }
     Stream {
         label: "journalctl -f axata-vpn"
         tunnel: "axata"
         command: ["journalctl", "-f", "-n", "0", "-q", "-o", "cat", "-u", "axata-vpn.service"]
         onLine: (text) => root.readAxata()
+    }
+
+    // --- «Поднят, но связи нет» по строкам журналов (design изменения
+    // tunnel-country-link). amneziawg-go с LOG_LEVEL=verbose (drop-in юнита)
+    // пишет о рукопожатиях: повторная неудача — связи нет, ответ на
+    // рукопожатие или keepalive от сервера — связь есть. Строки о собственных
+    // отправках (keepalive каждые 25 с, initiation) состояние не перечитывают. ---
+    function setNoLink(tunnel, reason) {
+        const t = tunnel === "amn0" ? root.amn : root.axata;
+        if ((t.noLink || "") === reason) return;
+        if (reason !== "" && t.state !== "up") return;
+        const s = Object.assign({}, t);
+        s.noLink = reason;
+        if (tunnel === "amn0") root.amn = s;
+        else root.axata = s;
+    }
+    function amnJournal(text) {
+        const retry = /Handshake did not complete after \d+ seconds, retrying \(try (\d+)\)/.exec(text);
+        if (retry) {
+            // Первая неудача (try 2) бывает и при потере одного пакета;
+            // вторая подряд (try 3, около 10 с без ответа) — связи нет.
+            if (Number(retry[1]) >= 3) root.setNoLink("amn0", text.replace(/^.*? - /, ""));
+            return;
+        }
+        if (/Handshake did not complete after \d+ attempts, giving up/.test(text)) {
+            root.setNoLink("amn0", text.replace(/^.*? - /, ""));
+            return;
+        }
+        if (/Received handshake response|Receiving keepalive packet|Received handshake initiation/.test(text)) {
+            root.setNoLink("amn0", "");
+            return;
+        }
+        if (/Sending keepalive packet|Sending handshake initiation|Retrying handshake because|Routine: |UAPI: |DEBUG: /.test(text)) return;
+        // Остальное — сообщения systemd о юните и ловушек awg-quick.
+        root.readAmn();
+    }
+    function axataJournal(text) {
+        if (/Inactivity timeout|SIGUSR1\[soft|Connection reset|TLS Error|No route to host|Network is unreachable/.test(text)) {
+            root.setNoLink("axata", text);
+        } else if (/Initialization Sequence Completed/.test(text)) {
+            root.setNoLink("axata", "");
+        }
     }
 
     // --- Действия значков: команда выполняется процессом панели, свой процесс

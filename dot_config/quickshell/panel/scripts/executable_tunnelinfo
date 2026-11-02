@@ -30,6 +30,27 @@ row() { rows="$rows$(jq -cn --arg k "$1" --arg v "$2" '[$k,$v]')
 case "$1" in
 amn0)
 	unit=awg-quick@amn0.service
+	# Выбранная страна и фактическая страна выхода: один запрос к ipinfo.io
+	# через amn0 при открытии окна.
+	country=$("$HOME/.local/bin/handmade-scripts/amn-country" current 2>/dev/null)
+	code=$(printf '%s' "$country" | jq -r '.code // ""')
+	name=$(printf '%s' "$country" | jq -r '.name // ""')
+	source=$(printf '%s' "$country" | jq -r 'if .source == "state" then "выбрана в панели" else "из приложения" end')
+	row "Страна" "${name:-неизвестна} (${code:-?}, $source)"
+	exit_info=$(curl -fsS --interface amn0 --max-time 10 https://ipinfo.io/json 2>/dev/null)
+	if [ -n "$exit_info" ]; then
+		exit_cc=$(printf '%s' "$exit_info" | jq -r '.country // ""')
+		exit_city=$(printf '%s' "$exit_info" | jq -r '.city // ""')
+		mark=""
+		# Код выбранной страны может быть с уточнением (us-east): сравнивается
+		# первая часть.
+		if [ -n "$code" ] && [ "$(printf '%s' "${code%%-*}" | tr '[:lower:]' '[:upper:]')" != "$exit_cc" ]; then
+			mark=" — не совпадает с выбранной"
+		fi
+		row "Выход" "$exit_cc, $exit_city$mark"
+	else
+		row "Выход" "нет ответа через amn0"
+	fi
 	row "Служба" "$(systemctl show -P ActiveState "$unit") ($(systemctl show -P SubState "$unit"))"
 	since=$(systemctl show -P ActiveEnterTimestamp "$unit")
 	[ -n "$since" ] && row "Запущена" "$since"

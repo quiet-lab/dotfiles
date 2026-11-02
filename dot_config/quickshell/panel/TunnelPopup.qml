@@ -20,12 +20,15 @@ PanelPopup {
     property var rows: []
     property var log: []
     property var actions: []
+    // Число столбцов кнопок: одна строка по умолчанию, сетка для списка стран.
+    property int columns: 0
 
     // grab: false — окно без захвата ввода (открытие по IPC для проверки:
     // захват требует, чтобы панель только что получила клик, иначе Wayland
     // отказывает в окне).
-    function open(item, heading, info, buttons, grab) {
+    function open(item, heading, info, buttons, grab, cols) {
         popup.grabFocus = grab !== false;
+        popup.columns = cols || 0;
         popup.title = heading;
         popup.rows = info.rows || [];
         popup.log = info.log || [];
@@ -78,25 +81,30 @@ PanelPopup {
                 font.pixelSize: 13
             }
         }
-        // Кнопки действий в ряд: подпись жёлтая, при наведении — чёрная на жёлтом.
-        RowLayout {
-            spacing: 6
+        // Кнопки действий в ряд (или сеткой): подпись жёлтая, при наведении —
+        // чёрная на жёлтом; отмеченная кнопка (current) залита жёлтым.
+        GridLayout {
+            columns: popup.columns > 0 ? popup.columns : Math.max(1, popup.actions.length)
+            columnSpacing: 6
+            rowSpacing: 6
             Repeater {
                 model: popup.actions
                 Rectangle {
                     id: btn
                     required property var modelData
+                    readonly property bool marked: modelData.current === true
+                    Layout.fillWidth: popup.columns > 0
                     implicitWidth: label.implicitWidth + 20
                     implicitHeight: label.implicitHeight + 8
                     radius: 6
-                    color: mouse.containsMouse ? Theme.yellow : "transparent"
+                    color: mouse.containsMouse || marked ? Theme.yellow : "transparent"
                     border.color: Theme.yellow
                     border.width: 1
                     Text {
                         id: label
                         anchors.centerIn: parent
                         text: btn.modelData.label
-                        color: mouse.containsMouse ? "#000000" : Theme.yellow
+                        color: mouse.containsMouse || btn.marked ? "#000000" : Theme.yellow
                         font.family: Theme.fontFamily
                         font.pixelSize: 16
                         font.bold: true
