@@ -28,46 +28,43 @@ row() { rows="$rows$(jq -cn --arg k "$1" --arg v "$2" '[$k,$v]')
 "; }
 
 case "$1" in
+amn0-exit)
+	# Страна выхода: один запрос к ipinfo.io через amn0 (строка «Выход» окна
+	# сведений); пометка — если она не совпадает с выбранной страной. Код
+	# выбранной страны может быть с уточнением (us-east): сравнивается первая
+	# часть.
+	code=$("$HOME/.local/bin/handmade-scripts/amn-country" current 2>/dev/null | jq -r '.code // ""')
+	if exit_info=$(curl -fsS --interface amn0 --max-time 10 https://ipinfo.io/json 2>/dev/null) && [ -n "$exit_info" ]; then
+		exit_cc=$(printf '%s' "$exit_info" | jq -r '.country // ""')
+		exit_city=$(printf '%s' "$exit_info" | jq -r '.city // ""')
+		mark=""
+		if [ -n "$code" ] && [ "$(printf '%s' "${code%%-*}" | tr '[:lower:]' '[:upper:]')" != "$exit_cc" ]; then
+			mark=" — не совпадает с выбранной"
+		fi
+		jq -cn --arg v "$exit_cc, $exit_city$mark" '$v'
+	else
+		jq -cn '"нет ответа через amn0 за 10 с"'
+	fi
+	exit 0
+	;;
 amn0)
 	unit=awg-quick@amn0.service
-	# Сведения awg читаются до строк окна: время handshake решает, есть ли
-	# смысл спрашивать страну выхода.
-	endpoints=$(sudo -n /usr/bin/awg show amn0 endpoints 2>/dev/null) && awg_ok=1 || awg_ok=""
-	hs=""
-	[ -n "$awg_ok" ] && hs=$(sudo -n /usr/bin/awg show amn0 latest-handshakes 2>/dev/null | awk '{ print $2; exit }')
-	# Выбранная страна и фактическая страна выхода: один запрос к ipinfo.io
-	# через amn0 при открытии окна. Окно открывается после выхода сценария,
-	# а захват ввода окну даётся только вскоре после клика, поэтому запрос
-	# короткий и не делается, если рукопожатия не было дольше 3 мин (при
-	# живой связи WireGuard обновляет его каждые 2 мин).
+	# Выбранная страна. Страну выхода окно запрашивает отдельно
+	# (tunnelinfo amn0-exit) уже после открытия: запрос через туннель бывает
+	# долгим, а захват ввода окну даётся только вскоре после клика.
 	country=$("$HOME/.local/bin/handmade-scripts/amn-country" current 2>/dev/null)
 	code=$(printf '%s' "$country" | jq -r '.code // ""')
 	name=$(printf '%s' "$country" | jq -r '.name // ""')
 	source=$(printf '%s' "$country" | jq -r 'if .source == "state" then "выбрана в панели" else "из приложения" end')
 	row "Страна" "${name:-неизвестна} (${code:-?}, $source)"
-	exit_info=""
-	if [ -n "$hs" ] && [ "$hs" -gt 0 ] && [ $((now - hs)) -lt 180 ]; then
-		exit_info=$(curl -fsS --interface amn0 --max-time 3 https://ipinfo.io/json 2>/dev/null)
-	fi
-	if [ -n "$exit_info" ]; then
-		exit_cc=$(printf '%s' "$exit_info" | jq -r '.country // ""')
-		exit_city=$(printf '%s' "$exit_info" | jq -r '.city // ""')
-		mark=""
-		# Код выбранной страны может быть с уточнением (us-east): сравнивается
-		# первая часть.
-		if [ -n "$code" ] && [ "$(printf '%s' "${code%%-*}" | tr '[:lower:]' '[:upper:]')" != "$exit_cc" ]; then
-			mark=" — не совпадает с выбранной"
-		fi
-		row "Выход" "$exit_cc, $exit_city$mark"
-	else
-		row "Выход" "нет ответа через amn0"
-	fi
+	row "Выход" "проверяется…"
 	row "Служба" "$(systemctl show -P ActiveState "$unit") ($(systemctl show -P SubState "$unit"))"
 	since=$(systemctl show -P ActiveEnterTimestamp "$unit")
 	[ -n "$since" ] && row "Запущена" "$since"
 	row "Адрес" "$(ip -4 -br addr show dev amn0 2>/dev/null | awk '{ print $3 }' || true)"
-	if [ -n "$awg_ok" ]; then
+	if endpoints=$(sudo -n /usr/bin/awg show amn0 endpoints 2>/dev/null); then
 		row "Endpoint" "$(printf '%s\n' "$endpoints" | awk '{ print $2; exit }')"
+		hs=$(sudo -n /usr/bin/awg show amn0 latest-handshakes 2>/dev/null | awk '{ print $2; exit }')
 		if [ -n "$hs" ] && [ "$hs" -gt 0 ]; then
 			row "Handshake" "$(ago "$hs")"
 		else

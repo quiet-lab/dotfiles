@@ -77,7 +77,8 @@ direct_ok() {
     curl -fsS --max-time 15 -o /dev/null https://ya.ru
 }
 
-# 1. Конфиг туннеля из хранилища приложения.
+# 1. Конфиг туннеля: из хранилища приложения или, если страна выбрана через
+#    amn-country, из нынешнего конфига и шаблона.
 if [ ! -r /etc/amnezia/amn0.conf.template ]; then
     result "ОШИБКА: нет /etc/amnezia — сначала system/amnezia/install.sh files"
     print_summary

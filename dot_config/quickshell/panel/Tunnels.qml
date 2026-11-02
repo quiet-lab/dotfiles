@@ -39,10 +39,9 @@ Singleton {
         if (axataProc.running) { root.axataPending = true; return; }
         axataProc.running = true;
     }
-    // Страна amn0 ({code, name}): читается отдельно от состояния и только
-    // по событиям inotify — сценарий amn-country разбирает хранилище
+    // Страна amn0 (поля country, countryName): читается отдельно от состояния
+    // и только по событиям inotify — сценарий amn-country разбирает хранилище
     // приложения, на каждое событие ip monitor его запускать дорого.
-    property var amnCountry: ({ code: "", name: "" })
     property bool countryPending: false
     function readCountry() {
         if (countryProc.running) { root.countryPending = true; return; }
@@ -56,8 +55,7 @@ Singleton {
             onStreamFinished: {
                 let c = { code: "", name: "" };
                 try { c = JSON.parse(text); } catch (e) { console.warn("tunnels: amn-country current: не JSON:", text); }
-                root.amnCountry = { code: c.code || "", name: c.name || "" };
-                root.amn = Object.assign({}, root.amn, { country: root.amnCountry.code, countryName: root.amnCountry.name });
+                root.amn = Object.assign({}, root.amn, { country: c.code || "", countryName: c.name || "" });
             }
         }
         onExited: if (root.countryPending) { root.countryPending = false; countryProc.running = true; }
@@ -67,8 +65,8 @@ Singleton {
         try {
             const s = JSON.parse(text);
             if (label === "amn0") {
-                s.country = root.amnCountry.code;
-                s.countryName = root.amnCountry.name;
+                s.country = old.country;
+                s.countryName = old.countryName;
             }
             s.error = old.error;
             // Туннель поднялся (был не поднят): прежняя ошибка действия больше

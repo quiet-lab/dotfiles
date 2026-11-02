@@ -123,9 +123,13 @@ def main() -> int:
             log(f"конфиг страны {code} ({name}) записан, перезапуск {UNIT}")
             subprocess.run(["systemctl", "restart", UNIT], check=False)
             exit_country = tunnel_works()
-        except BaseException as e:
-            log(f"установка прервана: {e!r}")
+        # Любое прерывание (в том числе SystemExit, KeyboardInterrupt) после
+        # замены amn0.conf должно вернуть прежние файлы.
+        except BaseException as e:  # noqa: BLE001
+            reason = f"установка прервана: {e!r}"
             exit_country = None
+        else:
+            reason = "туннель с новым конфигом не заработал"
         if exit_country is not None:
             # Страна выхода по ipinfo.io может расходиться с кодом подписки
             # (базы геоадресов неточны), поэтому расхождение не повод для
@@ -135,16 +139,19 @@ def main() -> int:
                 log(f"внимание: страна выхода {exit_country}, а выбрана {expected}")
             log(f"туннель поднят, страна выхода {exit_country}")
             return 0
-        log("туннель с новым конфигом не заработал, возвращаю прежний")
+        log(f"{reason}, возвращаю прежний конфиг")
         for path, prev in backups:
             if prev is not None:
                 os.replace(prev, path)
             else:
                 path.unlink(missing_ok=True)
         subprocess.run(["systemctl", "restart", UNIT], check=False)
-        log(f"прежний конфиг возвращён, {UNIT}: "
-            + subprocess.run(["systemctl", "is-active", UNIT], capture_output=True, check=False, text=True).stdout.strip())
+        state = subprocess.run(["systemctl", "is-active", UNIT], capture_output=True, check=False, text=True).stdout.strip()
+        # Последняя строка вывода ошибок — текст ошибки значка в панели:
+        # в ней причина, а не только итог отката.
+        log(f"{reason}; прежний конфиг возвращён ({UNIT}: {state})")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

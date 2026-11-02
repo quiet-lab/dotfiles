@@ -8,8 +8,9 @@
 #           действует со следующего перезапуска службы), настройку
 #           NetworkManager в conf.d, правило
 #           /etc/sudoers.d/amn-switch и собрать
-#           /etc/amnezia/amneziawg/amn0.conf из хранилища AmneziaVPN
-#           (если страна не выбрана через amn-country)
+#           /etc/amnezia/amneziawg/amn0.conf из хранилища AmneziaVPN, а если
+#           страна выбрана через amn-country — заново из нынешнего конфига
+#           и шаблона
 #   switch  перейти с приложения AmneziaVPN на awg-quick@amn0 — то же, что
 #           sudo /usr/local/sbin/amn-switch (запускается пользователем
 #           из терминала, пароль не спрашивается)

@@ -271,6 +271,22 @@ Tile {
                 const st = tile.tunnelState(t.tunnel);
                 if (st.state === "up") info.rows.unshift(["Связь", st.noLink ? "нет: " + st.noLink : "есть"]);
                 tunnelPopup.open(t, tile.tunnelTip(t.tunnel), info, tile.tunnelActions(t.tunnel), infoProc.grab);
+                if (t.tunnel === "amn0" && !exitProc.running) exitProc.running = true;
+            }
+        }
+    }
+    // Страна выхода amn0 — после открытия окна: запрос через туннель бывает
+    // долгим, а окно с захватом ввода должно открыться сразу после клика.
+    // Ответ заменяет строку «Выход», если окно сведений amn0 ещё открыто.
+    Process {
+        id: exitProc
+        command: [Quickshell.shellDir + "/scripts/tunnelinfo", "amn0-exit"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let value = "";
+                try { value = JSON.parse(text); } catch (e) { console.warn("tunnelinfo amn0-exit: не JSON:", text); return; }
+                if (!tunnelPopup.visible || tunnelPopup.target !== amnIcon || tunnelPopup.columns !== 0) return;
+                tunnelPopup.rows = tunnelPopup.rows.map(r => r[0] === "Выход" ? ["Выход", value] : r);
             }
         }
     }

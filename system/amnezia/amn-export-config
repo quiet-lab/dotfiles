@@ -292,16 +292,19 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.rerender:
+        if args.source is not None:
+            parser.error("--rerender берёт строки из нынешнего конфига, --source с ним не задаётся")
+        if not OUTPUT.exists():
+            raise SystemExit(f"{OUTPUT} нет: собирать заново нечего, страну выбрать через amn-country")
         interface, peer = split_sections(OUTPUT.read_text(), own=True)
-        content = render(args.template.read_text(), interface, peer)
     else:
         servers, default_id = read_servers_list(args.source or default_source())
         interface, peer = split_sections(awg_config_text(servers, default_id))
-        content = render(args.template.read_text(), interface, peer)
-    if args.output == OUTPUT and not args.rerender:
-        # Конфиг снова взят из приложения: страна, выбранная через
-        # amn-country, больше не действует.
-        STATE.unlink(missing_ok=True)
+        if args.output == OUTPUT:
+            # Конфиг снова взят из приложения: страна, выбранная через
+            # amn-country, больше не действует.
+            STATE.unlink(missing_ok=True)
+    content = render(args.template.read_text(), interface, peer)
     if write_if_changed(args.output, content):
         print(
             f"{args.output} записан: строк [Interface] {len(interface)},"
