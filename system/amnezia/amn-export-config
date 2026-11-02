@@ -10,8 +10,13 @@ awg в поле last_config лежит ещё одна строка JSON, а е�
 в /etc/amnezia/amneziawg/amn0.conf (root, 0600), только если он отличается
 от нынешнего файла. Ключи и параметры обфускации на экран не выводятся.
 
+С ключом --rerender источник — нынешний /etc/amnezia/amneziawg/amn0.conf:
+его строки заново подставляются в шаблон (после правки шаблона, когда
+страна выбрана через amn-country и конфига этой страны в приложении нет).
+
 Запуск с правами root:
     sudo -A -p '...' /usr/local/sbin/amn-export-config [--source ФАЙЛ] [--output ФАЙЛ]
+    sudo -A -p '...' /usr/local/sbin/amn-export-config --rerender
 Код выхода: 0 — файл записан или не изменился, 1 — ошибка.
 """
 
@@ -172,8 +177,16 @@ def awg_config_text(servers: list, default_id: str | None) -> str:
     raise SystemExit(f"у сервера {index} нет контейнера awg с last_config.config")
 
 
-def split_sections(text: str) -> tuple[list[str], list[str]]:
+# Ловушки, которые задаёт шаблон: в собственном конфиге (--rerender) они
+# отбрасываются и берутся из шаблона заново, в тексте приложения запрещены.
+HOOK_KEYS = {"preup", "postup", "predown", "postdown"}
+
+
+def split_sections(text: str, own: bool = False) -> tuple[list[str], list[str]]:
     """Строки [Interface] без ключей шаблона и строки [Peer].
+
+    own — текст собран этим же сценарием из шаблона (файл root): ловушки
+    шаблона в нём пропускаются, а не останавливают разбор.
 
     Комментарии отрезаются так же, как их отрезает awg-quick (всё после #),
     чтобы заголовки и ключи здесь читались одинаково с ним.
@@ -202,7 +215,7 @@ def split_sections(text: str) -> tuple[list[str], list[str]]:
         key, value = (part.strip() for part in stripped.split("=", 1))
         lkey = key.lower()
         if current is interface:
-            if lkey in OWN_INTERFACE_KEYS:
+            if lkey in OWN_INTERFACE_KEYS or (own and lkey in HOOK_KEYS):
                 continue
             allowed = INTERFACE_KEYS
         else:
@@ -271,13 +284,21 @@ def main() -> int:
     )
     parser.add_argument("--template", type=Path, default=TEMPLATE)
     parser.add_argument("--output", type=Path, default=OUTPUT)
+    parser.add_argument(
+        "--rerender",
+        action="store_true",
+        help="подставить в шаблон строки нынешнего конфига, а не приложения",
+    )
     args = parser.parse_args()
-    source = args.source or default_source()
 
-    servers, default_id = read_servers_list(source)
-    interface, peer = split_sections(awg_config_text(servers, default_id))
-    content = render(args.template.read_text(), interface, peer)
-    if args.output == OUTPUT:
+    if args.rerender:
+        interface, peer = split_sections(OUTPUT.read_text(), own=True)
+        content = render(args.template.read_text(), interface, peer)
+    else:
+        servers, default_id = read_servers_list(args.source or default_source())
+        interface, peer = split_sections(awg_config_text(servers, default_id))
+        content = render(args.template.read_text(), interface, peer)
+    if args.output == OUTPUT and not args.rerender:
         # Конфиг снова взят из приложения: страна, выбранная через
         # amn-country, больше не действует.
         STATE.unlink(missing_ok=True)

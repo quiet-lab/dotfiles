@@ -61,8 +61,9 @@ files)
     install -m 0440 -o root -g root "$sudoers" /etc/sudoers.d/amn-switch
     # Страну, выбранную через amn-country (файл country.json), конфиг из
     # приложения не перезаписывает: в хранилище приложения остаётся прежняя.
+    # Нынешний конфиг тогда только заново подставляется в шаблон.
     if [ -e /etc/amnezia/country.json ]; then
-        echo "страна выбрана через amn-country, amn0.conf из приложения не переносится"
+        /usr/local/sbin/amn-export-config --rerender
     else
         /usr/local/sbin/amn-export-config
     fi

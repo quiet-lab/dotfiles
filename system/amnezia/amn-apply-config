@@ -49,7 +49,7 @@ CHECK_TIMEOUT_S = 15
 
 
 def log(message: str) -> None:
-    print(f"amn-apply-config: {message}", flush=True)
+    print(f"amn-apply-config: {message}", file=sys.stderr, flush=True)
 
 
 def exporter():
@@ -117,12 +117,22 @@ def main() -> int:
             else:
                 prev.unlink(missing_ok=True)
                 backups.append((path, None))
-        write(CONF, content, 0o600)
-        write(STATE, json.dumps({"code": code, "name": name}, ensure_ascii=False) + "\n", 0o644)
-        log(f"конфиг страны {code} ({name}) записан, перезапуск {UNIT}")
-        subprocess.run(["systemctl", "restart", UNIT], check=False)
-        exit_country = tunnel_works()
+        try:
+            write(CONF, content, 0o600)
+            write(STATE, json.dumps({"code": code, "name": name}, ensure_ascii=False) + "\n", 0o644)
+            log(f"конфиг страны {code} ({name}) записан, перезапуск {UNIT}")
+            subprocess.run(["systemctl", "restart", UNIT], check=False)
+            exit_country = tunnel_works()
+        except BaseException as e:
+            log(f"установка прервана: {e!r}")
+            exit_country = None
         if exit_country is not None:
+            # Страна выхода по ipinfo.io может расходиться с кодом подписки
+            # (базы геоадресов неточны), поэтому расхождение не повод для
+            # отката, а запись в журнал.
+            expected = code.split("-", 1)[0].upper()
+            if exit_country != expected:
+                log(f"внимание: страна выхода {exit_country}, а выбрана {expected}")
             log(f"туннель поднят, страна выхода {exit_country}")
             return 0
         log("туннель с новым конфигом не заработал, возвращаю прежний")
@@ -135,7 +145,6 @@ def main() -> int:
         log(f"прежний конфиг возвращён, {UNIT}: "
             + subprocess.run(["systemctl", "is-active", UNIT], capture_output=True, check=False, text=True).stdout.strip())
         return 1
-
 
 if __name__ == "__main__":
     sys.exit(main())

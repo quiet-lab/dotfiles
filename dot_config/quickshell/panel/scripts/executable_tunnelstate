@@ -1,14 +1,11 @@
 #!/bin/sh
 # Краткое состояние туннеля для значка трея (спецификация qs-tray-lang,
 # требование «Значки туннелей»): один объект JSON
-# {"state":"up|starting|down|failed","ip":…,"service":…,"uuid":…,
-# "country":…,"countryName":…} (uuid — только у axata, для редактора
-# соединений; страна — только у amn0, из amn-country current).
-# Запускается панелью только в ответ на события: для amn0 — строки
-# ip monitor, журнала awg-quick@amn0 и inotify (хранилище приложения
-# AmneziaVPN, /etc/amnezia/country.json), для axata — строки nmcli monitor
-# и журнала axata-vpn.
-country='{}'
+# {"state":"up|starting|down|failed","ip":…,"service":…,"uuid":…}
+# (uuid — только у axata, для редактора соединений; страну amn0 панель
+# читает отдельно, по inotify). Запускается панелью только в ответ
+# на события: для amn0 — строки ip monitor и журнала awg-quick@amn0,
+# для axata — строки nmcli monitor и журнала axata-vpn.
 case "$1" in
 amn0)
 	service=$(systemctl is-active awg-quick@amn0.service 2>/dev/null)
@@ -19,7 +16,6 @@ amn0)
 	failed) state=failed ;;
 	*) state=down ;;
 	esac
-	country=$("$HOME/.local/bin/handmade-scripts/amn-country" current 2>/dev/null) || country='{}'
 	;;
 axata)
 	service=$(systemctl is-active axata-vpn.service 2>/dev/null)
@@ -38,5 +34,4 @@ axata)
 	;;
 esac
 jq -cn --arg state "$state" --arg ip "$ip" --arg service "$service" --arg uuid "${uuid:-}" \
-	--argjson c "$country" \
-	'{state:$state,ip:$ip,service:$service,uuid:$uuid,country:($c.code // ""),countryName:($c.name // "")}'
+	'{state:$state,ip:$ip,service:$service,uuid:$uuid}'

@@ -4,8 +4,8 @@
 // Состояние перечитывается только по событиям (запись docs/decisions/0007):
 // для amn0 — строки потоков `ip monitor link address` (устройство появилось,
 // исчезло, сменило состояние или адрес), журнала службы `journalctl -f`
-// (служба запущена, готова, остановлена, упала) и `inotifywait` (сменилась
-// страна туннеля); для axata — общий поток
+// (служба запущена, готова, остановлена, упала), страна amn0 — по
+// `inotifywait` (хранилище приложения, country.json); для axata — общий поток
 // `nmcli monitor` панели (синглтон NmMonitor) и журнал юнита axata-vpn
 // (NetworkManager сообщает об отказе VPN раньше, чем юнит становится failed).
 // Таймеров и опроса нет.
@@ -24,7 +24,7 @@ Singleton {
     // устройства; service — состояние юнита systemd; error — текст последней
     // неудачной команды значка (пусто, если ошибки нет); noLink — причина
     // состояния «поднят, но связи нет» (строка журнала), пусто — связь есть.
-    property var amn: ({ state: "down", ip: "", service: "", error: "", noLink: "" })
+    property var amn: ({ state: "down", ip: "", service: "", error: "", noLink: "", country: "", countryName: "" })
     property var axata: ({ state: "down", ip: "", service: "", error: "", noLink: "" })
 
     // --- Чтение состояния: один процесс на туннель, событие во время чтения
@@ -39,9 +39,37 @@ Singleton {
         if (axataProc.running) { root.axataPending = true; return; }
         axataProc.running = true;
     }
+    // Страна amn0 ({code, name}): читается отдельно от состояния и только
+    // по событиям inotify — сценарий amn-country разбирает хранилище
+    // приложения, на каждое событие ip monitor его запускать дорого.
+    property var amnCountry: ({ code: "", name: "" })
+    property bool countryPending: false
+    function readCountry() {
+        if (countryProc.running) { root.countryPending = true; return; }
+        countryProc.running = true;
+    }
+    Process {
+        id: countryProc
+        command: [root.home + "/.local/bin/handmade-scripts/amn-country", "current"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let c = { code: "", name: "" };
+                try { c = JSON.parse(text); } catch (e) { console.warn("tunnels: amn-country current: не JSON:", text); }
+                root.amnCountry = { code: c.code || "", name: c.name || "" };
+                root.amn = Object.assign({}, root.amn, { country: root.amnCountry.code, countryName: root.amnCountry.name });
+            }
+        }
+        onExited: if (root.countryPending) { root.countryPending = false; countryProc.running = true; }
+    }
+
     function merge(old, text, label) {
         try {
             const s = JSON.parse(text);
+            if (label === "amn0") {
+                s.country = root.amnCountry.code;
+                s.countryName = root.amnCountry.name;
+            }
             s.error = old.error;
             // Туннель поднялся (был не поднят): прежняя ошибка действия больше
             // не актуальна. Ошибка действия над уже поднятым туннелем остаётся.
@@ -136,7 +164,7 @@ Singleton {
         // amn-country). Реагируют строки об этих двух файлах.
         command: ["inotifywait", "-m", "-q", "-e", "close_write,moved_to,delete", "--format", "%w%f",
             root.home + "/.config/AmneziaVPN.ORG/", "/etc/amnezia/"]
-        onLine: (text) => { if (text === "" || /AmneziaVPN\.conf$|country\.json$/.test(text)) root.readAmn(); }
+        onLine: (text) => { if (text === "" || /AmneziaVPN\.conf$|country\.json$/.test(text)) root.readCountry(); }
     }
     Stream {
         label: "journalctl -f axata-vpn"
@@ -179,8 +207,13 @@ Singleton {
         // Остальное — сообщения systemd о юните и ловушек awg-quick.
         root.readAmn();
     }
+    // Только строки, за которыми OpenVPN перезапускает соединение: разовые
+    // ошибки («TLS Error», «No route to host») без перезапуска связь не
+    // обрывают, а снять признак может только «Initialization Sequence
+    // Completed». Строки других профилей OpenVPN не различаются (идентификатор
+    // общий), поэтому признак ставится, только пока axata поднят.
     function axataJournal(text) {
-        if (/Inactivity timeout|SIGUSR1\[soft|Connection reset|TLS Error|No route to host|Network is unreachable/.test(text)) {
+        if (/Inactivity timeout|SIGUSR1\[soft/.test(text)) {
             root.setNoLink("axata", text);
         } else if (/Initialization Sequence Completed/.test(text)) {
             root.setNoLink("axata", "");

@@ -213,11 +213,17 @@ def post(pem: bytes, payload: dict) -> bytes | None:
             raw = reply.read()
     except urllib.error.HTTPError as e:
         raw = e.read()
+        # Ответ об ошибке расшифровывается только подходящим ключом и тогда
+        # это JSON; случайно верное дополнение PKCS#7 от чужого ключа даёт
+        # мусор, и тогда пробуется следующий ключ.
         try:
-            text = aes_cbc(raw, key, iv, False).decode(errors="replace")
+            text = aes_cbc(raw, key, iv, False).decode()
+            json.loads(text)
         except ValueError:
             return None
         die(f"шлюз ответил HTTP {e.code}: {text[:200]}")
+    except (urllib.error.URLError, OSError) as e:
+        die(f"шлюз {GATEWAY} недоступен: {getattr(e, 'reason', e)}")
     try:
         return aes_cbc(raw, key, iv, False)
     except ValueError:

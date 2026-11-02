@@ -83,7 +83,15 @@ if [ ! -r /etc/amnezia/amn0.conf.template ]; then
     print_summary
     exit 1
 fi
-if /usr/local/sbin/amn-export-config; then
+# Страна, выбранная через amn-country (country.json), сохраняется: конфиг
+# из приложения её бы отменил, а ключ прежней страны шлюз мог отозвать.
+if [ -e /etc/amnezia/country.json ]; then
+    export_args=--rerender
+else
+    export_args=
+fi
+# shellcheck disable=SC2086 # пустой список аргументов — без аргументов
+if /usr/local/sbin/amn-export-config $export_args; then
     result "конфиг amn0 собран"
 else
     result "ОШИБКА: amn-export-config"

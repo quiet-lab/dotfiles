@@ -5,7 +5,7 @@
 
 | Файл | Куда ставится | Что это |
 |---|---|---|
-| `amn-export-config` | `/usr/local/sbin` | сборка `amn0.conf` из хранилища AmneziaVPN и шаблона; при выгрузке удаляет `country.json`, `install.sh` её пропускает, если страна выбрана в панели |
+| `amn-export-config` | `/usr/local/sbin` | сборка `amn0.conf` из хранилища AmneziaVPN и шаблона; при выгрузке удаляет `country.json`; если страна выбрана в панели, `install.sh` и `amn-switch` вызывают его с `--rerender` — нынешний конфиг заново подставляется в шаблон |
 | `amn-apply-config` | `/usr/local/sbin` | установка конфига страны из стандартного ввода (JSON от `amn-country set`): проверка по шаблону, перезапуск, откат |
 | `awg-quick@amn0.service.d/50-log-verbose.conf` | `/etc/systemd/system/awg-quick@amn0.service.d` | подробный журнал amneziawg-go для состояния «связи нет» в трее |
 | `amn-zones-update` | `/usr/local/sbin` | загрузка таблицы nftables `inet amn` с наборами |

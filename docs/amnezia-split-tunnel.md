@@ -126,8 +126,8 @@ journalctl -b -o short-monotonic -u awg-quick@amn0 -u axata-vpn \
   без ответа («Handshake did not complete … (try 3)») или «giving up» —
   связи нет, ответ на рукопожатие или keepalive от сервера — есть.
   Keepalive раз в 25 с задаёт `PersistentKeepalive` конфига сервера.
-- `axata` — строки `nm-openvpn` «Inactivity timeout», «SIGUSR1[soft»,
-  «Connection reset», «TLS Error» — связи нет, «Initialization Sequence
+- `axata` — строки `nm-openvpn` «Inactivity timeout», «SIGUSR1[soft»
+  (OpenVPN перезапускает соединение) — связи нет, «Initialization Sequence
   Completed» — есть. В профиле `axata` нет `ping`/`ping-restart`:
   обрыв без них OpenVPN может не заметить.
 
@@ -176,9 +176,13 @@ amn-country set de      # получить конфиг страны и пост
 подписки из хранилища приложения и новой ключевой парой; открытый ключ
 шлюза берётся из исполняемого файла приложения. Полученный конфиг уходит
 на стандартный ввод `sudo -n amn-apply-config`: сценарий root проверяет
-его по шаблону, ставит `/etc/amnezia/amn0.conf` и `country.json`,
-перезапускает туннель и проверяет страну выхода; если туннель не
-заработал, возвращает прежние файлы. Хранилище приложения не меняется,
+его по шаблону, ставит `/etc/amnezia/amneziawg/amn0.conf` и
+`/etc/amnezia/country.json`, перезапускает туннель и спрашивает страну
+выхода через `amn0`; если ответа нет, возвращает прежние файлы
+(несовпадение страны выхода с выбранной только пишется в вывод).
+`install.sh files` и `amn-switch` выбранную страну сохраняют: конфиг
+заново подставляется в шаблон (`amn-export-config --rerender`), а не
+берётся из приложения. Хранилище приложения не меняется,
 поэтому подключаться к Amnezia в самом приложении нельзя: оно может
 перевыпустить ключ подписки, и конфиг панели перестанет работать —
 тогда страна выбирается в панели заново. Устройство и решения —
