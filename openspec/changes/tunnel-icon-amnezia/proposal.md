@@ -23,5 +23,6 @@ Amnezia, а «поднят» — ярко-зелёным, как молнии о
 ## Impact
 
 `dot_config/quickshell/panel/tiles/Tray.qml`, `panel/icons/`
-(`amnezia.js`, `amnezia-symbol.svg`, `README.md`; `anarchy.svg` удалён),
+(`amnezia.js`, `README.md`; `anarchy.svg` удалён из источника и
+из `$HOME`),
 `dot_config/quickshell/common/Theme.qml`.

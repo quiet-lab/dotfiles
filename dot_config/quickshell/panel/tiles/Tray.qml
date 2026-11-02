@@ -190,21 +190,24 @@ Tile {
         // пути — логотипа; квадрат символа масштабируется до размера значка.
         // Штрих цвета заливки (2 единицы логотипа, около 0,5 px) закрывает
         // стыки исходных путей и доводит вес до глифа axata (снимки 20 px).
-        Item {
-            visible: icon.tunnel === "amn0"
-            width: AmneziaIcon.VIEW.size; height: AmneziaIcon.VIEW.size
-            scale: icon.width / AmneziaIcon.VIEW.size
-            transformOrigin: Item.TopLeft
-            Shape {
-                x: -AmneziaIcon.VIEW.x; y: -AmneziaIcon.VIEW.y
-                preferredRendererType: Shape.CurveRenderer
-                ShapePath {
-                    fillColor: tile.tunnelColor(icon.st)
-                    strokeColor: tile.tunnelColor(icon.st)
-                    strokeWidth: 2
-                    joinStyle: ShapePath.RoundJoin
-                    fillRule: ShapePath.WindingFill
-                    PathSvg { path: AmneziaIcon.PATH }
+        // Loader: путь в 18 КБ разбирается только у значка amn0.
+        Loader {
+            active: icon.tunnel === "amn0"
+            sourceComponent: Item {
+                width: AmneziaIcon.VIEW.size; height: AmneziaIcon.VIEW.size
+                scale: icon.width / AmneziaIcon.VIEW.size
+                transformOrigin: Item.TopLeft
+                Shape {
+                    x: -AmneziaIcon.VIEW.x; y: -AmneziaIcon.VIEW.y
+                    preferredRendererType: Shape.CurveRenderer
+                    ShapePath {
+                        fillColor: tile.tunnelColor(icon.st)
+                        strokeColor: tile.tunnelColor(icon.st)
+                        strokeWidth: 2
+                        joinStyle: ShapePath.RoundJoin
+                        fillRule: ShapePath.WindingFill
+                        PathSvg { path: AmneziaIcon.PATH }
+                    }
                 }
             }
         }
