@@ -218,9 +218,12 @@ echo "=== ip -4 rule"; ip -4 rule
 echo "=== ip -4 route show table 100"; ip -4 route show table 100
 result "элементов в наборе zones: $(/usr/local/sbin/amn-zones-update --count)"
 result "маршрут 10.200.115.180: $(ip -4 route get 10.200.115.180 | head -1)"
-direct_ip=$(curl -fsS --max-time 15 -A curl https://2ip.ru 2>/dev/null || echo нет ответа)
+# ip.ru.net отвечает адресом простым текстом, и его адрес не входит в набор
+# zones: запрос идёт напрямую и возвращает адрес прямого выхода, а не
+# туннеля. 2ip.ru отвечает на curl страницей защиты от ботов с кодом 503.
+direct_ip=$(curl -fsS --max-time 15 https://ip.ru.net/ 2>/dev/null || echo нет ответа)
 tunnel_ip=$(curl -fsS --max-time 15 https://api.ipify.org 2>/dev/null || echo нет ответа)
-result "внешний адрес напрямую (2ip.ru): $direct_ip"
+result "внешний адрес напрямую (ip.ru.net): $direct_ip"
 result "внешний адрес через туннель (api.ipify.org): $tunnel_ip"
 if [ "$direct_ip" = "$tunnel_ip" ]; then
     result "ПРЕДУПРЕЖДЕНИЕ: адреса напрямую и через туннель совпадают"
