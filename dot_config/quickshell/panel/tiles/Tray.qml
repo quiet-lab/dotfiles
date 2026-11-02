@@ -18,7 +18,8 @@ Tile {
     // Высота полосы трея: блок столов (358 px) без плитки уведомлений сверху
     // и без переключателя раскладки снизу, с зазорами 10 px (спецификация
     // qs-tray-lang). Над кнопкой громкости помещается восемь значков
-    // (шаг 26 px от y = 8 px до кнопки на y = 232 px).
+    // (шаг 26 px от y = 8 px до кнопки на y = 232 px): два значка туннелей
+    // и шесть StatusNotifierItem.
     height: 266
 
     // --- Значки ---
@@ -93,10 +94,13 @@ Tile {
     function tunnelActions(name) {
         const s = tunnelState(name);
         const up = s.state === "up" || s.state === "starting";
+        // Служба amn0 активна, а устройства нет (ошибка): start ничего не сделает,
+        // поэтому меню предлагает перезапуск и остановку, как у поднятого.
+        const amnRunning = up || s.service === "active" || s.service === "activating";
         const items = [];
         if (name === "amn0") {
             const ctl = (verb) => ["sudo", "-n", "/usr/bin/systemctl", verb, "awg-quick@amn0"];
-            if (up) {
+            if (amnRunning) {
                 items.push({ label: "Перезапустить", action: () => Tunnels.act("amn0", ctl("restart")) });
                 items.push({ label: "Остановить", action: () => Tunnels.act("amn0", ctl("stop")) });
             } else {
@@ -112,16 +116,14 @@ Tile {
     }
 
     // Проверка без мыши: `qs -c panel ipc call tunnels state` — состояние обоих
-    // туннелей; info, menu и close — то же, что левый и правый клик по значку
-    // и закрытие окна. Панель одна (только монитор DP-2), имя цели не повторяется.
+    // туннелей; info — окно сведений, как левый клик (без захвата ввода), run —
+    // действие меню по подписи пункта, shown — содержимое открытого окна, close.
+    // Меню по IPC не открывается: оно захватывает ввод, а Wayland разрешает
+    // захват только сразу после клика по панели. Панель одна (только монитор DP-2), имя цели не повторяется.
     IpcHandler {
         target: "tunnels"
         function state(): string { return JSON.stringify({ amn0: Tunnels.amn, axata: Tunnels.axata }); }
         function info(name: string): void { tile.openInfo(name === "amn0" ? amnIcon : axataIcon, false); }
-        function menu(name: string): void {
-            const icon = name === "amn0" ? amnIcon : axataIcon;
-            Popups.menu.open(icon, tile.tunnelActions(icon.tunnel));
-        }
         function close(): void { tunnelPopup.close(); Popups.menu.close(); }
         // Выполнить действие туннеля по подписи пункта меню, как выбор пункта.
         function run(name: string, label: string): string {
@@ -138,11 +140,26 @@ Tile {
         }
     }
     function openInfo(icon, grab) {
-        // Сведения читаются один раз при открытии окна: клик — событие.
+        // Сведения читаются один раз при открытии окна: клик — событие. Клик
+        // по другому значку во время чтения запоминается, и по окончании
+        // чтения сведения читаются заново уже для него.
         infoProc.target = icon;
         infoProc.grab = grab !== false;
+        if (infoProc.running) return;
+        infoProc.runFor = icon.tunnel;
         infoProc.command = [Quickshell.shellDir + "/scripts/tunnelinfo", icon.tunnel];
         infoProc.running = true;
+    }
+    // Окно туннеля закрыто только что, нажатием, которое ещё обрабатывается:
+    // время закрытия сравнивается с текущим, таймера нет.
+    property Item closedTarget: null
+    property double closedAt: 0
+    function justClosed(icon) { return closedTarget === icon && Date.now() - closedAt < 300; }
+    Connections {
+        target: tunnelPopup
+        function onVisibleChanged() {
+            if (!tunnelPopup.visible) { tile.closedTarget = tunnelPopup.target; tile.closedAt = Date.now(); }
+        }
     }
 
     component TunnelIcon: Item {
@@ -167,7 +184,11 @@ Tile {
                 Popups.tooltip.hide(icon);
                 if (m.button === Qt.RightButton) {
                     Popups.menu.open(icon, tile.tunnelActions(icon.tunnel));
-                } else if (tunnelPopup.visible && tunnelPopup.target === icon) {
+                } else if ((tunnelPopup.visible && tunnelPopup.target === icon) || tile.justClosed(icon)) {
+                    // Повторный клик по значку открытого окна закрывает его. Окно
+                    // с захватом ввода закрывается само ещё до этого клика (клик
+                    // вне окна), поэтому учитывается и окно, закрытое этим же
+                    // нажатием.
                     tunnelPopup.close();
                 } else {
                     tile.openInfo(icon);
@@ -179,12 +200,21 @@ Tile {
         id: infoProc
         property Item target: null
         property bool grab: true
+        // Туннель, для которого запущено текущее чтение.
+        property string runFor: ""
+        onExited: {
+            const t = infoProc.target;
+            if (t && t.tunnel !== infoProc.runFor) tile.openInfo(t, infoProc.grab);
+        }
         stdout: StdioCollector {
             onStreamFinished: {
                 const t = infoProc.target;
-                if (!t) return;
                 try {
-                    tunnelPopup.open(t, tile.tunnelTip(t.tunnel), JSON.parse(text), tile.tunnelActions(t.tunnel), infoProc.grab);
+                    const info = JSON.parse(text);
+                    // Сведения другого туннеля (клик по соседнему значку во время
+                    // чтения) не показываются: их перечитают по выходу процесса.
+                    if (!t || info.tunnel !== t.tunnel) return;
+                    tunnelPopup.open(t, tile.tunnelTip(t.tunnel), info, tile.tunnelActions(t.tunnel), infoProc.grab);
                 } catch (e) {
                     console.warn("tunnelinfo: не JSON:", text);
                 }

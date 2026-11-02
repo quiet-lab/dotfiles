@@ -14,10 +14,12 @@ Description=Ожидание туннелей amn0 и axata перед вход�
 # install.sh revert для amn0), этим юнитом не поднимается.
 After=awg-quick@amn0.service axata-vpn.service
 Before=greetd.service
-# amn0 поднимается за 14 с (из них 12 с — загрузка списков стран),
-# axata — около 2 с после готовности сети; 45 с — втрое больше самого
-# долгого замера.
-JobTimeoutSec=45
+# Срок задания отсчитывается с начала загрузки, а не с момента подъёма
+# туннелей, поэтому в него входит и ожидание сети: до 60 с у
+# NetworkManager-wait-online (NM_ONLINE_TIMEOUT), затем 14 с у amn0 (из них
+# 12 с — загрузка списков стран) и около 2 с у axata — 76 с в худшем
+# случае ожидания сети; 90 с покрывают его с запасом.
+JobTimeoutSec=90
 JobTimeoutAction=none
 
 [Service]

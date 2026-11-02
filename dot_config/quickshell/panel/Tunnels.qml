@@ -5,7 +5,9 @@
 // для amn0 — строки потоков `ip monitor link address` (устройство появилось,
 // исчезло, сменило состояние или адрес) и журнала службы `journalctl -f`
 // (служба запущена, готова, остановлена, упала); для axata — общий поток
-// `nmcli monitor` панели (синглтон NmMonitor). Таймеров и опроса нет.
+// `nmcli monitor` панели (синглтон NmMonitor) и журнал юнита axata-vpn
+// (NetworkManager сообщает об отказе VPN раньше, чем юнит становится failed).
+// Таймеров и опроса нет.
 pragma Singleton
 import Quickshell
 import Quickshell.Io
@@ -38,8 +40,9 @@ Singleton {
         try {
             const s = JSON.parse(text);
             s.error = old.error;
-            // Туннель поднялся: прежняя ошибка действия больше не актуальна.
-            if (s.state === "up") s.error = "";
+            // Туннель поднялся (был не поднят): прежняя ошибка действия больше
+            // не актуальна. Ошибка действия над уже поднятым туннелем остаётся.
+            if (s.state === "up" && old.state !== "up") s.error = "";
             return s;
         } catch (e) {
             console.warn("tunnels: " + label + ": не JSON:", text);
@@ -110,25 +113,38 @@ Singleton {
         command: ["journalctl", "-f", "-n", "0", "-q", "-o", "cat", "-u", "awg-quick@amn0.service"]
         onLine: (text) => root.readAmn()
     }
-
-    // --- Действия значков: команда выполняется процессом панели, код выхода
-    // и вывод ошибок попадают в error туннеля и показываются в подсказке. ---
-    function act(tunnel, args) {
-        if (actionProc.running) { console.warn("tunnels: действие уже выполняется"); return; }
-        actionProc.tunnel = tunnel;
-        actionProc.command = args;
-        actionProc.running = true;
+    Stream {
+        label: "journalctl -f axata-vpn"
+        command: ["journalctl", "-f", "-n", "0", "-q", "-o", "cat", "-u", "axata-vpn.service"]
+        onLine: (text) => root.readAxata()
     }
-    Process {
-        id: actionProc
-        property string tunnel
-        stderr: StdioCollector { id: actionErr }
+
+    // --- Действия значков: команда выполняется процессом панели, свой процесс
+    // у каждого туннеля; код выхода и вывод ошибок попадают в error туннеля
+    // и показываются в подсказке. Действие над туннелем, у которого предыдущее
+    // ещё выполняется, не запускается, и об этом говорит подсказка. ---
+    function act(tunnel, args) {
+        const proc = tunnel === "amn0" ? amnAction : axataAction;
+        if (proc.running) { root.setError(tunnel, "предыдущее действие ещё выполняется"); return; }
+        proc.command = args;
+        proc.running = true;
+    }
+    function setError(tunnel, text) {
+        const s = Object.assign({}, tunnel === "amn0" ? root.amn : root.axata);
+        s.error = text;
+        if (tunnel === "amn0") root.amn = s;
+        else root.axata = s;
+    }
+    component ActionProc: Process {
+        id: action
+        required property string tunnel
+        stderr: StdioCollector { id: err }
         onExited: (code) => {
-            const t = actionProc.tunnel === "amn0" ? root.amn : root.axata;
-            const s = Object.assign({}, t);
-            s.error = code === 0 ? "" : (actionErr.text.trim().split("\n").pop() || ("код выхода " + code));
-            if (actionProc.tunnel === "amn0") { root.amn = s; root.readAmn(); }
-            else { root.axata = s; root.readAxata(); }
+            root.setError(action.tunnel, code === 0 ? "" : (err.text.trim().split("\n").pop() || ("код выхода " + code)));
+            if (action.tunnel === "amn0") root.readAmn();
+            else root.readAxata();
         }
     }
+    ActionProc { id: amnAction; tunnel: "amn0" }
+    ActionProc { id: axataAction; tunnel: "axata" }
 }

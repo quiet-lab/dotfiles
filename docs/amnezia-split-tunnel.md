@@ -92,7 +92,7 @@ Hyprland VPN не поднимает (спецификация hyprland-autostar
 - `tunnels-before-login.service` стоит после обоих туннелей и перед
   `greetd.service`: экран входа и автовход ждут туннелей, поэтому herdr
   и браузеры, которые открывает демон workspaced, стартуют уже с ними.
-  Предел ожидания — 45 с (`JobTimeoutSec`): по нему systemd снимает
+  Предел ожидания — 90 с от начала загрузки (`JobTimeoutSec`, в него входит и ожидание сети): по нему systemd снимает
   только задание этого юнита, туннель продолжает подниматься, вход
   не задерживается.
 
@@ -130,7 +130,8 @@ qs-tray-lang, требования «Значки туннелей» и след
 ```bash
 qs -c panel ipc call tunnels state        # состояние обоих туннелей, JSON
 qs -c panel ipc call tunnels info amn0    # окно сведений (без захвата ввода)
-qs -c panel ipc call tunnels shown        # содержимое открытого окна или меню
+qs -c panel ipc call tunnels run amn0 'Обновить списки стран'  # действие меню
+qs -c panel ipc call tunnels shown        # содержимое открытого окна
 qs -c panel ipc call tunnels close
 ```
 
