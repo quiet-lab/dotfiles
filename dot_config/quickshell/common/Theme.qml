@@ -15,6 +15,9 @@ QtObject {
     readonly property color green:      "#73DACA"
     readonly property color yellow:     "#E0AF68"
     readonly property color orange:     "#FF9E64"
+    // Ярко-зелёный молний обоев mechanical/okita-souji: состояние «поднят»
+    // значков туннелей в трее.
+    readonly property color brightGreen: "#98D048"
     readonly property color wallGreen:  "#A8E040"
     readonly property color blue:       "#7AA2F7"
     readonly property color magenta:    "#BB9AF7"

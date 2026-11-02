@@ -12,6 +12,7 @@ import QtQuick
 import QtQuick.Shapes
 import qs
 import qs.common
+import "../icons/amnezia.js" as AmneziaIcon
 
 Tile {
     id: tile
@@ -81,7 +82,7 @@ Tile {
     function tunnelColor(s) {
         if (s.error !== "" || s.state === "failed") return Theme.red;
         if (s.state === "up" && s.noLink) return Theme.orange;
-        if (s.state === "up") return Theme.green;
+        if (s.state === "up") return Theme.brightGreen;
         if (s.state === "starting") return Theme.yellow;
         return Theme.gray;
     }
@@ -183,35 +184,27 @@ Tile {
         required property string tunnel
         readonly property var st: tile.tunnelState(tunnel)
         width: 20; height: 20
-        // amn0 — знак анархии из icons/anarchy.svg (Wikimedia Commons,
-        // общественное достояние). Круг и путь рисуются элементом Shape, а не
-        // Image: у Image нельзя перекрасить штрих, а Shape берёт цвет состояния
-        // из Theme напрямую. Геометрия задана в координатах файла 620×620 и
-        // масштабируется до размера значка; толщина штриха подобрана под глиф
-        // axata 20 px.
+        // amn0 — силуэт символа Amnezia (icons/amnezia.js, источник и
+        // лицензия — icons/README.md). Путь рисуется элементом Shape, а не
+        // Image: так цвет состояния берётся из Theme напрямую. Координаты
+        // пути — логотипа; квадрат символа масштабируется до размера значка.
+        // Штрих цвета заливки (2 единицы логотипа, около 0,5 px) закрывает
+        // стыки исходных путей и доводит вес до глифа axata (снимки 20 px).
         Item {
             visible: icon.tunnel === "amn0"
-            width: 620; height: 620
-            scale: icon.width / 620
+            width: AmneziaIcon.VIEW.size; height: AmneziaIcon.VIEW.size
+            scale: icon.width / AmneziaIcon.VIEW.size
             transformOrigin: Item.TopLeft
             Shape {
-                anchors.fill: parent
+                x: -AmneziaIcon.VIEW.x; y: -AmneziaIcon.VIEW.y
                 preferredRendererType: Shape.CurveRenderer
                 ShapePath {
-                    strokeWidth: 62
+                    fillColor: tile.tunnelColor(icon.st)
                     strokeColor: tile.tunnelColor(icon.st)
-                    fillColor: "transparent"
-                    joinStyle: ShapePath.MiterJoin
-                    capStyle: ShapePath.FlatCap
-                    PathAngleArc { centerX: 310; centerY: 310; radiusX: 269; radiusY: 269; startAngle: 0; sweepAngle: 360 }
-                }
-                ShapePath {
-                    strokeWidth: 62
-                    strokeColor: tile.tunnelColor(icon.st)
-                    fillColor: "transparent"
-                    joinStyle: ShapePath.MiterJoin
-                    capStyle: ShapePath.FlatCap
-                    PathSvg { path: "m113 493 198-412 125 256h-248 248l77 156" }
+                    strokeWidth: 2
+                    joinStyle: ShapePath.RoundJoin
+                    fillRule: ShapePath.WindingFill
+                    PathSvg { path: AmneziaIcon.PATH }
                 }
             }
         }
