@@ -1,0 +1,29 @@
+# Порядок «туннели до сессии» (изменение OpenSpec tunnel-tray-autostart,
+# design D6): экран входа greetd и автовход ждут, пока поднимутся
+# awg-quick@amn0 и axata-vpn, — значит, herdr и браузеры, которые открывает
+# демон workspaced в сессии, стартуют уже с туннелями.
+#
+# Ожидание идёт порядком systemd (After=), без опроса. Чтобы зависший
+# туннель не держал вход бесконечно, у задания этого юнита есть предел
+# JobTimeoutSec: по нему systemd снимает только это задание, туннели
+# продолжают подниматься, greetd стартует (зависимость Wants, не Requires),
+# а значок туннеля в трее показывает его состояние.
+[Unit]
+Description=Ожидание туннелей amn0 и axata перед входом в сессию
+# Только порядок, без Wants: туннель, выключенный из автозапуска (например,
+# install.sh revert для amn0), этим юнитом не поднимается.
+After=awg-quick@amn0.service axata-vpn.service
+Before=greetd.service
+# amn0 поднимается за 14 с (из них 12 с — загрузка списков стран),
+# axata — около 2 с после готовности сети; 45 с — втрое больше самого
+# долгого замера.
+JobTimeoutSec=45
+JobTimeoutAction=none
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/true
+
+[Install]
+WantedBy=greetd.service

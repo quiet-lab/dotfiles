@@ -462,7 +462,6 @@ end
 -- «Systemd startup»), цель удаляется командой
 -- `systemctl --user revert hyprland-session.target`, а два обработчика ниже
 -- (start и stop) убираются.
-local scripts = HOME .. "/.local/bin/handmade-scripts/"
 
 hl.on("hyprland.start", function()
     -- Переменные, заданные выше через hl.env, Hyprland в окружение пользовательского
@@ -478,8 +477,6 @@ hl.on("hyprland.start", function()
     -- История буфера обмена: текст и изображения.
     hl.exec_cmd("wl-paste --type text --watch cliphist store")
     hl.exec_cmd("wl-paste --type image --watch cliphist store")
-    -- VPN axata; kozloff-de только вручную.
-    hl.exec_cmd(scripts .. "vpn-up")
     -- Окна для работы открывает демон workspaced, поднимая стартовый
     -- workspace из своего конфига ([startup]); терминал и браузер здесь не нужны.
 end)

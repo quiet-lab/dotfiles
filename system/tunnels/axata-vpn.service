@@ -1,0 +1,32 @@
+# Подъём OpenVPN-соединения NetworkManager axata при загрузке системы,
+# до экрана входа (docs/amnezia-split-tunnel.md, раздел «Автозапуск
+# туннелей»; изменение OpenSpec tunnel-tray-autostart, design D5).
+# Автоподключение VPN в NetworkManager не реализовано (connection.autoconnect
+# для VPN не действует), а привязка через connection.secondaries роняет
+# проводное соединение, если VPN не поднялся, — поэтому соединение поднимает
+# этот юнит. Пароль хранится в NetworkManager (password-flags = 0), агент
+# секретов не нужен.
+[Unit]
+Description=VPN axata (NetworkManager)
+Wants=network-online.target
+After=network-online.target NetworkManager.service
+# Перезапуск NetworkManager разрывает VPN: юнит перезапускается вместе с ним
+# и поднимает соединение снова.
+PartOf=NetworkManager.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Уже активное соединение не переподключается: повторный nmcli con up
+# разорвал бы его.
+ExecCondition=/bin/sh -c '! nmcli -t -f NAME connection show --active | grep -qxF axata'
+# После перезапуска NetworkManager network-online.target уже достигнута,
+# поэтому готовность NetworkManager ожидается здесь, по его сигналу
+# StartupComplete на D-Bus; -t 30 — предел на случай, если сигнала нет.
+ExecStartPre=/usr/bin/nm-online -s -q -t 30
+# nmcli ждёт активации по событиям NetworkManager; --wait 60 — предел
+# на случай, если сервер не отвечает (OpenVPN по умолчанию ждёт до 60 с).
+ExecStart=/usr/bin/nmcli --wait 60 connection up id axata
+
+[Install]
+WantedBy=multi-user.target
