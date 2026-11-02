@@ -87,6 +87,7 @@ Tile {
         const s = tunnelState(name);
         let t = tunnelNames[name] + ": " + stateNames[s.state];
         if (s.ip !== "") t += ", " + s.ip;
+        if (name === "amn0" ? Tunnels.amnBusy : Tunnels.axataBusy) t += "\nвыполняется действие";
         if (s.error !== "") t += "\nошибка: " + s.error;
         return t;
     }
@@ -129,8 +130,7 @@ Tile {
         function run(name: string, label: string): string {
             const a = tile.tunnelActions(name).find(x => x.label === label);
             if (!a) return "нет действия " + label;
-            a.action();
-            return "ok";
+            return a.action() === false ? "занято: предыдущее действие ещё выполняется" : "ok";
         }
         // Текст окна или меню, открытого сейчас: заголовок и строки.
         function shown(): string {
@@ -146,19 +146,18 @@ Tile {
         infoProc.target = icon;
         infoProc.grab = grab !== false;
         if (infoProc.running) return;
-        infoProc.runFor = icon.tunnel;
         infoProc.command = [Quickshell.shellDir + "/scripts/tunnelinfo", icon.tunnel];
         infoProc.running = true;
     }
-    // Окно туннеля закрыто только что, нажатием, которое ещё обрабатывается:
-    // время закрытия сравнивается с текущим, таймера нет.
-    property Item closedTarget: null
-    property double closedAt: 0
-    function justClosed(icon) { return closedTarget === icon && Date.now() - closedAt < 300; }
+    // Значок, нажатие на который закрыло его же окно (окно с захватом ввода
+    // закрывается кликом вне себя ещё до onClicked значка). Отметка ставится
+    // по состоянию «кнопка мыши нажата на этом значке» и снимается в onClicked.
+    property Item closedByPress: null
     Connections {
         target: tunnelPopup
         function onVisibleChanged() {
-            if (!tunnelPopup.visible) { tile.closedTarget = tunnelPopup.target; tile.closedAt = Date.now(); }
+            const t = tunnelPopup.target;
+            if (!tunnelPopup.visible && t && t.pressed) tile.closedByPress = t;
         }
     }
 
@@ -174,21 +173,24 @@ Tile {
             font.family: Theme.fontFamily
             font.pixelSize: 20
         }
+        readonly property alias pressed: iconMouse.pressed
         MouseArea {
+            id: iconMouse
             anchors.fill: parent
             hoverEnabled: true
             acceptedButtons: Qt.LeftButton | Qt.RightButton
+            onPressed: tile.closedByPress = null
             onEntered: Popups.tooltip.show(icon, tile.tunnelTip(icon.tunnel))
             onExited: Popups.tooltip.hide(icon)
             onClicked: (m) => {
                 Popups.tooltip.hide(icon);
                 if (m.button === Qt.RightButton) {
                     Popups.menu.open(icon, tile.tunnelActions(icon.tunnel));
-                } else if ((tunnelPopup.visible && tunnelPopup.target === icon) || tile.justClosed(icon)) {
-                    // Повторный клик по значку открытого окна закрывает его. Окно
-                    // с захватом ввода закрывается само ещё до этого клика (клик
-                    // вне окна), поэтому учитывается и окно, закрытое этим же
-                    // нажатием.
+                } else if (tile.closedByPress === icon) {
+                    // Окно этого значка закрыто нажатием на сам значок (клик вне
+                    // окна с захватом ввода): повторный клик окно закрывает.
+                    tile.closedByPress = null;
+                } else if (tunnelPopup.visible && tunnelPopup.target === icon) {
                     tunnelPopup.close();
                 } else {
                     tile.openInfo(icon);
@@ -200,24 +202,21 @@ Tile {
         id: infoProc
         property Item target: null
         property bool grab: true
-        // Туннель, для которого запущено текущее чтение.
-        property string runFor: ""
-        onExited: {
+        // Клик по соседнему значку во время чтения: по завершении процесса
+        // сведения читаются заново уже для него.
+        onRunningChanged: {
             const t = infoProc.target;
-            if (t && t.tunnel !== infoProc.runFor) tile.openInfo(t, infoProc.grab);
+            if (!running && t && t.tunnel !== infoProc.command[1]) tile.openInfo(t, infoProc.grab);
         }
         stdout: StdioCollector {
             onStreamFinished: {
                 const t = infoProc.target;
-                try {
-                    const info = JSON.parse(text);
-                    // Сведения другого туннеля (клик по соседнему значку во время
-                    // чтения) не показываются: их перечитают по выходу процесса.
-                    if (!t || info.tunnel !== t.tunnel) return;
-                    tunnelPopup.open(t, tile.tunnelTip(t.tunnel), info, tile.tunnelActions(t.tunnel), infoProc.grab);
-                } catch (e) {
-                    console.warn("tunnelinfo: не JSON:", text);
-                }
+                // Сведения не того туннеля (ответ на прежний клик) не показываются.
+                if (!t || t.tunnel !== infoProc.command[1]) return;
+                let info = null;
+                try { info = JSON.parse(text); } catch (e) { console.warn("tunnelinfo: не JSON:", text); return; }
+                if (info.tunnel !== t.tunnel) return;
+                tunnelPopup.open(t, tile.tunnelTip(t.tunnel), info, tile.tunnelActions(t.tunnel), infoProc.grab);
             }
         }
     }

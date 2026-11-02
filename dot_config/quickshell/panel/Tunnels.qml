@@ -81,6 +81,8 @@ Singleton {
     component Stream: Process {
         id: stream
         property string label
+        // Туннель, состояние которого обновляет поток (для предупреждения).
+        property string tunnel: "amn0"
         property double started: 0
         property int failures: 0
         signal line(string text)
@@ -95,7 +97,7 @@ Singleton {
                 // Пока поток не работал, изменения могли пройти мимо.
                 stream.line("");
             } else {
-                console.warn("tunnels: " + stream.label + " не запускается, состояние amn0 больше не обновляется");
+                console.warn("tunnels: " + stream.label + " не запускается, состояние " + stream.tunnel + " больше не обновляется");
             }
         }
     }
@@ -115,19 +117,24 @@ Singleton {
     }
     Stream {
         label: "journalctl -f axata-vpn"
+        tunnel: "axata"
         command: ["journalctl", "-f", "-n", "0", "-q", "-o", "cat", "-u", "axata-vpn.service"]
         onLine: (text) => root.readAxata()
     }
 
     // --- Действия значков: команда выполняется процессом панели, свой процесс
-    // у каждого туннеля; код выхода и вывод ошибок попадают в error туннеля
-    // и показываются в подсказке. Действие над туннелем, у которого предыдущее
-    // ещё выполняется, не запускается, и об этом говорит подсказка. ---
+    // у каждого туннеля; код выхода и последняя строка вывода ошибок попадают
+    // в error туннеля и показываются в подсказке. Пока действие выполняется,
+    // второе над тем же туннелем не запускается: act возвращает false,
+    // подсказка показывает «выполняется действие» (свойства amnBusy, axataBusy). ---
+    readonly property bool amnBusy: amnAction.running
+    readonly property bool axataBusy: axataAction.running
     function act(tunnel, args) {
         const proc = tunnel === "amn0" ? amnAction : axataAction;
-        if (proc.running) { root.setError(tunnel, "предыдущее действие ещё выполняется"); return; }
+        if (proc.running) return false;
         proc.command = args;
         proc.running = true;
+        return true;
     }
     function setError(tunnel, text) {
         const s = Object.assign({}, tunnel === "amn0" ? root.amn : root.axata);
@@ -138,12 +145,19 @@ Singleton {
     component ActionProc: Process {
         id: action
         required property string tunnel
-        stderr: StdioCollector { id: err }
-        onExited: (code) => {
-            root.setError(action.tunnel, code === 0 ? "" : (err.text.trim().split("\n").pop() || ("код выхода " + code)));
+        // Итог подводится, когда пришли и код выхода, и весь вывод ошибок:
+        // порядок этих двух событий не гарантирован.
+        property int code: 0
+        property int pending: 0
+        onRunningChanged: if (running) action.pending = 2
+        function finish() {
+            if (--action.pending > 0) return;
+            root.setError(action.tunnel, action.code === 0 ? "" : (err.text.trim().split("\n").pop() || ("код выхода " + action.code)));
             if (action.tunnel === "amn0") root.readAmn();
             else root.readAxata();
         }
+        stderr: StdioCollector { id: err; onStreamFinished: action.finish() }
+        onExited: (exitCode) => { action.code = exitCode; action.finish(); }
     }
     ActionProc { id: amnAction; tunnel: "amn0" }
     ActionProc { id: axataAction; tunnel: "axata" }

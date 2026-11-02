@@ -74,7 +74,9 @@
 Hyprland VPN не поднимает (спецификация hyprland-autostart, требования
 «Туннели при загрузке системы» и «Вход после туннелей»; устройство
 и отвергнутые варианты — [`design.md`](../openspec/changes/archive/2026-11-02-tunnel-tray-autostart/design.md)
-изменения OpenSpec tunnel-tray-autostart).
+изменения OpenSpec tunnel-tray-autostart, уточнения —
+[`design.md`](../openspec/changes/archive/2026-11-02-tunnel-tray-fixes/design.md)
+изменения tunnel-tray-fixes).
 
 - `amn0` — служба `awg-quick@amn0.service` (`WantedBy=multi-user.target`,
   `After=network-online.target`). Подъём занимает около 14 с, из них 12 с —
@@ -92,7 +94,7 @@ Hyprland VPN не поднимает (спецификация hyprland-autostar
 - `tunnels-before-login.service` стоит после обоих туннелей и перед
   `greetd.service`: экран входа и автовход ждут туннелей, поэтому herdr
   и браузеры, которые открывает демон workspaced, стартуют уже с ними.
-  Предел ожидания — 90 с от начала загрузки (`JobTimeoutSec`, в него входит и ожидание сети): по нему systemd снимает
+  Предел ожидания — 105 с от начала загрузки (`JobTimeoutSec`, в него входит и ожидание сети): по нему systemd снимает
   только задание этого юнита, туннель продолжает подниматься, вход
   не задерживается.
 

@@ -16,10 +16,11 @@ After=awg-quick@amn0.service axata-vpn.service
 Before=greetd.service
 # Срок задания отсчитывается с начала загрузки, а не с момента подъёма
 # туннелей, поэтому в него входит и ожидание сети: до 60 с у
-# NetworkManager-wait-online (NM_ONLINE_TIMEOUT), затем 14 с у amn0 (из них
-# 12 с — загрузка списков стран) и около 2 с у axata — 76 с в худшем
-# случае ожидания сети; 90 с покрывают его с запасом.
-JobTimeoutSec=90
+# NetworkManager-wait-online (NM_ONLINE_TIMEOUT). Затем туннели поднимаются
+# одновременно, дольше — amn0: 14 с по замеру, из них 12 с — загрузка
+# списков стран, которая на медленной сети растёт; втрое — 42 с.
+# 60 + 42 = 102 с, округлено до 105 с (изменение OpenSpec tunnel-tray-fixes).
+JobTimeoutSec=105
 JobTimeoutAction=none
 
 [Service]

@@ -8,7 +8,7 @@
 | Файл | Куда ставится | Что это |
 |---|---|---|
 | `axata-vpn.service` | `/etc/systemd/system`, включается в `multi-user.target` | подъём VPN `axata` от root после готовности сети и после перезапуска NetworkManager |
-| `tunnels-before-login.service` | `/etc/systemd/system`, включается в `greetd.service.wants` | экран входа ждёт `awg-quick@amn0` и `axata-vpn` не дольше 90 с от начала загрузки |
+| `tunnels-before-login.service` | `/etc/systemd/system`, включается в `greetd.service.wants` | экран входа ждёт `awg-quick@amn0` и `axata-vpn` не дольше 105 с от начала загрузки |
 | `install.sh` | не ставится | установка и состояние |
 
 ```bash
