@@ -128,8 +128,9 @@ journalctl -b -o short-monotonic -u awg-quick@amn0 -u axata-vpn \
   Keepalive раз в 25 с задаёт `PersistentKeepalive` конфига сервера.
 - `axata` — строки `nm-openvpn` «Inactivity timeout», «SIGUSR1[soft»
   (OpenVPN перезапускает соединение) — связи нет, «Initialization Sequence
-  Completed» — есть. В профиле `axata` нет `ping`/`ping-restart`:
-  обрыв без них OpenVPN может не заметить.
+  Completed» — есть. Профиль `axata` по решению пользователя остаётся
+  без клиентских опций `ping`/`ping-restart`, поэтому оранжевое состояние
+  у `axata` появляется, только если сервер присылает keepalive.
 
 Причина — последняя строка журнала — видна в подсказке и в строке
 «Связь» окна сведений.
