@@ -1,0 +1,245 @@
+#!/usr/bin/env bash
+# Переход с приложения AmneziaVPN на туннель awg-quick@amn0 одной командой.
+#
+# Пользователь запускает сценарий сам в терминале: пока туннель приложения
+# снят, а свой ещё не поднят, станция не достаёт до сервисов, доступных
+# только через туннель (в том числе API Anthropic), и агент этот шаг
+# выполнить не может.
+#
+#   sudo /usr/local/sbin/amn-switch [--signal]
+#
+# Пароль не спрашивается: правило /etc/sudoers.d/amn-switch разрешает
+# пользователю mne этот сценарий без аргументов и с --signal. Поэтому
+# сценарий лежит в /usr/local/sbin (root, 0755), PATH задаёт сам и как код
+# исполняет только файлы root: хранилище AmneziaVPN в ~/.config читается
+# сценарием amn-export-config как данные. Сам сценарий и остальные файлы
+# ставит install.sh files из репозитория dotfiles.
+#
+# Шаги: сборка конфига amn0 (amn-export-config) →
+# остановка и выключение AmneziaVPN.service, удаление оставшегося amn0
+# приложения и его правил межсетевого экрана → проверка прямого выхода →
+# перезапуск awg-quick@amn0 (amn-route up обновляет списки, если кэш
+# старше 7 суток) и включение в автозапуск после проверки → проверка туннеля → never-default и подъём axata →
+# самопроверка с итогом построчно. --signal после удачного подъёма axata
+# даёт сигнал duty studio-tunnel-up от пользователя SUDO_USER.
+#
+# Повторный запуск безопасен: каждый шаг проверяет состояние или
+# выполняется заново без вреда. Если туннель не поднялся или не пропускает
+# трафик, сценарий останавливает awg-quick@amn0 и снимает правило метки:
+# станция остаётся с прямым выходом. Приложение обратно не включается
+# (его kill switch блокирует OpenVPN axata); возврат — install.sh revert.
+# Журнал — /var/log/amn-switch.log.
+set -uo pipefail
+
+PATH=/usr/local/sbin:/usr/local/bin:/usr/bin
+export PATH
+log=/var/log/amn-switch.log
+signal=0
+[ "${1:-}" = --signal ] && signal=1
+signals_py=/home/mne/work/telecom/axata/monorepo-ocp/claude-plugins/duty/scripts/signals.py
+
+if [ "$(id -u)" -ne 0 ]; then
+    echo "нужны права root: sudo $0 $*" >&2
+    exit 1
+fi
+
+exec > >(tee -a "$log") 2>&1
+echo "=== amn-switch $(date --iso-8601=seconds)"
+
+declare -a summary=()
+failed=0
+result() { summary+=("$1"); echo ">>> $1"; }
+
+print_summary() {
+    echo "=== итог"
+    printf '%s\n' "${summary[@]}"
+    echo "журнал: $log"
+}
+
+rollback() {
+    echo "=== откат к прямому выходу: $1"
+    # Служба выключается, а не только останавливается: иначе после
+    # перезагрузки неработающий туннель снова заберёт адреса набора zones.
+    systemctl disable --now awg-quick@amn0.service
+    /usr/local/sbin/amn-route down amn0
+    if ping -c 2 -W 2 192.168.1.1 >/dev/null; then
+        result "откат: прямой выход есть, awg-quick@amn0 остановлен и выключен"
+    else
+        result "откат: 192.168.1.1 НЕ отвечает — проверить enp43s0"
+    fi
+    result "ОШИБКА: $1"
+    print_summary
+    exit 1
+}
+
+direct_ok() {
+    ping -c 2 -W 2 192.168.1.1 >/dev/null || return 1
+    curl -fsS --max-time 15 -o /dev/null https://ya.ru
+}
+
+# 1. Конфиг туннеля из хранилища приложения.
+if [ ! -r /etc/amnezia/amn0.conf.template ]; then
+    result "ОШИБКА: нет /etc/amnezia — сначала system/amnezia/install.sh files"
+    print_summary
+    exit 1
+fi
+if /usr/local/sbin/amn-export-config; then
+    result "конфиг amn0 собран"
+else
+    result "ОШИБКА: amn-export-config"
+    print_summary
+    exit 1
+fi
+
+# 2. Приложение AmneziaVPN.
+if systemctl is-active --quiet AmneziaVPN.service ||
+    systemctl is-enabled --quiet AmneziaVPN.service 2>/dev/null; then
+    # Остановка службы завершает весь её cgroup, в том числе amneziawg-go
+    # приложения; PID проверяется по cgroup на случай, если процесс остался.
+    cg=$(systemctl show -P ControlGroup AmneziaVPN.service)
+    systemctl disable --now AmneziaVPN.service
+    if [ -n "$cg" ] && [ -r "/sys/fs/cgroup$cg/cgroup.procs" ]; then
+        while read -r pid; do
+            echo "процесс службы $pid остался после остановки, завершается"
+            kill "$pid" 2>/dev/null
+        done <"/sys/fs/cgroup$cg/cgroup.procs"
+    fi
+fi
+result "AmneziaVPN.service: $(systemctl is-enabled AmneziaVPN.service 2>/dev/null), $(systemctl is-active AmneziaVPN.service)"
+if pgrep -x AmneziaVPN >/dev/null; then
+    result "окно приложения AmneziaVPN ещё запущено — выйти из него через трей"
+fi
+if ip link show amn0 >/dev/null 2>&1 && ! systemctl is-active --quiet awg-quick@amn0.service; then
+    echo "интерфейс amn0 приложения остался, удаляется"
+    ip link del amn0
+fi
+
+# Правила межсетевого экрана приложения: таблицы nftables и цепочки
+# iptables с «amn» или «amnezia» в имени; своя таблица inet amn и цепочки
+# ufw не трогаются.
+nft -j list tables | jq -r '.nftables[] | select(.table) | .table | "\(.family) \(.name)"' |
+    while read -r family name; do
+        [ "$family $name" = "inet amn" ] && continue
+        if [[ ${name,,} =~ amn ]]; then
+            echo "удаляется таблица nftables $family $name"
+            nft delete table "$family" "$name"
+        fi
+    done
+# Переход на цепочку ищется точным сравнением поля после -j или -g; правило
+# удаляется по номеру, чтобы не разбирать кавычки в его тексте.
+for tool in iptables ip6tables; do
+    for tbl in filter nat mangle raw; do
+        chains=$("$tool" -t "$tbl" -S 2>/dev/null | awk '$1 == "-N" && tolower($2) ~ /amn/ && $2 !~ /^ufw/ { print $2 }')
+        for chain in $chains; do
+            echo "удаляется цепочка $tool -t $tbl $chain"
+            for parent in $("$tool" -t "$tbl" -S | awk '$1 == "-P" || $1 == "-N" { print $2 }'); do
+                "$tool" -t "$tbl" -S "$parent" |
+                    awk -v c="$chain" '$1 == "-A" { n++; for (i = 2; i < NF; i++) if (($i == "-j" || $i == "-g") && $(i + 1) == c) { print n; break } }' |
+                    sort -rn | while read -r num; do
+                        "$tool" -t "$tbl" -D "$parent" "$num"
+                    done
+            done
+            "$tool" -t "$tbl" -F "$chain"
+            if ! "$tool" -t "$tbl" -X "$chain"; then
+                result "ОШИБКА: цепочка $tool -t $tbl $chain не удалена"
+                failed=1
+            fi
+        done
+    done
+done
+
+# 3. Прямой выход без туннеля.
+if direct_ok; then
+    result "прямой выход есть (192.168.1.1, ya.ru)"
+else
+    result "ОШИБКА: прямого выхода нет ещё до подъёма туннеля, дальше не иду"
+    print_summary
+    exit 1
+fi
+
+# 4. Туннель. Служба включается в автозапуск только после проверки (шаг 5).
+if ! systemctl restart awg-quick@amn0.service; then
+    journalctl -u awg-quick@amn0.service -b --no-pager | tail -30
+    rollback "awg-quick@amn0 не поднялся"
+fi
+result "awg-quick@amn0: $(systemctl is-active awg-quick@amn0.service)"
+
+# 5. Проверка туннеля: адрес api.anthropic.com должен быть в наборе zones,
+# маршрут с меткой 0x1 — идти через amn0, запрос — пройти и увеличить
+# счётчик принятых байтов amn0.
+rx_before=$(cat /sys/class/net/amn0/statistics/rx_bytes)
+anthropic=$(curl -sS --max-time 20 -o /dev/null -w '%{remote_ip} %{http_code}' https://api.anthropic.com/ 2>&1)
+rx_after=$(cat /sys/class/net/amn0/statistics/rx_bytes)
+remote_ip=${anthropic%% *}
+if ! [[ $anthropic =~ ^[0-9.]+\ [1-5][0-9][0-9]$ ]]; then
+    rollback "запрос к api.anthropic.com не прошёл: '$anthropic'"
+fi
+if ! nft get element inet amn zones "{ $remote_ip }" >/dev/null 2>&1; then
+    rollback "адреса $remote_ip (api.anthropic.com) нет в наборе zones"
+fi
+route_dev=$(ip -4 route get "$remote_ip" mark 0x1 | awk '{ for (i = 1; i < NF; i++) if ($i == "dev") { print $(i + 1); exit } }')
+if [ "$route_dev" != amn0 ]; then
+    rollback "маршрут к $remote_ip с меткой 0x1 идёт через '${route_dev}', а не через amn0"
+fi
+if [ "$rx_after" -le "$rx_before" ]; then
+    rollback "запрос к api.anthropic.com не увеличил счётчик amn0"
+fi
+result "api.anthropic.com через amn0: $anthropic, принято $((rx_after - rx_before)) байт"
+if direct_ok; then
+    result "прямой выход при поднятом туннеле есть"
+else
+    rollback "прямой выход пропал после подъёма туннеля"
+fi
+systemctl enable awg-quick@amn0.service
+result "awg-quick@amn0 включён в автозапуск"
+
+# 6. OpenVPN axata без маршрута по умолчанию.
+nmcli connection modify axata ipv4.never-default yes
+if nmcli connection up axata; then
+    tun0=$(ip -4 -o addr show dev tun0 2>/dev/null | awk '{ print $4 }')
+    result "axata поднят, адрес tun0 ${tun0:-нет}"
+else
+    tun0=""
+    result "ОШИБКА: nmcli connection up axata (туннель amn0 оставлен)"
+    failed=1
+fi
+for host in 10.200.115.180 10.200.115.164; do
+    if ping -c 2 -W 3 "$host" >/dev/null; then
+        result "ping $host: есть"
+    else
+        result "ping $host: НЕТ"
+        failed=1
+    fi
+done
+
+# 7. Самопроверка.
+echo "=== ip -4 route"; ip -4 route
+echo "=== ip -4 rule"; ip -4 rule
+echo "=== ip -4 route show table 100"; ip -4 route show table 100
+result "элементов в наборе zones: $(/usr/local/sbin/amn-zones-update --count)"
+result "маршрут 10.200.115.180: $(ip -4 route get 10.200.115.180 | head -1)"
+direct_ip=$(curl -fsS --max-time 15 -A curl https://2ip.ru 2>/dev/null || echo нет ответа)
+tunnel_ip=$(curl -fsS --max-time 15 https://api.ipify.org 2>/dev/null || echo нет ответа)
+result "внешний адрес напрямую (2ip.ru): $direct_ip"
+result "внешний адрес через туннель (api.ipify.org): $tunnel_ip"
+if [ "$direct_ip" = "$tunnel_ip" ]; then
+    result "ПРЕДУПРЕЖДЕНИЕ: адреса напрямую и через туннель совпадают"
+fi
+result "DNS: $(resolvectl dns 2>/dev/null | tr '\n' ';')"
+result "ufw: $(ufw status | head -1)"
+
+# 8. Сигнал для задач duty.
+if [ "$signal" -eq 1 ] && [ -n "$tun0" ] && [ -n "${SUDO_USER:-}" ] && [ -r "$signals_py" ]; then
+    # Сигнал даётся от пользователя: файл сигнала должен принадлежать ему.
+    # Без --keep: при повторном запуске сигнал получает новый адрес tun0.
+    if runuser -u "$SUDO_USER" -- env HOME="$(getent passwd "$SUDO_USER" | cut -d: -f6)" \
+        python3 -I "$signals_py" signal studio-tunnel-up \
+        "туннель axata поднят, адрес tun0 $tun0"; then
+        result "сигнал studio-tunnel-up дан"
+    else
+        result "ОШИБКА: сигнал studio-tunnel-up не дан"
+        failed=1
+    fi
+fi
+print_summary
+exit "$failed"

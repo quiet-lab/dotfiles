@@ -1,0 +1,44 @@
+# Таблица nftables маршрутизации по адресу назначения для туннеля amn0.
+# Отдельная таблица семейства inet: правила ufw (iptables-nft) она не трогает.
+# Файл подключает amn-zones-update, он же в той же транзакции заполняет наборы;
+# отдельно файл не загружается. Загрузку вызывает amn-route up после того,
+# как правило метки и таблица 100 уже на месте.
+table inet amn {
+	# Страны и адреса доменов, трафик к которым идёт через amn0.
+	set zones {
+		type ipv4_addr
+		flags interval
+		auto-merge
+	}
+
+	# Адреса, которые всегда идут напрямую: сервер туннеля (Endpoint из
+	# amn0.conf), сервер OpenVPN axata и записи bypass.txt.
+	set bypass {
+		type ipv4_addr
+		flags interval
+		auto-merge
+	}
+
+	# Тип route: после смены метки ядро заново выбирает маршрут пакета.
+	chain output {
+		type route hook output priority mangle; policy accept;
+		# Пакет с чужой меткой (в том числе FwMark самого туннеля) не трогается.
+		meta mark != 0x0 return
+		# Соединение, начатое через туннель, остаётся в туннеле до конца,
+		# даже если адрес ушёл из набора при перезагрузке списков.
+		ct mark 0x1 meta mark set 0x1 return
+		ip daddr @bypass return
+		# Сеть axata (tun0), сети Docker и домашняя сеть.
+		ip daddr { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 } return
+		# Только новые соединения: уже установленное напрямую соединение
+		# прошло без подмены адреса, и в туннеле его пакеты потерялись бы.
+		ip daddr @zones ct state new meta mark set 0x1 ct mark set 0x1
+	}
+
+	# Адрес источника выбран по таблице main (192.168.1.11) ещё до смены
+	# маршрута, сервер туннеля принимает только адрес amn0 — подмена здесь.
+	chain postrouting {
+		type nat hook postrouting priority srcnat; policy accept;
+		oifname "amn0" masquerade
+	}
+}

@@ -62,8 +62,9 @@ enable --now avahi-daemon.socket`. Запуск по D-Bus (`org.freedesktop.Ava
   `power-profiles-daemon` оставлен (его поднимает Telegram через
   GPowerProfileMonitor из GLib; демон выставляет EPP под профиль
   `balanced`, без него значение не проверено);
-- `AmneziaVPN.service` и `sshd-unix-local.socket` оставлены по решению
-  пользователя.
+- `sshd-unix-local.socket` оставлен по решению пользователя;
+  `AmneziaVPN.service` выключен, туннель AmneziaWG поднимает
+  `awg-quick@amn0.service` ([`amnezia-split-tunnel.md`](amnezia-split-tunnel.md)).
 - пакет `lvm2` удалён вместе с `thin-provisioning-tools` и `libaio`
   (`pacman -Rns lvm2`): томов LVM нет ни на одном диске, хука `lvm2`
   в initramcpio не было; юниты `lvm2-monitor`, `lvm2-lvmpolld.socket`

@@ -1,0 +1,14 @@
+# Домены, адреса которых идут через туннель amn0 независимо от страны:
+# CDN может отдавать адреса вне списков стран. По имени в строке,
+# # — комментарий. Адреса разрешаются при каждом подъёме туннеля
+# и при запуске amn-zones-update; поддомены не охватываются, каждое
+# нужное имя пишется отдельно.
+anthropic.com
+api.anthropic.com
+claude.ai
+console.anthropic.com
+statsig.anthropic.com
+googleapis.com
+google.com
+gstatic.com
+amazonaws.com

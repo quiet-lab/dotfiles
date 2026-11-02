@@ -1,0 +1,23 @@
+# Конфиг awg-quick туннеля amn0. Файл /etc/amnezia/amneziawg/amn0.conf
+# собирает amn-export-config из этого шаблона и хранилища приложения
+# AmneziaVPN; вручную его не править — правка шаблона в репозитории dotfiles
+# (system/amnezia/amn0.conf.template), затем повторный запуск amn-export-config.
+#
+# Маршруты awg-quick не ставит (Table = off): в туннель уходит только трафик
+# к адресам набора zones, его отбирает таблица nftables inet amn (amn.nft).
+# amn-route up ставит правило метки 0x1 и таблицу маршрутизации 100, затем
+# загружает таблицу nftables (amn-zones-update --if-stale).
+# FwMark помечает собственные пакеты туннеля к серверу: они идут по таблице
+# main напрямую и в правило метки 0x1 не попадают. Строки DNS нет:
+# имена разрешает systemd-resolved через домашний маршрутизатор.
+
+[Interface]
+@INTERFACE@
+Table = off
+MTU = 1376
+FwMark = 51820
+PostUp = /usr/local/sbin/amn-route up %i
+PostDown = /usr/local/sbin/amn-route down %i
+
+[Peer]
+@PEER@

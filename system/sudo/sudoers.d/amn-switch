@@ -1,0 +1,10 @@
+# Переход на туннель awg-quick@amn0 и управление им без пароля
+# (system/amnezia, docs/amnezia-split-tunnel.md). Сценарий amn-switch
+# разрешён только без аргументов и с --signal, systemctl — только
+# с перечисленными действиями для awg-quick@amn0.
+Cmnd_Alias AMN_SWITCH = /usr/local/sbin/amn-switch "", \
+                        /usr/local/sbin/amn-switch --signal, \
+                        /usr/bin/systemctl restart awg-quick@amn0, \
+                        /usr/bin/systemctl stop awg-quick@amn0, \
+                        /usr/bin/systemctl start awg-quick@amn0
+mne ALL=(root) NOPASSWD: AMN_SWITCH

@@ -76,3 +76,15 @@ sudo -A -p 'Установка правила sudoers для prlimit' \
 ```
 
 Проверка: `sudo -n prlimit --pid $$ --memlock` печатает пределы без окна пароля.
+
+# /etc/sudoers.d/amn-switch
+
+`sudoers.d/amn-switch` — правило, по которому пользователь `mne` без пароля
+запускает `/usr/local/sbin/amn-switch` (только без аргументов и с `--signal`)
+и `systemctl start`, `stop`, `restart` для `awg-quick@amn0`. Переход
+с приложения AmneziaVPN пользователь выполняет сам в терминале
+([`docs/amnezia-split-tunnel.md`](../../docs/amnezia-split-tunnel.md)).
+Сценарий принадлежит root и пользователю на запись не доступен. Ставит
+правило `system/amnezia/install.sh files` после проверки `visudo -c -f`.
+
+Проверка: `sudo -n -l /usr/local/sbin/amn-switch` печатает путь без окна пароля.

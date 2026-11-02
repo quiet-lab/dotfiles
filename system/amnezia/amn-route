@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Правило маршрутизации по метке 0x1 и таблица 100 туннеля AmneziaWG.
+# Вызывается ловушками PostUp и PostDown awg-quick (amn0.conf.template):
+#   amn-route up <интерфейс>    правило fwmark 0x1 → таблица 100, маршрут
+#                               по умолчанию через туннель в таблице 100,
+#                               нестрогая проверка обратного пути на туннеле,
+#                               затем таблица nftables inet amn
+#                               (amn-zones-update --if-stale)
+#   amn-route down <интерфейс>  убрать правило, таблицу 100 и таблицу
+#                               nftables inet amn
+# Метку 0x1 ставит цепочка output таблицы inet amn (amn.nft).
+set -uo pipefail
+PATH=/usr/local/sbin:/usr/local/bin:/usr/bin
+export PATH
+
+action=${1:?нужно действие up или down}
+iface=${2:?нужно имя интерфейса}
+table=100
+pref=5100
+mark=0x1
+
+down() {
+    while ip -4 rule del pref "$pref" 2>/dev/null; do :; done
+    ip -4 route flush table "$table" 2>/dev/null
+    nft delete table inet amn 2>/dev/null
+}
+
+# Отказ прерывает awg-quick up (ловушки выполняются под set -e), а PostDown
+# после неудачного PostUp awg-quick не вызывает, поэтому уборка — здесь же;
+# служба остаётся в состоянии failed, а не работает без маршрута.
+fail() {
+    echo "amn-route: $1, правило и таблицы сняты" >&2
+    down
+    exit 1
+}
+
+case "$action" in
+up)
+    # Правило могло остаться от прерванного запуска: сначала снять.
+    while ip -4 rule del pref "$pref" 2>/dev/null; do :; done
+    ip -4 rule add pref "$pref" fwmark "$mark" lookup "$table" || fail "правило не добавлено"
+    ip -4 route replace default dev "$iface" table "$table" || fail "маршрут не добавлен"
+    # Ответы из туннеля приходят с адресов, маршрут к которым в main идёт
+    # через enp43s0; строгая проверка (rp_filter=1) их отбросила бы.
+    sysctl -q -w "net.ipv4.conf.$iface.rp_filter=2" || fail "rp_filter не изменён"
+    # Метки начинают ставиться только теперь, когда маршрут для них есть.
+    amn-zones-update --if-stale || fail "таблица nftables не загружена"
+    ;;
+down)
+    down
+    ;;
+*)
+    echo "amn-route: неизвестное действие $action" >&2
+    exit 2
+    ;;
+esac
+exit 0
