@@ -34,17 +34,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '/home/mne/.claude/hooks/herdr-agent-state.sh' session",
+            "command": "bash \"$HOME/.claude/hooks/herdr-session-label.sh\"",
             "timeout": 10
           }
         ]
       },
       {
-        "matcher": "*",
+        "matcher": "^(startup|resume|clear|compact|fork)$",
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$HOME/.claude/hooks/herdr-session-label.sh\"",
+            "command": "bash '/home/mne/.claude/hooks/herdr-agent-state.sh' session",
             "timeout": 10
           }
         ]
