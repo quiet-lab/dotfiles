@@ -68,6 +68,8 @@ enable --now avahi-daemon.socket`. Запуск по D-Bus (`org.freedesktop.Ava
   VPN `axata` поднимает при загрузке `axata-vpn.service`, экран входа ждёт
   туннелей по `tunnels-before-login.service` (копии и установка —
   `system/tunnels/`).
+- пакет `herdr-bin` обновляет при загрузке `herdr-update.service`
+  до экрана входа (копии и установка — `system/herdr-update/`).
 - пакет `lvm2` удалён вместе с `thin-provisioning-tools` и `libaio`
   (`pacman -Rns lvm2`): томов LVM нет ни на одном диске, хука `lvm2`
   в initramcpio не было; юниты `lvm2-monitor`, `lvm2-lvmpolld.socket`

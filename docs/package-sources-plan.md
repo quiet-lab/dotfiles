@@ -69,3 +69,6 @@
 | yarn 4                         | —                    | [x] ● yarn-berry 4.18.0-1            | [ ] 4.18.1   | —              | —                                            | —            | —                           |
 | yazi                           | [x] ● 26.9.1-2.1     | —                                    | [ ] 26.9.1   | [ ] 26.5.6     | [ ] io.github.sxyazi.yazi 25.4.8             | —            | [ ] v26.9.1                 |
 | zoxide                         | [x] ● 0.10.0-1.1     | —                                    | [ ] 0.10.0   | [ ] 0.10.0     | —                                            | —            | [ ] v0.10.0                 |
+
+Пакет `herdr-bin` обновляет при загрузке юнит `herdr-update.service`
+([`../system/herdr-update/`](../system/herdr-update/README.md)).

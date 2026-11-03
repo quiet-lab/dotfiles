@@ -160,12 +160,15 @@ class = "^org\\.wezfurlong\\.wezterm$"
 # --always-new-process: отдельный процесс, иначе окно откроется внутри уже
 # работающего wezterm.
 # Клавиша — Super+W: Super+T отдана окну-переключателю Telegram.
+# Каталог запуска — монорепозиторий: при чистом старте herdr открывает в нём
+# одно пространство (спецификация hyprland-autostart, требование
+# «Предстартовая подготовка herdr»).
 [apps.herdr]
 family = "wezterm"
 chain = "SUPER+W"
 cmd = "wezterm-gui"
 args = ["start", "--always-new-process", "--class", "wezterm-herdr", "--", "herdr"]
-cwd = "~"
+cwd = "~/work/telecom/axata/monorepo-ocp"
 class = "^wezterm-herdr$"
 
 # Chromium нативно под Wayland (~/.config/chromium-flags.conf), класс chromium;

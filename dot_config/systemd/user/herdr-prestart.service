@@ -1,0 +1,22 @@
+# Подготовка herdr к запуску в сессии Hyprland (спецификация
+# hyprland-autostart, требование «Предстартовая подготовка herdr»): обновление
+# Claude Code и интеграции herdr с ним, чистый старт herdr без восстановления
+# прежних workspace. Шаги — сценарий herdr-prestart. Демон workspaced, который
+# открывает herdr, ждёт этот юнит (After= и Wants= в workspaced.service);
+# неудача юнита запуск демона не останавливает.
+[Unit]
+Description=Подготовка herdr к запуску (Claude Code, интеграция, чистый старт)
+PartOf=hyprland-session.target
+After=hyprland-session.target
+Before=workspaced.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=%h/.local/bin/handmade-scripts/herdr-prestart
+# Срок: claude update ограничен в сценарии 90 с, интеграция и переименование
+# session.json — меньше секунды; 120 с — с запасом на запуск herdr и claude.
+TimeoutStartSec=120
+
+[Install]
+WantedBy=hyprland-session.target

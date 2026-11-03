@@ -16,3 +16,9 @@ enabled = false
 [theme]
 name = "catppuccin"
 auto_switch = false
+
+# Восстановление сессии не запускает агентов (claude --resume): решение
+# запустить Claude Code принимает пользователь (спецификация
+# hyprland-autostart, требование «Предстартовая подготовка herdr»).
+[session]
+resume_agents_on_restore = false
