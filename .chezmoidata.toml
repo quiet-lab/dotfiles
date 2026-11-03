@@ -1,0 +1,6 @@
+# Данные шаблонов chezmoi. Адрес Nexus задан один раз; файлы настроек
+# uv, pip, npm, yarn и cargo берут его отсюда.
+[nexus]
+# HTTP без TLS: отсюда trusted-host, allow-insecure-host и unsafeHttpWhitelist.
+host = "10.200.101.134"
+port = 8081

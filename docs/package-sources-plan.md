@@ -72,3 +72,10 @@
 
 Пакет `herdr-bin` обновляет при загрузке юнит `herdr-update.service`
 ([`../system/herdr-update/`](../system/herdr-update/README.md)).
+
+Установка зависимостей языковыми менеджерами (uv, pip, npm, yarn, cargo)
+идёт через proxy-группы Nexus (`10.200.101.134:8081`), а не через публичные
+источники; адрес задан один раз в `.chezmoidata.toml`, настройки — шаблоны
+`dot_config/uv/uv.toml.tmpl`, `dot_config/pip/pip.conf.tmpl`, `dot_npmrc.tmpl`,
+`dot_yarnrc.yml.tmpl`, `dot_cargo/config.toml.tmpl`. Пакеты pacman и AUR
+этим не затрагиваются.

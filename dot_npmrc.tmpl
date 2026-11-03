@@ -1,0 +1,3 @@
+; Пакеты npm берутся из proxy-группы Nexus, а не из registry.npmjs.org.
+; Адрес — .chezmoidata.toml.
+registry=http://{{ .nexus.host }}:{{ .nexus.port }}/repository/npm-group/

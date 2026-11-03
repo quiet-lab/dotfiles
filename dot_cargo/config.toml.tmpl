@@ -1,0 +1,7 @@
+# Зависимости cargo берутся из proxy-группы Nexus, а не из crates.io.
+# Адрес — .chezmoidata.toml.
+[source.crates-io]
+replace-with = "nexus"
+
+[source.nexus]
+registry = "sparse+http://{{ .nexus.host }}:{{ .nexus.port }}/repository/cargo-group/"

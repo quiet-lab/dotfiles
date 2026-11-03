@@ -1,0 +1,5 @@
+# Yarn 4: пакеты берутся из proxy-группы Nexus, а не из registry.yarnpkg.com.
+# Адрес — .chezmoidata.toml. HTTP без TLS требует белого списка.
+npmRegistryServer: "http://{{ .nexus.host }}:{{ .nexus.port }}/repository/npm-group/"
+unsafeHttpWhitelist:
+  - "{{ .nexus.host }}"

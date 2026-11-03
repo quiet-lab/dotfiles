@@ -1,0 +1,8 @@
+# Установка пакетов uv идёт через proxy-группу Nexus, а не через pypi.org.
+# Адрес — .chezmoidata.toml. Замки проектов (uv.lock) с прямыми адресами
+# files.pythonhosted.org этот файл не меняет.
+allow-insecure-host = ["{{ .nexus.host }}:{{ .nexus.port }}"]
+
+[[index]]
+url = "http://{{ .nexus.host }}:{{ .nexus.port }}/repository/pypi-group/simple/"
+default = true

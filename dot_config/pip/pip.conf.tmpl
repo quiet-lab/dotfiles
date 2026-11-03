@@ -1,0 +1,5 @@
+# Установка пакетов pip идёт через proxy-группу Nexus, а не через pypi.org.
+# Адрес — .chezmoidata.toml.
+[global]
+index-url = http://{{ .nexus.host }}:{{ .nexus.port }}/repository/pypi-group/simple/
+trusted-host = {{ .nexus.host }}
