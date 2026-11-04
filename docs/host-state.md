@@ -33,6 +33,11 @@ initramfs, без которой параметр не действует. Фа�
 pacman кладёт рядом `/etc/sudo.conf.pacnew`, и строку надо перенести
 (запись [`decisions/0008-askpass-quickshell-only.md`](decisions/0008-askpass-quickshell-only.md)).
 
+**`/etc/polkit-1/rules.d/50-mne-admin.rules`** — правило polkit: пользователю
+`mne` без пароля открыты действия служб `resolve1`, `systemd1`, `login1`,
+`machine1`, `udisks2`, `hostname1`, `timedate1`, `locale1`. Источник и
+установка — `system/polkit/`.
+
 **Служба `avahi-daemon`** (пакет `avahi`) выключена и остановлена
 17.10.2026 по решению пользователя: `systemctl disable --now
 avahi-daemon.socket avahi-daemon.service`. Пакет остаётся, его требуют

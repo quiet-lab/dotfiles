@@ -1,0 +1,28 @@
+// /etc/polkit-1/rules.d/50-mne-admin.rules
+//
+// Пользователю станции mne (только ему, не группе и не всем) без пароля
+// открыты действия polkit служб resolve1, systemd1, login1, machine1,
+// udisks2, hostname1, timedate1 и locale1. Повод: команды агента
+// (например, resolvectl statistics) открывали окно агента polkit
+// «Authentication Required», а терминала у агента нет. Правило
+// соответствует разделу «Повышение привилегий» ~/.claude/CLAUDE.md.
+// Правила для группы wheel и остальных пользователей не пишутся.
+polkit.addRule(function(action, subject) {
+    var prefixes = [
+        "org.freedesktop.resolve1.",
+        "org.freedesktop.systemd1.",
+        "org.freedesktop.login1.",
+        "org.freedesktop.machine1.",
+        "org.freedesktop.udisks2.",
+        "org.freedesktop.hostname1.",
+        "org.freedesktop.timedate1.",
+        "org.freedesktop.locale1."
+    ];
+    if (subject.user != "mne")
+        return polkit.Result.NOT_HANDLED;
+    for (var i = 0; i < prefixes.length; i++) {
+        if (action.id.indexOf(prefixes[i]) == 0)
+            return polkit.Result.YES;
+    }
+    return polkit.Result.NOT_HANDLED;
+});
