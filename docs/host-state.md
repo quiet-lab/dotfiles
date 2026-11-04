@@ -103,6 +103,12 @@ enable --now avahi-daemon.socket`. Запуск по D-Bus (`org.freedesktop.Ava
 в `/var/lib/docker`, новый хранит свои в `~/.local/share/docker`.
 Контейнер `distrobox` работает на podman и от смены не зависит.
 
+**PostgreSQL** — пакет `postgresql` из pacman (явно установлен), служба
+`postgresql.service` включена, слушает `127.0.0.1:5433`; нужна оснастке
+тестов монорепозитория `monorepo-ocp`. В [плане источников пакетов](package-sources-plan.md)
+строки нет: план содержит только программы, требующие работы, а пакет
+pacman без других установок её не требует.
+
 ## Профили и настройки программ
 
 **`~/.config/mozilla/firefox/3e5c3xuj.default-release/user.js`** — настройки
