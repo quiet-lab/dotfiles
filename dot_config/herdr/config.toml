@@ -10,10 +10,11 @@ kitty_graphics = true
 [ui.toast]
 delivery = "off"
 
-# Подпись вкладки агента всегда равна подписи workspace, поэтому токен tab
-# из первой строки панели агентов убран (иначе подпись повторяется дважды).
+# Подпись вкладки агента всегда равна подписи workspace, поэтому в первой
+# строке панели агентов оставлена подпись вкладки, а workspace убран
+# (иначе подпись повторяется дважды).
 [ui.sidebar.agents]
-rows = [["state_icon", "machine", "workspace"], ["agent"]]
+rows = [["state_icon", "machine", "tab"], ["agent"]]
 
 [ui.sound]
 enabled = false
