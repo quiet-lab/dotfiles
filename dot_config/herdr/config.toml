@@ -13,8 +13,29 @@ delivery = "off"
 # Подпись вкладки агента всегда равна подписи workspace, поэтому в первой
 # строке панели агентов оставлена подпись вкладки, а workspace убран
 # (иначе подпись повторяется дважды).
+# Первая строка — подпись workspace, вторая — вкладка, выбранная в workspace
+# агента (форк duty-herdr), третья — агент.
 [ui.sidebar.agents]
-rows = [["state_icon", "machine", "tab"], ["agent"]]
+rows = [["state_icon", "machine", "tab"], ["focused_tab"], ["agent"]]
+
+# Значки состояния агентов (форк duty-herdr): ширина 2 ячейки, без U+FE0F.
+[ui.status_icons]
+idle = "🟡"
+working = "🟢"
+blocked = "🔴"
+done = "✅"
+unknown = "·"
+
+# Цвет заголовков spaces по префиксу подписи (форк duty-herdr).
+[ui.sidebar.spaces]
+rows = [
+  ["state_icon", { token = "workspace", rules = [
+      { starts_with = "🐘", fg = "#f9e2af" },
+      { starts_with = "🧪", fg = "#94e2d5" },
+      { contains = "monorepo-ocp", fg = "#89b4fa" },
+  ] }],
+  ["branch", "git_status"],
+]
 
 [ui.sound]
 enabled = false
