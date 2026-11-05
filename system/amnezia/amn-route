@@ -5,7 +5,8 @@
 #                               по умолчанию через туннель в таблице 100,
 #                               нестрогая проверка обратного пути на туннеле,
 #                               затем таблица nftables inet amn
-#                               (amn-zones-update --if-stale)
+#                               (amn-zones-update --if-stale), затем DNS
+#                               канала для зон за туннелем (resolvectl)
 #   amn-route down <интерфейс>  убрать правило, таблицу 100 и таблицу
 #                               nftables inet amn
 # Метку 0x1 ставит цепочка output таблицы inet amn (amn.nft).
@@ -18,6 +19,14 @@ iface=${2:?нужно имя интерфейса}
 table=100
 pref=5100
 mark=0x1
+# Домашний роутер (DNS systemd-resolved по умолчанию) отдаёт пустой NOERROR
+# на имена, которые разрешаются в частные адреса 10.200.x (защита от rebind),
+# поэтому имена зон за туннелем им не разрешаются. Зоны с «~» — маршрутные
+# домены: на эти серверы через канал идут только запросы этих зон, остальные
+# имена по-прежнему разрешает роутер. На down снимать нечего: настройки
+# канала исчезают вместе с ним.
+dns_servers=(1.1.1.1 9.9.9.9)
+dns_routes=('~service-desk.site' '~onedemoserver.online')
 
 down() {
     while ip -4 rule del pref "$pref" 2>/dev/null; do :; done
@@ -45,6 +54,8 @@ up)
     sysctl -q -w "net.ipv4.conf.$iface.rp_filter=2" || fail "rp_filter не изменён"
     # Метки начинают ставиться только теперь, когда маршрут для них есть.
     amn-zones-update --if-stale || fail "таблица nftables не загружена"
+    resolvectl dns "$iface" "${dns_servers[@]}" || fail "DNS канала не задан"
+    resolvectl domain "$iface" "${dns_routes[@]}" || fail "маршрутные домены DNS не заданы"
     ;;
 down)
     down
