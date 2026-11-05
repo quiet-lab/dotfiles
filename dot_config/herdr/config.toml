@@ -10,13 +10,10 @@ kitty_graphics = true
 [ui.toast]
 delivery = "off"
 
-# Подпись вкладки агента всегда равна подписи workspace, поэтому в первой
-# строке панели агентов оставлена подпись вкладки, а workspace убран
-# (иначе подпись повторяется дважды).
-# Первая строка — подпись workspace, вторая — вкладка, выбранная в workspace
-# агента (форк duty-herdr), третья — агент.
+# Заголовок агента — одна строка: значок состояния и название вкладки
+# (подпись вкладки равна подписи workspace).
 [ui.sidebar.agents]
-rows = [["state_icon", "machine", "tab"], ["focused_tab"], ["agent"]]
+rows = [["state_icon", "tab"]]
 
 # Значки состояния агентов (форк duty-herdr): ширина 2 ячейки, без U+FE0F.
 [ui.status_icons]
@@ -26,15 +23,13 @@ blocked = "🔴"
 done = "✅"
 unknown = "·"
 
+# Заголовок workspace — одна строка: значок состояния и подпись.
 # Цвет заголовка задаёт токен метаданных color
 # (herdr workspace report-metadata <ws> --source <id> --token color=#hex):
 # главная сессия репозитория — белый из хука herdr-session-label.sh,
 # задачи duty — из конфига duty.
 [ui.sidebar.spaces]
-rows = [
-  ["state_icon", { token = "workspace", fg = "$color" }],
-  ["branch", "git_status"],
-]
+rows = [["state_icon", { token = "workspace", fg = "$color" }]]
 
 [ui.sound]
 enabled = false
