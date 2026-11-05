@@ -50,7 +50,7 @@ current=$(herdr workspace list | jq -r --arg w "$HERDR_WORKSPACE_ID" '.result.wo
 case $current in
     *" · "*)
         name=${current%% · *}
-        [ "$name" = "$place" ] || [ "${name#* }" = "$place" ] || exit 0 ;;
+        [ "$name" = "$place" ] || [ "$name" = "$symbol $place" ] || exit 0 ;;
 esac
 
 herdr workspace rename "$HERDR_WORKSPACE_ID" "$label" > /dev/null
