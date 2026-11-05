@@ -4,3 +4,4 @@ state = "~/.local/state/duty"
 [symbols]
 outside = ["🍺", "🍻", "🍷", "🍸", "🍹", "🍵", "☕", "🍾", "🥂", "🥃", "🥛",
            "🧉", "🧋"]
+outside_color = "#f5c2e7"
