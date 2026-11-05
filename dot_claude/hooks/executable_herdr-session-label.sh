@@ -1,6 +1,7 @@
 #!/bin/bash
 # Подпись главной сессии Claude в herdr: workspace и вкладка получают
-# «<репозиторий или папка> · <модель>», у панели выставляется display_agent.
+# «<репозиторий или папка> · <модель>», у панели выставляется display_agent,
+# у workspace — токен цвета color=#ffffff (главный агент репозитория белый).
 # Исполнители duty:worker и субагенты пропускаются: их подписывает dispatch.sh.
 # Хук молчит и выходит с кодом 0 при любой ошибке и вне herdr.
 exec 2>/dev/null
@@ -45,4 +46,5 @@ herdr workspace rename "$HERDR_WORKSPACE_ID" "$label" > /dev/null
 tab=$(herdr pane get "$HERDR_PANE_ID" | jq -r '.result.pane.tab_id // empty')
 [ -z "$tab" ] || herdr tab rename "$tab" "$label" > /dev/null
 herdr pane report-metadata "$HERDR_PANE_ID" --source claude-main --display-agent "$model" > /dev/null
+herdr workspace report-metadata "$HERDR_WORKSPACE_ID" --source claude-main --token color=#ffffff > /dev/null
 exit 0

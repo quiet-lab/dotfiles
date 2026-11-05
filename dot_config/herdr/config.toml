@@ -26,14 +26,13 @@ blocked = "🔴"
 done = "✅"
 unknown = "·"
 
-# Цвет заголовков spaces по префиксу подписи (форк duty-herdr).
+# Цвет заголовка задаёт токен метаданных color
+# (herdr workspace report-metadata <ws> --source <id> --token color=#hex):
+# главная сессия репозитория — белый из хука herdr-session-label.sh,
+# задачи duty — из конфига duty.
 [ui.sidebar.spaces]
 rows = [
-  ["state_icon", { token = "workspace", rules = [
-      { starts_with = "🐘", fg = "#f9e2af" },
-      { starts_with = "🧪", fg = "#94e2d5" },
-      { contains = "monorepo-ocp", fg = "#89b4fa" },
-  ] }],
+  ["state_icon", { token = "workspace", fg = "$color" }],
   ["branch", "git_status"],
 ]
 
