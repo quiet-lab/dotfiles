@@ -104,8 +104,10 @@ hl.config({
     },
     -- Слой с клавиатурой «по требованию» (поле фильтра панели) не удерживает
     -- клавиатуру при клике по окну: клик по окну возвращает ему ввод.
-    misc = {
+    layers = {
         layers_hog_keyboard_focus = false,
+    },
+    misc = {
         -- Запрос активации от приложения (xdg-activation: клик по уведомлению
         -- Telegram, ссылка из другой программы) переводит фокус на его окно
         -- и стол; иначе запрос остаётся без ответа.
@@ -359,6 +361,15 @@ hl.on("window.fullscreen", function(w)
     local mode = w.fullscreen
     if mode == 0 then
         fullscreen_just_left = true
+        -- WARNING: таймер вместо события. Признак fullscreen_just_left нужно снять,
+        -- когда повторный запрос Chromium (maximized) уже не придёт, но Hyprland
+        -- такого события не шлёт: оба запроса приходят в одну миллисекунду, а
+        -- отличить повторный запрос от настоящего включения maximized позже
+        -- нечем. Поэтому окно защиты ограничено 50 мс. Заменить, когда
+        -- в Hyprland появится событие или признак источника запроса
+        -- (повторный запрос того же клиента) либо будет исправлен сам
+        -- порядок запросов (обсуждение Hyprland #13322). Запись: todo.md,
+        -- раздел «Hyprland».
         hl.timer(function() fullscreen_just_left = false end, { timeout = 50, type = "oneshot" })
     elseif mode == 1 and fullscreen_just_left then
         fullscreen_just_left = false
