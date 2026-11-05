@@ -1,0 +1,12 @@
+schema = 1
+
+[project]
+name = "dotfiles"
+
+[git]
+protected = ["main"]
+
+[symbols]
+main = "🏠"
+tasks = ["🏡", "🏢", "🏣", "🏤", "🏦", "🏨", "🏩", "🏫", "🏬", "🏭", "🏯",
+         "🏰", "💒", "🛖"]
