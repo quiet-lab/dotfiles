@@ -60,6 +60,7 @@
     "chrome-devtools-mcp@claude-plugins-official": true,
     "browser-use@claude-plugins-official": true,
     "handoff@quiet-lab": true,
+    "ask-gate@quiet-lab": true,
     "duty@quiet-lab": true
   },
   "language": "Русский",
