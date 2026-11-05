@@ -1,6 +1,7 @@
 {
   "env": {
-    "CLAUDE_CODE_IDLE_COMPACT_MIN_TOKENS": "150000"
+    "CLAUDE_CODE_IDLE_COMPACT_MIN_TOKENS": "150000",
+    "CLAUDE_CODE_NATIVE_CURSOR": "1"
   },
   "permissions": {
     "allow": [
@@ -60,8 +61,17 @@
     "chrome-devtools-mcp@claude-plugins-official": true,
     "browser-use@claude-plugins-official": true,
     "handoff@quiet-lab": true,
-    "ask-gate@quiet-lab": true,
-    "duty@quiet-lab": true
+    "duty@quiet-lab": true,
+    "rust-analyzer-lsp@claude-plugins-official": true,
+    "ask-gate@quiet-lab": true
+  },
+  "extraKnownMarketplaces": {
+    "quiet-lab": {
+      "source": {
+        "source": "github",
+        "repo": "quiet-lab/claude-plugins"
+      }
+    }
   },
   "language": "Русский",
   "sandbox": {
@@ -90,13 +100,5 @@
   "editorMode": "vim",
   "preferredNotifChannel": "notifications_disabled",
   "switchModelsOnFlag": false,
-  "agentPushNotifEnabled": true,
-  "extraKnownMarketplaces": {
-    "quiet-lab": {
-      "source": {
-        "source": "github",
-        "repo": "quiet-lab/claude-plugins"
-      }
-    }
-  }
+  "agentPushNotifEnabled": true
 }
