@@ -1,0 +1,6 @@
+[paths]
+state = "~/.local/state/duty"
+
+[symbols]
+outside = ["🍺", "🍻", "🍷", "🍸", "🍹", "🍵", "☕", "🍾", "🥂", "🥃", "🥛",
+           "🧉", "🧋"]
