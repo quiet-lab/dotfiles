@@ -21,15 +21,6 @@
   "hooks": {
     "SessionStart": [
       {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$HOME/.claude/hooks/session-handoff.sh\" start",
-            "timeout": 20
-          }
-        ]
-      },
-      {
         "matcher": "*",
         "hooks": [
           {
@@ -45,17 +36,6 @@
           {
             "type": "command",
             "command": "bash '/home/mne/.claude/hooks/herdr-agent-state.sh' session",
-            "timeout": 10
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$HOME/.claude/hooks/session-handoff.sh\" end",
             "timeout": 10
           }
         ]
@@ -78,7 +58,9 @@
     "context7@claude-plugins-official": true,
     "playwright@claude-plugins-official": true,
     "chrome-devtools-mcp@claude-plugins-official": true,
-    "browser-use@claude-plugins-official": true
+    "browser-use@claude-plugins-official": true,
+    "handoff@quiet-lab": true,
+    "duty@quiet-lab": true
   },
   "language": "Русский",
   "sandbox": {
@@ -107,5 +89,13 @@
   "editorMode": "vim",
   "preferredNotifChannel": "notifications_disabled",
   "switchModelsOnFlag": false,
-  "agentPushNotifEnabled": true
+  "agentPushNotifEnabled": true,
+  "extraKnownMarketplaces": {
+    "quiet-lab": {
+      "source": {
+        "source": "github",
+        "repo": "quiet-lab/claude-plugins"
+      }
+    }
+  }
 }
