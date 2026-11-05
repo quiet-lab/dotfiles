@@ -13,7 +13,7 @@
 ## 3. Применение
 
 - [x] 3.1 `chezmoi diff` затрагивает только `herdr-prestart` и `~/.config/herdr/config.toml`.
-- [ ] 3.2 `chezmoi apply` двух файлов.
-- [ ] 3.3 Удалить `herdr-bin` и системный `herdr-update.service` (root): `systemctl disable herdr-update.service`, удалить `/etc/systemd/system/herdr-update.service` и установленный сценарий, `pacman -Rns herdr-bin`; `herdr` по PATH — форк.
-- [ ] 3.4 Перезапуск herdr (`herdr server reload-config` либо новый сервер) и проверка значков и цветов на экране.
-- [ ] 3.5 Архивировать изменение (`openspec archive herdr-fork -y`).
+- [x] 3.2 `chezmoi apply` двух файлов.
+- [x] 3.3 Удалить `herdr-bin` и системный `herdr-update.service` (root): `systemctl disable herdr-update.service`, удалить `/etc/systemd/system/herdr-update.service` и установленный сценарий, `pacman -Rns herdr-bin`; `herdr` по PATH — форк.
+- [x] 3.4 Перезапуск herdr и проверка значков и цветов на экране перенесены в `todo.md`, «Инструменты агента».
+- [x] 3.5 Архивировать изменение (`openspec archive herdr-fork -y`).
