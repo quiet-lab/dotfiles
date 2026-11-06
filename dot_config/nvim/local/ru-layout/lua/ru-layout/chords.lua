@@ -330,30 +330,45 @@ end
 -- привязками, пропускаются; алиасы и явные сочетания ставятся одним пакетом команд
 -- `:map <unique>` (через API в несколько раз дольше, а это время запуска Neovim).
 -- Вызывается после keymap.sweep(): проход по привязкам не видит алиасов.
+-- Чтецы по режимам: readers[режим][латинский префикс] = запись M.READERS.
+local readers = {}
+for _, r in ipairs(M.READERS) do
+  for _, m in ipairs(r.modes) do
+    readers[m] = readers[m] or {}
+    readers[m][r.key] = r
+  end
+end
+
+-- Поставить чтец r на lhs в режиме m, если место свободно: привязка вне реестра
+-- (латинская привязка плагина на `<C-\>`, Vim-script) проверяется maparg — у
+-- чтеца нет `<unique>`, иначе он перезаписал бы её.
+local function set_reader(m, lhs, r, busy)
+  if busy and busy[m][lhs] then
+    return
+  end
+  local d = vim.fn.maparg(lhs, m, false, true)
+  if d.lhs and d.buffer ~= 1 and not M.is_ours(d, m) then
+    return
+  end
+  local o = opts_for(r.key, {
+    expr = true,
+    replace_keycodes = false,
+    callback = reader(m, r.key, r.as, r.index),
+  })
+  raw_set(m, lhs, "", o)
+  remember(m, lhs, "", o)
+end
+
 function M.setup()
   local busy = taken()
-  local readers = {}
-  for _, r in ipairs(M.READERS) do
-    for _, m in ipairs(r.modes) do
-      readers[m] = readers[m] or {}
-      readers[m][r.key] = r
-    end
-  end
   local lines = {}
   local function add(cmd, lhs, rhs)
     lines[#lines + 1] = ("silent! %s <unique> %s %s"):format(cmd, lhs, rhs)
   end
-  local function set_reader(m, lhs, r)
-    if not busy[m][lhs] then
-      local o = opts_for(r.key, {
-        expr = true,
-        replace_keycodes = false,
-        callback = reader(m, r.key, r.as, r.index),
-      })
-      raw_set(m, lhs, "", o)
-      remember(m, lhs, "", o)
-    end
-  end
+  -- Алиасы, поставленные командой группы: если в одном из режимов группы место
+  -- занято привязкой вне реестра, команда не выполняется целиком, и такие режимы
+  -- ставятся затем по одному.
+  local grouped = {}
 
   -- Алиасы: режимы группы, где у lhs один и тот же rhs и нет чтеца, ставятся одной
   -- командой группы, остальные — командами режимов.
@@ -366,7 +381,7 @@ function M.setup()
           for _, m in ipairs(modes) do
             if readers[m] and readers[m][us] then
               all = false
-              set_reader(m, lhs, readers[m][us])
+              set_reader(m, lhs, readers[m][us], busy)
             elseif busy[m][lhs] then
               all = false
             else
@@ -378,6 +393,7 @@ function M.setup()
           end
           if all then
             add(MAPCMD[group], lhs, us)
+            grouped[#grouped + 1] = { lhs, us, modes }
           else
             for _, m in ipairs(plain) do
               add(MAPCMD[m], lhs, mode_rhs(us, m))
@@ -392,7 +408,7 @@ function M.setup()
   for _, r in ipairs(M.READERS) do
     if r.latin then
       for _, m in ipairs(r.modes) do
-        set_reader(m, r.key, r)
+        set_reader(m, r.key, r, busy)
       end
     end
   end
@@ -414,6 +430,27 @@ function M.setup()
     end
   end
   api.nvim_exec2(table.concat(lines, "\n"), {})
+
+  -- Проверка групповых команд: по одному списку привязок на режим.
+  local have = {}
+  for _, m in ipairs(ALL_MODES) do
+    have[m] = {}
+    for _, d in ipairs(api.nvim_get_keymap(m)) do
+      have[m][d.lhsraw or kc(d.lhs)] = true
+    end
+  end
+  local retry = {}
+  for _, g in ipairs(grouped) do
+    local raw = kc(g[1])
+    for _, m in ipairs(g[3]) do
+      if not have[m][raw] then
+        retry[#retry + 1] = ("silent! %s <unique> %s %s"):format(MAPCMD[m], g[1], g[2])
+      end
+    end
+  end
+  if #retry > 0 then
+    api.nvim_exec2(table.concat(retry, "\n"), {})
+  end
 end
 
 -- Привязка модуля на месте (режим, коды lhs) снята дублем или чужой привязкой, а
@@ -424,6 +461,12 @@ function M.restore(mode, raw)
     local lhs = vim.fn.keytrans(raw)
     local us = alias_rhs(lhs, mode)
     if not us then
+      return
+    end
+    -- На этом месте при свободном месте стоял бы чтец, а не алиас.
+    local r = readers[mode] and readers[mode][us]
+    if r then
+      set_reader(mode, lhs, r)
       return
     end
     s = { lhs = lhs, rhs = us, opts = {} }
@@ -438,11 +481,15 @@ end
 -- Чтецы узнаются по описанию; алиасы и явные сочетания (у :map описания нет) — по
 -- lhs и rhs: rhs совпадает с тем, что модуль ставит на этом месте.
 function M.is_ours(d, m)
-  if type(d) ~= "table" or not d.lhs or type(d.rhs) ~= "string" then
+  if type(d) ~= "table" or not d.lhs then
     return false
   end
+  -- Чтецы — функции: rhs у них нет, узнаются по описанию.
   if type(d.desc) == "string" and d.desc:sub(1, #M.DESC) == M.DESC then
     return true
+  end
+  if type(d.rhs) ~= "string" then
+    return false
   end
   local raw = d.lhsraw or kc(d.lhs)
   local s = spec[m] and spec[m][raw]

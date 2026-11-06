@@ -160,9 +160,11 @@ end
 
 -- Место (режим m, lhs) занято привязкой, которую нельзя перекрыть дублем: не алиасом
 -- chords и не дублем модуля.
-local function occupied(s, buf, m, lhs, dk)
+-- sk — источник ставящегося дубля: свой прежний дубль места не занимает (его rhs
+-- обновляется), дубль другого источника занимает.
+local function occupied(s, buf, m, lhs, dk, sk)
   if s.dup[dk] then
-    return true
+    return s.dup[dk].src ~= sk
   end
   local d
   if buf then
@@ -281,8 +283,9 @@ local function on_set(buf, mode, lhs, rhs, opts)
       local sk_raw = vim.keycode(lhs)
       for _, m in ipairs(modes) do
         local dk = m .. "\0" .. rawus
-        if m ~= "l" and not occupied(s, buf, m, us, dk) then
-          put_dup(s, buf, m, us, rawus, rhs, o, m .. "\0" .. sk_raw)
+        local sk = m .. "\0" .. sk_raw
+        if m ~= "l" and not occupied(s, buf, m, us, dk, sk) then
+          put_dup(s, buf, m, us, rawus, rhs, o, sk)
         end
       end
     end
@@ -422,7 +425,8 @@ local function sweep_list(s, m, list, buf)
     local e, sk, us, rawus = r[1], r[2], r[3], r[4]
     local dk = m .. "\0" .. rawus
     local d = s.dup[dk]
-    if not (d and d.src == sk and present[dk]) and not (present[dk] and not d) then
+    -- Место занято чужой привязкой или дублем другого источника — как в on_set.
+    if not (d and present[dk]) and not (present[dk] and not d) then
       put(e, sk, us, rawus)
     end
   end

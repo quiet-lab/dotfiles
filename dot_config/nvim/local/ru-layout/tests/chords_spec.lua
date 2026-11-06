@@ -322,6 +322,66 @@ D.check("<C-ц>я и <C-w>я — одна привязка", { wz = 2 }, hits())
 D.check("setup() повторно без ошибок", true, D.lua([[return pcall(require("ru-layout").setup)]]))
 D.check("алиас после повторного setup", "<C-D>", maparg("<C-в>", "n"))
 
+-- Латинская привязка плагина на префиксе чтеца (`<C-\>`, как toggleterm), стоявшая
+-- до setup(), чтецом не перезаписывается.
+D.lua([[_G.HITS = {}
+  vim.cmd("nunmap <C-\\>")
+  vim.keymap.set("n", "<C-\\>", hit("plug"))
+  require("ru-layout.chords").setup()]])
+reset({ "x" }, { 1, 0 })
+D.input("<C-\\>")
+D.sync()
+D.check("<C-\\> плагина не перезаписан чтецом", { plug = 1 }, hits())
+D.lua([[vim.keymap.del("n", "<C-\\>")]])
+
+-- Чтецы — свои привязки: повторный проход keymap не ставит им обратных дублей.
+D.lua([[require("ru-layout.keymap").sweep()]])
+D.check("после sweep у чтеца <C-ц> нет обратного дубля <C-w>", "", maparg("<C-w>", "n"))
+D.check("после sweep у чтеца <C-к> нет обратного дубля <C-r>", "", maparg("<C-r>", "i"))
+
+-- Кириллическая привязка пользователя на месте чтеца: обратный дубль заменяет
+-- латинский чтец `<C-r>` в `:` (чтец — своя привязка, место свободно).
+D.lua(
+  [[_G.HITS = {}; vim.keymap.set("c", "<C-к>", function() HITS.ck = (HITS.ck or 0) + 1; return "" end, { expr = true })]]
+)
+reset({ "x" }, { 1, 0 })
+D.input(":")
+D.input("<C-к><C-r>")
+D.sync()
+D.input("<C-c>")
+D.sync()
+D.check("c <C-к> пользователя срабатывает и по <C-r>", { ck = 2 }, hits())
+D.lua([[vim.keymap.del("c", "<C-к>")]])
+D.check(
+  "после снятия c <C-r> — снова чтец",
+  true,
+  D.lua([[return require("ru-layout.chords").is_ours(vim.fn.maparg("<C-r>", "c", false, true), "c")]])
+)
+
+-- Привязка Vim-script вне реестра в одном режиме группы: в остальных режимах
+-- алиас всё равно ставится.
+D.lua([[vim.cmd("silent! unmap <C-ф>")
+  vim.cmd("nnoremap <C-ф> x")
+  require("ru-layout.chords").setup()]])
+D.check("n <C-ф> Vim-script не тронут", "x", maparg("<C-ф>", "n"))
+D.check("x <C-ф> — алиас при занятом n", "<C-A>", maparg("<C-ф>", "x"))
+D.check("o <C-ф> — алиас при занятом n", "<C-A>", maparg("<C-ф>", "o"))
+D.lua([[vim.cmd("nunmap <C-ф>")]])
+
+-- Место чтеца было занято при setup(), затем освободилось: ставится чтец, а не
+-- алиас (сведений о чтеце нет — как после setup() при занятом месте).
+D.lua([[local C = require("ru-layout.chords")
+  C.spec.x[vim.keycode("<C-ц>")] = nil
+  vim.keymap.set("x", "<C-ц>", hit("xw"))
+  vim.keymap.del("x", "<C-ц>")
+  local d = vim.fn.maparg("<C-ц>", "x", false, true)
+  _G.RESTORED = { callback = type(d.callback), ours = C.is_ours(d, "x") }]])
+D.check(
+  "после снятия x <C-ц> — снова чтец",
+  { callback = "function", ours = true },
+  D.lua("return _G.RESTORED")
+)
+
 -- 4. Терминальный буфер: <C-ф> и <M-в> доходят до программы как <C-a> и <M-d>.
 D.lua([[vim.cmd("enew! | terminal cat -v")]])
 D.input("i")
