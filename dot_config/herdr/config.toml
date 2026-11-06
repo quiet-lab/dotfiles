@@ -11,11 +11,12 @@ kitty_graphics = true
 delivery = "off"
 
 # Заголовок агента — одна строка: значок состояния и подпись вкладки.
-# Цвет текста — токен color workspace (белый у главной сессии из хука,
-# палитра у задач), без токена — цвет темы. Инверсия по фокусу вкладки
-# временно снята до запасного цвета в форке (задача color-fallback).
+# Активная вкладка — текст цветом токена color workspace на фоне панели,
+# неактивная — заливка цветом токена, текст цветом фона панели.
+# У workspace без токена color неактивная вкладка невидима до запасного
+# цвета в форке (задача color-fallback, тогда bg = "$color|#ffffff").
 [ui.sidebar.agents]
-rows = [["state_icon", { token = "tab", fg = "$color", rules = [{ active = true, bold = true }, { active = false, dim = true }] }]]
+rows = [["state_icon", { token = "tab", fg = "$panel", bg = "$color", rules = [{ active = true, fg = "$color", bg = "$panel" }] }]]
 
 # Значки состояния агентов (форк duty-herdr): ширина 2 ячейки, без U+FE0F.
 # Список кадров — анимация по кругу, период frame_interval_ms (форк duty-herdr).
@@ -116,7 +117,7 @@ colors = [
 # (herdr workspace report-metadata <ws> --source <id> --token color=#hex):
 # главная сессия репозитория — белый из хука herdr-session-label.sh,
 # задачи duty — из dispatch.sh, дочерние workspace без токена duty — из colors.
-# Без токена подпись рисуется цветом темы; инверсия снята до запасного цвета в форке.
+# Без токена подпись рисуется цветом темы.
 [ui.sidebar.spaces]
 rows = [["state_icon", { token = "workspace", fg = "$color" }]]
 
