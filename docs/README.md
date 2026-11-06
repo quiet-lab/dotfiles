@@ -37,6 +37,7 @@
 | [`upstream/`](upstream/README.md) | Черновики обращений в сторонние проекты (Hyprland, Chromium), не отправленные |
 | [`amnezia-split-tunnel.md`](amnezia-split-tunnel.md) | Туннель AmneziaWG и выбор маршрута по адресу назначения: устройство, автозапуск туннелей amn0 и axata, значки в трее, страна и связь туннелей, добавление доменов, обновление списков, починка, возврат приложения |
 | [`agent-session-tips.md`](agent-session-tips.md) | Приёмы работы агента в живой сессии Hyprland: что можно проверить самому, что делает только пользователь |
+| [`claude-input.md`](claude-input.md) | Буфер ввода Claude Code в neovim: панель под Claude Code в herdr, хук и плагин, проверка после обновления Claude Code |
 | [`host-state.md`](host-state.md) | Что в системе и в `$HOME` не лежит под chezmoi и потеряется при переустановке |
 | [`media-and-portals.md`](media-and-portals.md) | Проверки мультимедиа, аппаратного декодирования видео и порталов XDG |
 | [`package-sources.md`](package-sources.md) | Откуда установлена каждая программа и куда её переводить по правилу «pacman, потом AUR, потом остальное» |
