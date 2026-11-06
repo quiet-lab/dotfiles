@@ -5,6 +5,8 @@
 # нет и подпись «<репозиторий или папка> · <модель>»), у панели выставляется display_agent,
 # у workspace — токен цвета color=#ffffff (главный агент репозитория белый).
 # Исполнители duty:worker и субагенты пропускаются: их подписывает dispatch.sh.
+# Workspace исполнителя узнаётся по токену цвета не #ffffff, а не по имени:
+# подпись главной сессии другого репозитория перезаписывается.
 # Хук молчит и выходит с кодом 0 при любой ошибке и вне herdr.
 exec 2>/dev/null
 [ "${HERDR_ENV:-}" = "1" ] || exit 0
@@ -45,13 +47,9 @@ cfg=$(ls ~/.claude/plugins/cache/*/duty/*/scripts/duty_config.py | sort -V | tai
 [ -z "$cfg" ] || symbol=$(env -u DUTY_PROJECT -u CLAUDE_PROJECT_DIR python3 -I "$cfg" --cwd "$cwd" get symbols.main --default '') || symbol=
 label="$place · $model"
 [ -z "$symbol" ] || label="$symbol $place · $model"
-# Уже подписанный «имя · модель» workspace исполнителя не трогаем.
-current=$(herdr workspace list | jq -r --arg w "$HERDR_WORKSPACE_ID" '.result.workspaces[] | select(.workspace_id == $w) | .label')
-case $current in
-    *" · "*)
-        name=${current%% · *}
-        [ "$name" = "$place" ] || [ "$name" = "$symbol $place" ] || exit 0 ;;
-esac
+# Workspace исполнителя (dispatch.sh ставит токен цвета не белого) не трогаем.
+color=$(herdr workspace list | jq -r --arg w "$HERDR_WORKSPACE_ID" '.result.workspaces[] | select(.workspace_id == $w) | .tokens.color // empty')
+[ -z "$color" ] || [ "$color" = "#ffffff" ] || exit 0
 
 herdr workspace rename "$HERDR_WORKSPACE_ID" "$label" > /dev/null
 tab=$(herdr pane get "$HERDR_PANE_ID" | jq -r '.result.pane.tab_id // empty')
