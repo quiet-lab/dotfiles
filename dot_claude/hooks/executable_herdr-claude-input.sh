@@ -5,15 +5,14 @@
 # эту панель. Соответствие «панель Claude -> панель буфера» хранит файл
 # ${XDG_STATE_HOME:-~/.local/state}/claude-input/<панель Claude, ':' -> '_'>
 # с идентификатором панели буфера. Аргумент — open или close.
-# Хук молчит и выходит с кодом 0 при любой ошибке, вне herdr, у исполнителей
-# duty и субагентов, при живой панели буфера того же workspace и когда
+# Хук молчит и выходит с кодом 0 при любой ошибке, вне herdr и у
+# субагентов, при живой панели буфера того же workspace и когда
 # панель Claude ниже 20 строк (13 строк вывода, 2 строки рамки, 5 строк Claude).
 exec 2>/dev/null
 mode=${1:-}
 input=$(cat)
 [ "${HERDR_ENV:-}" = "1" ] || exit 0
 [ -n "${HERDR_PANE_ID:-}" ] || exit 0
-[ -z "${DUTY_TASK:-}" ] || exit 0
 command -v jq > /dev/null && command -v herdr > /dev/null || exit 0
 [ -z "$(jq -r '.agent_id // empty' <<< "$input")" ] || exit 0
 
