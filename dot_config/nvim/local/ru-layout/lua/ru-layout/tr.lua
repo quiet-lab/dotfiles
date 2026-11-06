@@ -47,6 +47,43 @@ function M.counterpart(c)
   return nil
 end
 
+-- Активная раскладка по ru-layout.layout: "ru" или "us"; неизвестная раскладка,
+-- отсутствие Hyprland и модуля layout — "us".
+function M.layout()
+  local ok, layout = pcall(require, "ru-layout.layout")
+  return (ok and layout.get() == "ru") and "ru" or "us"
+end
+
+-- Экранирование символа внутри коллекции [] регулярного выражения Vim.
+function M.cesc(c)
+  if c == "]" or c == "\\" or c == "^" or c == "-" then
+    return "\\" .. c
+  end
+  return c
+end
+
+-- Один символ → фрагмент шаблона \V: символ с парой — класс из него и пары
+-- (`ы` → `\[ыs]`), остальные — буквально (`\` экранируется). pair(c) — пара
+-- символа (по умолчанию M.counterpart).
+function M.class(c, pair)
+  local d = (pair or M.counterpart)(c)
+  if not d then
+    return c == "\\" and "\\\\" or c
+  end
+  return "\\[" .. M.cesc(c) .. M.cesc(d) .. "]"
+end
+
+-- Есть ли в строке кириллица (U+0400…U+04FF).
+function M.has_cyrillic(s)
+  for _, c in ipairs(chars(s)) do
+    local cp = vim.fn.char2nr(c)
+    if cp >= 0x400 and cp <= 0x4FF then
+      return true
+    end
+  end
+  return false
+end
+
 -- Вся строка состоит из кириллицы и ё (регистр любой); пустая строка не подходит.
 function M.is_cyrillic(s)
   if s == "" then

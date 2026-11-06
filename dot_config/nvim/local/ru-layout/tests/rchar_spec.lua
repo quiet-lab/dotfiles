@@ -5,6 +5,8 @@ local D = dofile(here .. "/harness/drv.lua")
 
 D.start({ langmap = true, hypr = "ru", plugins = { "flash.nvim" } })
 D.lua([[
+-- Порядок как в рабочей конфигурации: подмена API привязок до модулей.
+require("ru-layout.keymap").install()
 local L = require("ru-layout.layout")
 L.setup()
 vim.wait(2 ^ 31 - 1, function() return L.get() == "ru" end, 1)
@@ -30,6 +32,17 @@ end
 return res]])
 )
 D.check("gr не тронут", "", D.lua("return vim.fn.maparg('gr', 'n')"))
+D.check(
+  "к — дубль модуля keymap, удаляется вместе с r",
+  { true, "", "" },
+  D.lua([[
+local had = vim.fn.maparg('к', 'n') ~= ''
+vim.keymap.del({ 'n', 'x' }, 'r')
+local res = { had, vim.fn.maparg('к', 'n'), vim.fn.maparg('к', 'x') }
+require('ru-layout.rchar').setup()
+return res
+]])
+)
 
 local function L(lines)
   return { lines = lines }
@@ -49,6 +62,25 @@ D.case("RU: r<CR> разбивает строку", "lr<CR>", { "a", "c" }, D.li
 D.case("RU: r<C-v>ф над abc — буквально", "r<C-v>ф", { "фbc" }, D.lines, L({ "abc" }))
 D.case("RU: vllrа над abc → fff", "vllrа", { "fff" }, D.lines, L({ "abc" }))
 D.case("RU: vllrф над абв → ффф", "vllrф", { "ффф" }, D.lines, L({ "абв" }))
+-- visual: решение по всему выделению — есть латинская буква и нет кириллицы.
+D.case(
+  "RU: $v0rа над abcд (есть кириллица) → аааа",
+  "$v0rа",
+  { "аааа" },
+  D.lines,
+  L({ "abcд" })
+)
+D.case("RU: v$rа над abc1 → ffff", "v$rа", { "ffff" }, D.lines, L({ "abc1" }))
+D.case("RU: lvlrа над 1a2 (курсор не на букве) → 1ff", "lvlrа", { "1ff" }, D.lines, L({ "1a2" }))
+D.case("RU: v$rа над 12 (нет букв) → аа", "v$rа", { "аа" }, D.lines, L({ "12" }))
+D.case(
+  "RU: Vjrа над ab/cд → кириллица во второй строке",
+  "Vjrа",
+  { "аа", "аа" },
+  D.lines,
+  L({ "ab", "cд" })
+)
+D.case("RU: <C-v>jrа (блок) над ab/cd → f/f", "<C-v>jrа", { "fb", "fd" }, D.lines, L({ "ab", "cd" }))
 D.case("RU: rа затем ю (повтор) → ffc", "rаlю", { "ffc" }, D.lines, L({ "abc" }))
 D.case("RU: к (клавиша r) работает как r", "ка", { "fbc" }, D.lines, L({ "abc" }))
 

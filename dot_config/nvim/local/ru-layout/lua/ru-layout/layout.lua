@@ -40,9 +40,22 @@ local S = {
   ev = nil, -- труба .socket2.sock
   buf = "",
   watchers = {}, -- uv_fs_event_t на время ожидания экземпляра
-  watched = {}, -- пути, за которыми уже следят
+  watched = {}, -- путь → его uv_fs_event_t
+  -- Каталог экземпляра → отпечаток файла .socket2.sock, подключение к которому
+  -- отклонено (Hyprland упал, файлы сокетов остались). Каталог не пробуется снова,
+  -- пока файл тот же и в каталоге нет событий файловой системы; новый сокет —
+  -- другой файл, а живой Hyprland пишет в каталог журнал.
+  failed = {},
   requests = 0, -- число запросов к .socket.sock (для проверок)
+  connects = 0, -- число попыток подключения к .socket2.sock (для проверок)
+  refused = 0, -- число отказов подключения к .socket2.sock (для проверок)
 }
+
+-- Отпечаток файла: inode и время смены метаданных; nil — файла нет.
+local function file_id(path)
+  local st = uv.fs_stat(path)
+  return st and table.concat({ st.ino, st.ctime.sec, st.ctime.nsec }, ":") or nil
+end
 
 local function code_of(keymap)
   if not keymap then
@@ -53,6 +66,7 @@ end
 
 -- Каталог экземпляра: подпись из окружения, если её сокеты существуют,
 -- иначе самый свежий каталог $XDG_RUNTIME_DIR/hypr с обоими сокетами.
+-- Каталоги, чей .socket2.sock уже отклонил подключение (S.failed), пропускаются.
 -- Второе значение — каталог hypr, третье — $XDG_RUNTIME_DIR.
 local function find_base()
   local rt = vim.env.XDG_RUNTIME_DIR
@@ -61,7 +75,8 @@ local function find_base()
   end
   local root = rt .. "/hypr"
   local function has_sockets(dir)
-    return uv.fs_stat(dir .. "/.socket2.sock") and uv.fs_stat(dir .. "/.socket.sock")
+    local id = file_id(dir .. "/.socket2.sock")
+    return id and id ~= S.failed[dir] and uv.fs_stat(dir .. "/.socket.sock")
   end
   local sig = vim.env.HYPRLAND_INSTANCE_SIGNATURE
   if sig and sig ~= "" and has_sockets(root .. "/" .. sig) then
@@ -117,14 +132,14 @@ local function request(cmd, cb)
   end)
 end
 
--- Новое состояние: событие User LayoutChanged, если код изменился.
-local function set_code(keymap)
+-- Новое состояние: событие User LayoutChanged, если код изменился. index — номер
+-- группы XKB, если он известен (j/devices); иначе — по коду, а для неизвестной
+-- раскладки и при обрыве связи — nil.
+local function set_code(keymap, index)
   local old = S.code
   S.keymap = keymap
   S.code = code_of(keymap)
-  if S.code and S.opts.indices[S.code] then
-    S.index = S.opts.indices[S.code]
-  end
+  S.index = index or (S.code and S.opts.indices[S.code]) or nil
   if old ~= S.code then
     vim.api.nvim_exec_autocmds("User", {
       pattern = "LayoutChanged",
@@ -155,8 +170,7 @@ local function query_devices()
       return
     end
     S.device = kb.name
-    S.index = kb.active_layout_index
-    set_code(kb.active_keymap)
+    set_code(kb.active_keymap, kb.active_layout_index)
   end)
 end
 
@@ -218,9 +232,25 @@ local function watch_for_instance(root, rt)
       end
     end
   end
-  watch = function(path)
-    if S.watched[path] then
-      return
+  -- renew — поставить наблюдатель заново: каталог с тем же именем удалён и создан
+  -- снова, а прежний наблюдатель остался на удалённом каталоге.
+  watch = function(path, renew)
+    local old = S.watched[path]
+    if old then
+      if not renew then
+        return
+      end
+      for i, x in ipairs(S.watchers) do
+        if x == old then
+          table.remove(S.watchers, i)
+          break
+        end
+      end
+      if not old:is_closing() then
+        old:stop()
+        old:close()
+      end
+      S.watched[path] = nil
     end
     local w = uv.new_fs_event()
     if
@@ -233,12 +263,17 @@ local function watch_for_instance(root, rt)
           if #S.watchers == 0 then
             return
           end
+          -- Событие в каталоге экземпляра снимает отметку об отказе: отказ мог
+          -- прийти между bind() и listen() живого экземпляра.
+          if path ~= rt and path ~= root then
+            S.failed[path] = nil
+          end
           if path == rt then
             if fname == "hypr" and uv.fs_stat(root) then
               watch_root()
             end
           elseif path == root and fname and uv.fs_stat(root .. "/" .. fname .. "/") then
-            watch(root .. "/" .. fname)
+            watch(root .. "/" .. fname, true)
           end
           try()
         end)
@@ -249,7 +284,7 @@ local function watch_for_instance(root, rt)
       end
       return
     end
-    S.watched[path] = true
+    S.watched[path] = w
     S.watchers[#S.watchers + 1] = w
   end
   if uv.fs_stat(root) then
@@ -291,15 +326,21 @@ function connect_events(base)
     return false
   end
   close_events()
+  S.connects = S.connects + 1
   S.base = base
   S.enabled = true
   S.device = S.opts.device
+  local id = file_id(base .. "/.socket2.sock")
   local pipe = uv.new_pipe(false)
   S.ev = pipe
   S.buf = ""
   pipe:connect(base .. "/.socket2.sock", function(err)
     if err then
       return vim.schedule(function()
+        S.refused = S.refused + 1
+        -- Отказ (ECONNREFUSED у сокета без слушателя): тот же файл сокета
+        -- не пробуется снова, иначе переподключение шло бы без остановки.
+        S.failed[base] = id
         if S.ev == pipe then
           on_disconnect()
         end
@@ -342,6 +383,8 @@ function M.setup(opts)
   local new_opts = vim.tbl_deep_extend("force", vim.deepcopy(defaults), opts or {})
   local same_device = new_opts.device == S.opts.device
   S.opts = new_opts
+  -- Явный вызов снова пробует и каталоги, подключение к которым было отклонено.
+  S.failed = {}
   local base, root, rt = find_base()
   if S.ev and same_device and base == S.base then
     return true

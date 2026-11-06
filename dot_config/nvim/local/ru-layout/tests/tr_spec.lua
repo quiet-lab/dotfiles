@@ -47,4 +47,39 @@ eq("has_modifier <A-x>", true, tr.has_modifier("a<A-x>"))
 eq("has_modifier <D-x>", true, tr.has_modifier("<D-x>"))
 eq("has_modifier <CR>", false, tr.has_modifier("<CR>"))
 eq("has_modifier gsa", false, tr.has_modifier("gsa"))
+eq("cesc ]", "\\]", tr.cesc("]"))
+eq("cesc ^", "\\^", tr.cesc("^"))
+eq("cesc -", "\\-", tr.cesc("-"))
+eq("cesc \\", "\\\\", tr.cesc("\\"))
+eq("cesc ы", "ы", tr.cesc("ы"))
+eq("class ы", "\\[ыs]", tr.class("ы"))
+eq("class х", "\\[х[]", tr.class("х"))
+eq("class ъ", "\\[ъ\\]]", tr.class("ъ"))
+eq("class 1", "1", tr.class("1"))
+eq("class \\", "\\\\", tr.class("\\"))
+eq(
+  "class со своей парой",
+  "ж",
+  tr.class("ж", function()
+    return nil
+  end)
+)
+eq("has_cyrillic abcд", true, tr.has_cyrillic("abcд"))
+eq("has_cyrillic abc1", false, tr.has_cyrillic("abc1"))
+eq("has_cyrillic пусто", false, tr.has_cyrillic(""))
+-- layout() без модуля layout в package.loaded: get() == nil → "us".
+eq("layout без Hyprland", "us", tr.layout())
+package.loaded["ru-layout.layout"] = {
+  get = function()
+    return "ru"
+  end,
+}
+eq("layout ru", "ru", tr.layout())
+package.loaded["ru-layout.layout"] = {
+  get = function()
+    return "German"
+  end,
+}
+eq("layout неизвестная → us", "us", tr.layout())
+package.loaded["ru-layout.layout"] = nil
 D.finish()

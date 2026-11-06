@@ -135,6 +135,29 @@ D.row(
 )
 pick("4e RU: метка к → «правка»", s1, "правка", "к")
 
+-- Пропуск меток: исходный Labeler.skip не вызывается ни разу, наш — по разу на
+-- каждое обновление меток (ввод «ыпр»: пустой шаблон, «п», «пр» — одно окно).
+D.reset(TEXT)
+D.lua([[
+local Labeler = require("flash.labeler")
+_G.SKIPN = { orig = 0, ours = 0, updates = 0 }
+_G.SKIP_SAVED = { skip = Labeler.skip, ours = RUF.skip, update = Labeler.update }
+Labeler.skip = function(...) SKIPN.orig = SKIPN.orig + 1; return SKIP_SAVED.skip(...) end
+RUF.skip = function(...) SKIPN.ours = SKIPN.ours + 1; return SKIP_SAVED.ours(...) end
+Labeler.update = function(...) SKIPN.updates = SKIPN.updates + 1; return SKIP_SAVED.update(...) end
+]])
+D.input("ыпр")
+D.sync()
+D.check(
+  "labeler: исходный skip не вызывается, наш — по разу на обновление",
+  true,
+  D.lua([[
+local Labeler = require("flash.labeler")
+Labeler.skip, RUF.skip, Labeler.update = SKIP_SAVED.skip, SKIP_SAVED.ours, SKIP_SAVED.update
+return SKIPN.orig == 0 and SKIPN.updates > 0 and SKIPN.ours == SKIPN.updates or SKIPN]])
+)
+esc()
+
 -- латинская s в ru: те же кириллические метки
 D.reset(TEXT)
 D.input("sпр")

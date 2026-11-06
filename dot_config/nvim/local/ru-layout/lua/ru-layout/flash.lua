@@ -37,12 +37,7 @@ local FLAG = "_ru_layout"
 local warned = false
 
 -- Активная раскладка: "ru" или "us" (неизвестная и отсутствие Hyprland — "us").
-function M.layout()
-  local ok, code = pcall(function()
-    return require("ru-layout.layout").get()
-  end)
-  return (ok and code == "ru") and "ru" or "us"
-end
+M.layout = tr.layout
 
 -- Пара символа в другой раскладке; без punct — только у букв.
 function M.counterpart(c)
@@ -59,21 +54,11 @@ function M.counterpart(c)
   return d
 end
 
--- Экранирование символа внутри коллекции [] регулярного выражения Vim.
-local function cesc(c)
-  if c == "]" or c == "\\" or c == "^" or c == "-" then
-    return "\\" .. c
-  end
-  return c
-end
+local cesc = tr.cesc
 
--- Один символ ввода → фрагмент шаблона \V.
+-- Один символ ввода → фрагмент шаблона \V (пара — с учётом opts.punct).
 function M.class(c)
-  local d = M.counterpart(c)
-  if not d then
-    return c == "\\" and "\\\\" or c
-  end
-  return "\\[" .. cesc(c) .. cesc(d) .. "]"
+  return tr.class(c, M.counterpart)
 end
 
 -- search.mode для flash: строка ввода → шаблон поиска и шаблон пропуска меток.
@@ -155,10 +140,24 @@ function M.skip(self, win, labels)
   return labels
 end
 
+-- Пропуск меток на время Labeler.new: new() сразу вызывает reset() с пропуском
+-- меток (searchpos по каждому окну), а update() ниже всё равно делает reset()
+-- заново, уже с M.skip; метки, оставленные здесь, отбрасываются.
+local function no_skip(_, _, labels)
+  return labels
+end
+
 -- labeler для flash: стандартный Labeler с пропуском меток по паре.
 function M.labeler(_, state)
   if not state._ru_labeler then
-    local l = require("flash.labeler").new(state)
+    local Labeler = require("flash.labeler")
+    local orig = Labeler.skip
+    Labeler.skip = no_skip
+    local ok, l = pcall(Labeler.new, state)
+    Labeler.skip = orig
+    if not ok then
+      error(l, 0)
+    end
     l.skip = M.skip
     state._ru_labeler = l
   end

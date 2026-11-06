@@ -273,6 +273,49 @@ D.check("dbui: o → щ", maparg("o", "n", dbuf), maparg("щ", "n", dbuf))
 D.check("dbui: дубль непустой", true, maparg("щ", "n", dbuf) ~= "")
 D.lua("vim.cmd('silent! %bwipe!')")
 
+-- 14а. Смена maplocalleader: дубль привязки, поставленной при прежнем значении,
+-- удаляется вместе с ней (память переводов учитывает и maplocalleader).
+D.check(
+  "maplocalleader: дубли при обоих значениях удаляются со своими привязками",
+  { true, true, "", "", "" },
+  D.lua([[
+  vim.g.maplocalleader = "\\"
+  vim.keymap.set("n", "<localleader>x", hit("llx1"))
+  vim.g.maplocalleader = ","
+  vim.keymap.set("n", "<localleader>x", hit("llx2"))
+  local r = { vim.fn.maparg("\\ч", "n") ~= "", vim.fn.maparg(",ч", "n") ~= "" }
+  vim.keymap.del("n", "\\x")
+  r[3] = vim.fn.maparg("\\ч", "n")
+  vim.keymap.del("n", "<localleader>x")
+  r[4] = vim.fn.maparg(",ч", "n")
+  r[5] = vim.fn.maparg(",x", "n")
+  vim.g.maplocalleader = nil
+  return r]])
+)
+
+-- 14б. BufWinEnter: проход по буферным привязкам только у типов файлов из списка.
+D.check(
+  "BufWinEnter: обычный буфер не проходится, буфер типа dbui — проходится",
+  { "", true },
+  D.lua([[
+  -- Буфер с привязкой Vim script (мимо подмены), тип файла — без события FileType:
+  -- дубль может поставить только BufWinEnter.
+  local function shown(ft)
+    local b = vim.api.nvim_create_buf(true, false)
+    vim.api.nvim_buf_call(b, function()
+      vim.cmd("nnoremap <buffer> zq :echo 1<CR>")
+      if ft then
+        vim.cmd("noautocmd setlocal filetype=" .. ft)
+      end
+    end)
+    vim.api.nvim_win_set_buf(0, b)
+    return vim.fn.maparg("яй", "n")
+  end
+  local r = { shown(nil), shown("dbui") ~= "" }
+  vim.cmd("silent! %bwipe!")
+  return r]])
+)
+
 -- 15. Замер: 400 привязок без подмены и с подменой, sweep() по ним.
 local t = D.lua([[
   local km = require("ru-layout.keymap")

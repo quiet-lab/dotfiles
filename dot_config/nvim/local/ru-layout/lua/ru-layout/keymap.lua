@@ -73,12 +73,13 @@ end
 local ALWAYS = { n = true, x = true, o = true }
 local WITH_MOD = { i = true, c = true, t = true, s = true }
 
--- Память переводов: lhs → { ru, коды клавиш ru }. Коды зависят от mapleader,
--- поэтому при его смене память сбрасывается.
-local memo, memo_leader = {}, nil
+-- Память переводов: lhs → { ru, коды клавиш ru }. Коды зависят от mapleader
+-- и maplocalleader, поэтому при смене любого из них память сбрасывается.
+local memo, memo_leader, memo_local = {}, nil, nil
 local function to_ru(lhs)
-  if vim.g.mapleader ~= memo_leader then
-    memo, memo_leader = {}, vim.g.mapleader
+  local leader, localleader = vim.g.mapleader, vim.g.maplocalleader
+  if leader ~= memo_leader or localleader ~= memo_local then
+    memo, memo_leader, memo_local = {}, leader, localleader
   end
   local r = memo[lhs]
   if r == nil then
@@ -154,10 +155,14 @@ local function drop_dups(s, sk, buf)
   for dk in pairs(list) do
     local d = s.dup[dk]
     if d and d.src == sk then
+      -- Удаление по кодам клавиш из ключа, а не по d.lhs: `<leader>` и
+      -- `<localleader>` в d.lhs раскрылись бы по нынешнему значению переменной,
+      -- а дубль поставлен при том, что действовало тогда.
+      local lhs = vim.fn.keytrans(dk:sub(#d.mode + 2))
       if buf then
-        pcall(orig.buf_del, buf, d.mode, d.lhs)
+        pcall(orig.buf_del, buf, d.mode, lhs)
       else
-        pcall(orig.del, d.mode, d.lhs)
+        pcall(orig.del, d.mode, lhs)
       end
       s.dup[dk] = nil
     end
@@ -337,8 +342,8 @@ function M.install()
   -- vim-fugitive ставит буферные привязки до FileType и в своём обработчике
   -- FileType, vim-dadbod-ui — после FileType тем же вызовом; поэтому проход идёт
   -- в vim.schedule после FileType — по завершении текущей обработки событий, без
-  -- срока. Запасной BufWinEnter переводит привязки, появившиеся позже (буфер,
-  -- перечитанный плагином) и у типов файлов вне списка.
+  -- срока. Запасной BufWinEnter у буферов тех же типов переводит привязки,
+  -- появившиеся позже (буфер, перечитанный плагином, `:mapclear <buffer>`).
   api.nvim_create_autocmd("FileType", {
     group = augroup,
     pattern = M.filetypes,
@@ -353,7 +358,9 @@ function M.install()
     group = augroup,
     desc = "ru-layout: дубли буферных привязок, поставленных мимо API",
     callback = function(args)
-      M.sweep_buf(args.buf)
+      if vim.tbl_contains(M.filetypes, vim.bo[args.buf].filetype) then
+        M.sweep_buf(args.buf)
+      end
     end,
   })
   api.nvim_create_autocmd("BufWipeout", {

@@ -17,8 +17,10 @@ local function last()
   return D.lua("return { vim.fn.histget(':', -1), vim.v.errmsg }")
 end
 
+-- Порядок как в рабочей конфигурации: подмена API привязок до модулей.
 local SETUP = [[
 vim.v.errmsg = ''
+require('ru-layout.keymap').install()
 require('ru-layout.cmdline').setup()
 ]]
 
@@ -187,6 +189,24 @@ D.case(
 D.case("<M-l>: incsearch как у /sel", "/ыуд<M-l>", { 1, 7 }, function()
   return D.lua("return vim.api.nvim_win_get_cursor(0)")
 end, { lines = TEXT })
+D.case(
+  "<M-д> (дубль keymap): /ыуд → шаблон",
+  "/ыуд<M-д>",
+  "\\V\\[ыs]\\[уe]\\[дl]",
+  cmdline,
+  { lines = TEXT }
+)
+D.check(
+  "<M-д> — дубль модуля keymap, удаляется вместе с <M-l>",
+  { true, "" },
+  D.lua([[
+local had = vim.fn.maparg('<M-д>', 'c') ~= ''
+vim.keymap.del('c', '<M-l>')
+local after = vim.fn.maparg('<M-д>', 'c')
+require('ru-layout.cmdline').setup()
+return { had, after }
+]])
+)
 D.case("<M-l>: в `:` вставка без перевода", ":ab<M-l><C-u>echo 1<CR>", "", function()
   return D.lua("return vim.v.errmsg")
 end)
@@ -284,6 +304,43 @@ D.case(
   function()
     return D.lua("return vim.o.number")
   end
+)
+D.stop()
+
+-- <Tab> blink с "fallback": blink запоминает прежнюю привязку (первую привязку
+-- модуля) как свой запасной вариант; модуль переставляет свою поверх blink.
+-- Цепочка «модуль → blink → fallback (прежняя привязка модуля)» должна закончиться
+-- встроенным дополнением, а не возвращаться в blink без конца.
+D.start({ langmap = true, plugins = { "blink.cmp" } })
+D.lua(SETUP)
+D.lua([[
+_G.TABS = 0
+require('blink.cmp').setup({
+  fuzzy = { implementation = 'lua' },
+  sources = { default = {} },
+  cmdline = {
+    enabled = true,
+    keymap = {
+      preset = 'cmdline',
+      ['<Tab>'] = { function() _G.TABS = _G.TABS + 1; return false end, 'fallback' },
+    },
+    completion = { menu = { auto_show = false } },
+  },
+})
+vim.api.nvim_exec_autocmds('User', { pattern = 'LazyLoad', data = 'blink.cmp' })
+vim.wait(2 ^ 31 - 1, function()
+  local m = vim.fn.maparg('<S-Tab>', 'c', false, true)
+  return m.desc ~= nil and vim.startswith(m.desc, 'blink.cmp')
+end, 1)
+]])
+D.case(
+  "blink fallback: Жув<Tab> → встроенное дополнение edit",
+  "Жув<Tab>",
+  { "edit", 1, "" },
+  function()
+    return D.lua("return { vim.fn.getcmdline(), _G.TABS, vim.v.errmsg }")
+  end,
+  { pre = "_G.TABS = 0; vim.v.errmsg = ''" }
 )
 D.stop()
 D.finish()

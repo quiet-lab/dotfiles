@@ -495,21 +495,10 @@ end
 -- Шаблон поиска «по обеим раскладкам»: `\V`, каждый символ с парой — класс из него
 -- и пары (`ы` → `\[ыs]`), остальные — буквально.
 function M.both_layouts(s)
-  local function esc(c)
-    if c == "]" or c == "\\" or c == "^" or c == "-" then
-      return "\\" .. c
-    end
-    return c
-  end
   local out, i = { "\\V" }, 1
   while i <= #s do
     local c = charat(s, i)
-    local p = tr.counterpart(c)
-    if p then
-      out[#out + 1] = "\\[" .. esc(c) .. esc(p) .. "]"
-    else
-      out[#out + 1] = c == "\\" and "\\\\" or c
-    end
+    out[#out + 1] = tr.class(c)
     i = i + #c
   end
   return table.concat(out)
@@ -565,21 +554,39 @@ local function run_prev(prev, key)
 end
 
 local prev_map = {}
+-- Клавиши, обработка которых модулем сейчас идёт (защита от повторного входа).
+local active = {}
 
 -- Поставить привязку модуля на клавишу key в `c`, запомнив чужую прежнюю.
 -- Повторный вызов при своей привязке ничего не меняет.
+--
+-- Прежняя привязка запоминается в замыкании каждой установки: blink.cmp с
+-- "fallback" хранит у себя прежнюю (более раннюю) привязку модуля и вызывает её
+-- как запасной вариант, и она должна вести к своей прежней привязке, а не к blink.
+-- Повторный вход в обработку той же клавиши (цепочка вернулась в модуль) выполняет
+-- встроенное действие клавиши.
 local function wrap_key(key, desc, fn)
   local m = vim.fn.maparg(key, "c", false, true)
   if m.desc == desc then
     return
   end
-  prev_map[key] = (m.lhs and m.buffer ~= 1) and m or nil
+  local prev = (m.lhs and m.buffer ~= 1) and m or nil
+  prev_map[key] = prev
   vim.keymap.set("c", key, function()
+    if active[key] then
+      return run_prev(nil, key)
+    end
     local ok, err = pcall(fn)
     if not ok then
       vim.notify("ru-layout: " .. tostring(err), vim.log.levels.ERROR)
     end
-    return run_prev(prev_map[key], key)
+    active[key] = true
+    local rok, res = pcall(run_prev, prev, key)
+    active[key] = nil
+    if not rok then
+      error(res, 0)
+    end
+    return res
   end, { expr = true, replace_keycodes = false, desc = desc })
 end
 
@@ -640,18 +647,18 @@ end
 function M.setup()
   wrap_key("<CR>", DESC_CR, cr_translate)
   M.ensure_tab()
-  for _, key in ipairs({ "<M-l>", "<M-д>" }) do
-    vim.keymap.set("c", key, function()
-      local t = vim.fn.getcmdtype()
-      if t == "/" or t == "?" then
-        toggle_both()
-        -- setcmdline из привязки не обновляет incsearch: вставка и удаление символа
-        -- дают изменение строки, после которого подсветка и курсор пересчитываются.
-        return "x\8"
-      end
-      return termcodes(key)
-    end, { expr = true, replace_keycodes = false, desc = DESC_BOTH })
-  end
+  -- Дубль <M-д> ставит модуль keymap (правило дубля: в `c` — при модификаторе),
+  -- поэтому keymap.install() вызывается раньше этого модуля.
+  vim.keymap.set("c", "<M-l>", function()
+    local t = vim.fn.getcmdtype()
+    if t == "/" or t == "?" then
+      toggle_both()
+      -- setcmdline из привязки не обновляет incsearch: вставка и удаление символа
+      -- дают изменение строки, после которого подсветка и курсор пересчитываются.
+      return "x\8"
+    end
+    return termcodes("<M-l>")
+  end, { expr = true, replace_keycodes = false, desc = DESC_BOTH })
   local group = vim.api.nvim_create_augroup("ru-layout-cmdline", { clear = true })
   vim.api.nvim_create_autocmd("CmdlineEnter", { group = group, callback = M.ensure_tab })
   vim.api.nvim_create_autocmd("CmdlineLeave", {

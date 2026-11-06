@@ -70,9 +70,13 @@ def handle_cmd(cmd):
 
 
 def serve(path, handler):
+    # Сокет появляется под своим именем уже слушающим: bind и listen под временным
+    # именем, затем переименование. Иначе подключение между bind и listen получает
+    # отказ, и исход проверки зависит от скорости узла.
     s = socket.socket(socket.AF_UNIX)
-    s.bind(path)
+    s.bind(path + ".tmp")
     s.listen(8)
+    os.rename(path + ".tmp", path)
 
     def loop():
         while True:

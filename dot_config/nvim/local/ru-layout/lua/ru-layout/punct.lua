@@ -51,11 +51,6 @@ local function slot(mode, key)
   return M._slots[id]
 end
 
-local function layout_code()
-  local ok, layout = pcall(require, "ru-layout.layout")
-  return ok and layout.get() or nil
-end
-
 local function tc(s)
   return vim.api.nvim_replace_termcodes(s, true, true, true)
 end
@@ -110,7 +105,7 @@ end
 
 -- Тело привязки знака.
 function M.action(mode, key)
-  if layout_code() == "ru" then
+  if tr.layout() == "ru" then
     return T.ru_ascii_to_us[key]
   end
   return M.previous(mode, key)

@@ -119,11 +119,27 @@ local ok, err = pcall(function()
   D.lua("require('ru-layout.layout')._feed(...)", "activelayout>>hl-virtual-keyboard-wtype,English (US)")
   eq("е: чужое устройство — get()", "ru", D.lua("return require('ru-layout.layout').get()"))
   eq("е: чужое устройство — без события", {}, events())
+  -- Неизвестное имя раскладки: код — имя, номер группы неизвестен.
+  D.lua("require('ru-layout.layout')._feed(...)", "activelayout>>dh747-w-corne,German")
+  eq(
+    "е: неизвестная раскладка — код и index",
+    { "German", "nil" },
+    D.lua("local i = require('ru-layout.layout').info(); return { i.code, tostring(i.index) }")
+  )
+  eq("е: событие old=ru new=German", { { old = "ru", new = "German" } }, events())
+  D.lua("require('ru-layout.layout')._feed(...)", "activelayout>>dh747-w-corne,Russian")
+  eq("е: снова ru — index 1", 1, D.lua("return require('ru-layout.layout').info().index"))
+  events()
 
   -- (г) обрыв: двойник остановлен, затем новый с другой подписью.
   vim.uv.kill(D.hypr_pid, "sigterm")
   eq("г: get() после обрыва", "nil", wait_code(nil))
   eq("г: событие old=ru new=nil", { { old = "ru", new = "nil" } }, events())
+  eq(
+    "г: info().index после обрыва",
+    "nil",
+    D.lua("return tostring(require('ru-layout.layout').info().index)")
+  )
   eq("г: switch_to без Hyprland", false, D.lua("return require('ru-layout.layout').switch_to('us')"))
   eq(
     "г: ожидание экземпляра по inotify",
@@ -165,6 +181,58 @@ local ok, err = pcall(function()
   stop_extra()
   eq("д: get() после остановки", "nil", wait_code(nil))
   eq("д: :messages пусто в конце", "", vim.trim(D.lua("return vim.fn.execute('messages')")))
+  D.stop()
+
+  -- (ж) «мёртвый» экземпляр: файлы сокетов остались, процесса нет (Hyprland упал).
+  -- Подключение отклоняется (ECONNREFUSED); модуль не повторяет попытку к тому же
+  -- каталогу, а ждёт события файловой системы в нём или другого экземпляра.
+  D.start({})
+  D.lua(RECORD)
+  local rt2 = D.lua("return vim.env.XDG_RUNTIME_DIR")
+  local dead = rt2 .. "/hypr/dead"
+  vim.fn.mkdir(dead, "p")
+  -- Сокеты без слушателя: python привязывает их и выходит, не удаляя файлов.
+  vim.fn.system({
+    "python3",
+    "-I",
+    "-c",
+    "import socket,sys\nfor p in sys.argv[1:]:\n s=socket.socket(socket.AF_UNIX); s.bind(p)",
+    dead .. "/.socket.sock",
+    dead .. "/.socket2.sock",
+  })
+  eq("ж: файлы сокетов остались", true, vim.uv.fs_stat(dead .. "/.socket2.sock") ~= nil)
+  D.lua("require('ru-layout.layout').setup()")
+  -- Ожидание до события: отказ подключения обработан.
+  D.lua([[local S = require('ru-layout.layout')._state()
+    vim.wait(2 ^ 31 - 1, function() return S.refused >= 1 end, 1)]])
+  local c1 = D.lua("return require('ru-layout.layout')._state().connects")
+  -- Несколько проходов событийного цикла (каждый запрос RPC — проход): без
+  -- исправления попытки подключения идут без остановки.
+  for _ = 1, 20 do
+    D.lua("vim.cmd('redraw')")
+  end
+  eq("ж: одна попытка к мёртвому экземпляру", { 1, 1, true, false }, {
+    c1,
+    D.lua("return require('ru-layout.layout')._state().connects"),
+    D.lua("return require('ru-layout.layout').info().waiting"),
+    D.lua("return require('ru-layout.layout').info().connected"),
+  })
+  eq("ж: get() — nil", "nil", D.lua("return tostring(require('ru-layout.layout').get())"))
+  -- Живой экземпляр в том же $XDG_RUNTIME_DIR: подключение по inotify.
+  start_extra(rt2, "alive", "Russian")
+  eq("ж: подключение к живому экземпляру", "ru", wait_code("ru"))
+  eq("ж: попыток всего две", 2, D.lua("return require('ru-layout.layout')._state().connects"))
+  eq("ж: событие подключения", { { old = "nil", new = "ru" } }, events())
+  stop_extra()
+  eq("ж: get() после остановки", "nil", wait_code(nil))
+  -- Мёртвый каталог ожил: прежние файлы удалены, Hyprland создал сокеты заново —
+  -- событие файловой системы в каталоге снимает отметку, подключение идёт.
+  vim.fn.delete(dead, "rf")
+  start_extra(rt2, "dead", "English (US)")
+  eq("ж: подключение к ожившему каталогу", "us", wait_code("us"))
+  eq("ж: base — dead", "dead", D.lua("return vim.fn.fnamemodify(require('ru-layout.layout').info().base, ':t')"))
+  stop_extra()
+  eq("ж: get() в конце", "nil", wait_code(nil))
 end)
 if not ok then
   D.row("исключение", "", "нет", tostring(err), false)

@@ -22,17 +22,12 @@ local M = {}
 
 local DESC = "ru-layout: @ (макрос из регистра)"
 
-local function layout_code()
-  local ok, layout = pcall(require, "ru-layout.layout")
-  return ok and layout.get() or nil
-end
-
 -- Имя регистра по физической клавише.
 function M.register_name(c)
   if tr.ru2us[c] then
     return tr.ru2us[c]
   end
-  if layout_code() == "ru" and T.ru_ascii_to_us[c] then
+  if tr.layout() == "ru" and T.ru_ascii_to_us[c] then
     return T.ru_ascii_to_us[c]
   end
   return c
