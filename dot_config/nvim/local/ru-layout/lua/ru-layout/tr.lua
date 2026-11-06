@@ -7,8 +7,30 @@ local M = {}
 M.ru2us = T.ru_to_us
 M.us2ru = T.us_to_ru
 
+-- Символы строки UTF-8 по одному (без vim.fn: функция вызывается на каждую
+-- привязку при запуске). Байт продолжения без ведущего байта — отдельный символ.
 local function chars(s)
-  return vim.fn.split(s, "\\zs")
+  local out, i, n = {}, 1, #s
+  while i <= n do
+    local j = i + 1
+    -- Продолжения собираются только за ведущим байтом многобайтового символа.
+    while j <= n and s:byte(i) >= 0xC0 do
+      local b = s:byte(j)
+      if b < 0x80 or b > 0xBF then
+        break
+      end
+      j = j + 1
+    end
+    out[#out + 1] = s:sub(i, j - 1)
+    i = j
+  end
+  return out
+end
+M.chars = chars
+
+-- Один ли символ в строке.
+local function single(s)
+  return s ~= "" and #chars(s) == 1
 end
 
 local function is_ascii(c)
@@ -74,14 +96,10 @@ function M.class(c, pair)
 end
 
 -- Есть ли в строке кириллица (U+0400…U+04FF).
+-- В UTF-8 это два байта: ведущий 0xD0…0xD3 и байт продолжения.
+local CYR = "^[\208-\211][\128-\191]$"
 function M.has_cyrillic(s)
-  for _, c in ipairs(chars(s)) do
-    local cp = vim.fn.char2nr(c)
-    if cp >= 0x400 and cp <= 0x4FF then
-      return true
-    end
-  end
-  return false
+  return s:find("[\208-\211][\128-\191]") ~= nil
 end
 
 -- Вся строка состоит из кириллицы и ё (регистр любой); пустая строка не подходит.
@@ -90,8 +108,7 @@ function M.is_cyrillic(s)
     return false
   end
   for _, c in ipairs(chars(s)) do
-    local cp = vim.fn.char2nr(c)
-    if cp < 0x400 or cp > 0x4FF then
+    if not c:find(CYR) then
       return false
     end
   end
@@ -139,7 +156,7 @@ function M.split_mod(key)
     k = k + 2
   end
   local mods, c = name:sub(1, k - 1), name:sub(k)
-  if k == 1 or vim.fn.strchars(c) ~= 1 or not M.has_modifier("<" .. mods) then
+  if k == 1 or not single(c) or not M.has_modifier("<" .. mods) then
     return nil
   end
   return mods, c
@@ -214,7 +231,7 @@ function M.lhs_to_ru(lhs, keep_mods)
         if key:match("^%u$") and mods:upper():find("C%-") and not mods:upper():find("S%-") then
           key = key:lower()
         end
-        if k > 1 and vim.fn.strchars(key) == 1 and M.has_modifier("<" .. mods) and not keep_mods then
+        if k > 1 and single(key) and M.has_modifier("<" .. mods) and not keep_mods then
           out[#out + 1] = "<" .. mods .. conv(key) .. ">"
         else
           out[#out + 1] = "<" .. name .. ">"
