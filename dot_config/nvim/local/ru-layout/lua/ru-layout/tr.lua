@@ -209,6 +209,11 @@ function M.lhs_to_ru(lhs, keep_mods)
           k = k + 2
         end
         local mods, key = name:sub(1, k - 1), name:sub(k)
+        -- `<C-W>` (так пишет keytrans) — то же, что `<C-w>`: Ctrl с латинской буквой
+        -- без Shift регистра не различает, а у кириллицы `<C-Ц>` ≠ `<C-ц>`.
+        if key:match("^%u$") and mods:upper():find("C%-") and not mods:upper():find("S%-") then
+          key = key:lower()
+        end
         if k > 1 and vim.fn.strchars(key) == 1 and M.has_modifier("<" .. mods) and not keep_mods then
           out[#out + 1] = "<" .. mods .. conv(key) .. ">"
         else

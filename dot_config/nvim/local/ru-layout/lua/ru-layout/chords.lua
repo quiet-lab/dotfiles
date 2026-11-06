@@ -3,13 +3,16 @@
 -- символ (Neovide), — как `<C-в>`. Модуль делает обе формы равноправными по
 -- построению, хост не определяется:
 --
---   * алиасы: `<C-кир>` → `<C-лат>`, `<M-кир>` → `<M-лат>` (и заглавные формы
---     `<C-В>`, `<C-S-в>`, `<M-В>`…) во всех режимах, с переназначением (remap):
---     сочетание приходит к той же привязке или встроенной команде, что латинское;
+--   * алиасы: `<C-кир>` → `<C-лат>` (заглавная — `<C-S-В>` → `<C-S-d>`) во всех
+--     режимах, с переназначением (remap): сочетание приходит к той же привязке или
+--     встроенной команде, что латинское; в `:` `<C-х>` (это `<C-[>`, Esc) — `<C-c>`:
+--     Esc из привязки выполнил бы командную строку. `<M-кир>` — только в terminal:
+--     в остальных режимах непривязанное `<M-в>` уже равно `<Esc>в`, то есть по
+--     langmap `<Esc>d`, как `<M-d>`; алиас сломал бы эту замену;
 --   * чтецы: у сочетаний, после которых Neovim читает следующую клавишу мимо
 --     привязок (`<C-r>{регистр}`, `<C-x>{режим}`, `<C-g>{буква}`, `<C-v>{символ}`,
---     `<C-\>{…}`), следующая клавиша читается привязкой-выражением и переводится
---     по перечню `ru-layout.index`;
+--     `<C-\>{…}`, `<C-w>{…}`), следующая клавиша читается привязкой-выражением и
+--     переводится по перечню `ru-layout.index`;
 --   * явные сочетания для записей index.txt, где клавиша с Ctrl вторая после
 --     буквы (`g<C-a>`, `]<C-d>`): `g<C-ф>`, `п<C-ф>` → `g<C-a>`.
 --
@@ -35,19 +38,23 @@ local ALL_MODES = { "n", "x", "s", "o", "i", "c", "t" }
 -- (продолжение `<C-\>` в o и s index.txt не перечисляет отдельно).
 local INDEX_MODE = { n = "n", x = "x", s = "x", o = "n", i = "i", c = "c", t = "t" }
 
--- Чтецы: латинский префикс, режимы, и нужен ли чтец на латинском префиксе. На
--- кириллическом (алиасе) он нужен всегда: Neovim читает вторую клавишу без
--- привязок, алиас к ней не применяется. Латинский — только там, где вторая клавиша
--- и при физическом кодировании приходит кириллицей и встроенная команда её не
--- переводит: имя регистра в `:` (`langmap` в командной строке не действует), буква
--- после `<C-g>` в insert, клавиша после `<C-\>` (у `\` нет кириллической формы).
+-- Чтецы: латинский префикс, режимы, нужен ли чтец на латинском префиксе, чьи
+-- записи index.txt продолжают префикс (as — другой префикс, index — другой режим).
+-- На кириллическом префиксе чтец нужен всегда: Neovim читает вторую клавишу без
+-- привязок, алиас к ней не применяется. На латинском — там, где вторая клавиша и при
+-- физическом кодировании приходит кириллицей и встроенная команда её не переводит:
+-- имя регистра в `:` (`langmap` в командной строке не действует), буква после
+-- `<C-x>` и `<C-g>` в insert, клавиша после `<C-\>` (у `\` нет кириллической формы).
+-- В insert имя регистра после `<C-r>` переводит langmap, `<C-w>` в normal переводит
+-- букву по langmap сам.
 M.READERS = {
-  { key = "<C-r>", modes = { "i" }, latin = false }, -- в insert имя регистра переводит langmap
+  { key = "<C-r>", modes = { "i" }, latin = false },
   { key = "<C-r>", modes = { "c" }, latin = true },
-  { key = "<C-x>", modes = { "i" }, latin = false },
+  { key = "<C-x>", modes = { "i" }, latin = true },
   { key = "<C-g>", modes = { "i" }, latin = true },
   { key = "<C-v>", modes = { "i", "c" }, latin = false },
-  { key = "<C-q>", modes = { "i", "c" }, latin = false },
+  { key = "<C-q>", modes = { "i", "c" }, latin = false, as = "<C-v>" },
+  { key = "<C-w>", modes = { "n", "x" }, latin = false, index = "n" },
   { key = "<C-\\>", modes = { "n", "x", "s", "o", "i", "c" }, latin = true },
 }
 
@@ -69,9 +76,6 @@ local function letter_pairs()
   return out
 end
 
--- Формы сочетаний символа ru (lhs) и латинские rhs. Строчная буква — `<C-в>` и
--- `<M-в>`; заглавная — `<C-S-В>` и `<M-В>`: так их передаёт хост, передающий
--- символ (Shift+в приходит как `В`, Alt+Shift+в — как `<M-В>`).
 -- Заглавные символы ru: второй уровень клавиши в таблице раскладки (без vim.fn в
 -- цикле установки).
 local UPPER = {}
@@ -81,18 +85,30 @@ for _, k in ipairs(require("ru-layout.table").keys) do
   end
 end
 
+-- Формы сочетаний символа ru: { lhs, латинский rhs, только terminal }. Строчная
+-- буква — `<C-в>` и `<M-в>`; заглавная — `<C-S-В>` и `<M-В>`: так их передаёт хост,
+-- передающий символ (Shift+в приходит как `В`, Alt+Shift+в — как `<M-В>`).
 local function forms(ru)
   local is_upper = UPPER[ru] == true
   local out = {}
   for _, m in ipairs(is_upper and { "C-S-", "M-" } or { "C-", "M-" }) do
     local us = tr.mod_to_us(m, ru)
     if us then
-      out[#out + 1] = { "<" .. m .. ru .. ">", us }
+      out[#out + 1] = { "<" .. m .. ru .. ">", us, m == "M-" }
     end
   end
   return out
 end
 M.forms = forms
+
+-- rhs алиаса в режиме: в `:` Esc из привязки выполнил бы строку, поэтому `<C-c>`.
+local ESC = kc("<Esc>")
+local function mode_rhs(us, m)
+  if m == "c" and kc(us) == ESC then
+    return "<C-c>"
+  end
+  return us
+end
 
 -- Сведения о поставленных чтецах и явных сочетаниях: spec[режим][коды lhs] =
 -- { lhs, rhs, opts } — для restore и признака привязки модуля. Алиасы не
@@ -131,15 +147,15 @@ local function taken()
   return t
 end
 
--- Латинский rhs алиаса для lhs в записи keytrans; nil, если lhs не алиас модуля.
-local function alias_rhs(lhs)
+-- rhs алиаса для lhs (запись keytrans) в режиме m; nil, если там нет алиаса модуля.
+local function alias_rhs(lhs, m)
   local mods, c = tr.split_mod(lhs)
   if not mods then
     return nil
   end
   for _, f in ipairs(forms(c)) do
-    if f[1] == lhs then
-      return f[2]
+    if f[1] == lhs and (m == "t" or not f[3]) then
+      return mode_rhs(f[2], m)
     end
   end
   return nil
@@ -163,10 +179,11 @@ local function is_arg(t)
   return t:sub(1, 1) == "{" and #t > 2
 end
 
--- Записи режима, которые начинаются с префикса prefix (список кодов клавиш).
-local function candidates(mode, prefix)
+-- Записи режима (имя в INDEX), которые начинаются с префикса prefix (список кодов
+-- клавиш).
+local function candidates(imode, prefix)
   local out = {}
-  for _, e in ipairs(INDEX[INDEX_MODE[mode]] or {}) do
+  for _, e in ipairs(INDEX[imode] or {}) do
     if #e > #prefix then
       local ok = true
       for i, raw in ipairs(prefix) do
@@ -229,17 +246,27 @@ local function accept(cands, pos, c)
   return c, true
 end
 
+local CTRL_C = kc("<C-c>")
+
 -- Чтец для латинского префикса key в режиме mode: функция привязки-выражения.
-local function reader(mode, key)
+-- Продолжения берутся у записей префикса as (`<C-q>` — как `<C-v>`) режима imode.
+local function reader(mode, key, as, imode)
+  local head, look = kc(key), kc(as or key)
+  imode = imode or INDEX_MODE[mode]
   return function()
-    local seq = { kc(key) }
+    local seq = { look }
     while true do
-      local cands = candidates(mode, seq)
+      local cands = candidates(imode, seq)
       if not wants_more(cands, #seq + 1) then
         break
       end
       local ok, c = pcall(vim.fn.getcharstr)
       if not ok then
+        return ""
+      end
+      -- `<C-c>`, набранная латиницей, прерывает getcharstr (ok == false); та же
+      -- клавиша в кириллической форме приходит обычной клавишей — тоже отмена.
+      if tr.key_to_us(c) == CTRL_C then
         return ""
       end
       local got, final = accept(cands, #seq + 1, c)
@@ -248,6 +275,7 @@ local function reader(mode, key)
         break
       end
     end
+    seq[1] = head
     return table.concat(seq)
   end
 end
@@ -315,35 +343,45 @@ function M.setup()
   local function add(cmd, lhs, rhs)
     lines[#lines + 1] = ("silent! %s <unique> %s %s"):format(cmd, lhs, rhs)
   end
-  local function set_reader(m, lhs, key)
+  local function set_reader(m, lhs, r)
     if not busy[m][lhs] then
-      local o = opts_for(key, { expr = true, replace_keycodes = false, callback = reader(m, key) })
+      local o = opts_for(r.key, {
+        expr = true,
+        replace_keycodes = false,
+        callback = reader(m, r.key, r.as, r.index),
+      })
       raw_set(m, lhs, "", o)
       remember(m, lhs, "", o)
     end
   end
 
-  -- Алиасы; у префиксов чтецов кириллическая форма — чтец, а не алиас.
+  -- Алиасы: режимы группы, где у lhs один и тот же rhs и нет чтеца, ставятся одной
+  -- командой группы, остальные — командами режимов.
   for _, p in ipairs(letter_pairs()) do
     for _, f in ipairs(forms(p[2])) do
-      local lhs, us = f[1], f[2]
+      local lhs, us, term_only = f[1], f[2], f[3]
       for group, modes in pairs(GROUPS) do
-        local plain, all = {}, true
-        for _, m in ipairs(modes) do
-          if readers[m] and readers[m][us] then
-            all = false
-            set_reader(m, lhs, us)
-          elseif busy[m][lhs] then
-            all = false
-          else
-            plain[#plain + 1] = m
+        if group == "t" or not term_only then
+          local plain, all = {}, true
+          for _, m in ipairs(modes) do
+            if readers[m] and readers[m][us] then
+              all = false
+              set_reader(m, lhs, readers[m][us])
+            elseif busy[m][lhs] then
+              all = false
+            else
+              plain[#plain + 1] = m
+              if mode_rhs(us, m) ~= us then
+                all = false
+              end
+            end
           end
-        end
-        if all then
-          add(MAPCMD[group], lhs, us)
-        else
-          for _, m in ipairs(plain) do
-            add(MAPCMD[m], lhs, us)
+          if all then
+            add(MAPCMD[group], lhs, us)
+          else
+            for _, m in ipairs(plain) do
+              add(MAPCMD[m], lhs, mode_rhs(us, m))
+            end
           end
         end
       end
@@ -354,7 +392,7 @@ function M.setup()
   for _, r in ipairs(M.READERS) do
     if r.latin then
       for _, m in ipairs(r.modes) do
-        set_reader(m, r.key, r.key)
+        set_reader(m, r.key, r)
       end
     end
   end
@@ -384,7 +422,7 @@ function M.restore(mode, raw)
   local s = spec[mode] and spec[mode][raw]
   if not s then
     local lhs = vim.fn.keytrans(raw)
-    local us = alias_rhs(lhs)
+    local us = alias_rhs(lhs, mode)
     if not us then
       return
     end
@@ -408,7 +446,7 @@ function M.is_ours(d, m)
   end
   local raw = d.lhsraw or kc(d.lhs)
   local s = spec[m] and spec[m][raw]
-  local rhs = s and s.rhs or alias_rhs(vim.fn.keytrans(raw))
+  local rhs = s and s.rhs or alias_rhs(vim.fn.keytrans(raw), m)
   return rhs ~= nil and rhs ~= "" and kc(d.rhs) == kc(rhs)
 end
 
