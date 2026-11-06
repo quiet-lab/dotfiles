@@ -1,0 +1,85 @@
+-- Перевод строк и lhs: ru-layout.tr.
+-- Запуск: cd <корень плагина> && nvim --headless --clean -u NONE -l tests/tr_spec.lua
+local here = vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":p:h")
+package.path = here .. "/../lua/?.lua;" .. package.path
+local D = dofile(here .. "/harness/drv.lua")
+local tr = require("ru-layout.tr")
+
+local function eq(name, expect, fact)
+  D.row(name, "", expect, fact)
+end
+
+eq("to_us", "ghbdtn", tr.to_us("привет"))
+eq("to_ru", "привет", tr.to_ru("ghbdtn"))
+eq("to_us: прочие как есть", "gh 1!", tr.to_us("пр 1!"))
+eq("counterpart ю", ".", tr.counterpart("ю"))
+eq("counterpart .", "ю", tr.counterpart("."))
+eq("counterpart a", "ф", tr.counterpart("a"))
+eq("counterpart 1", nil, tr.counterpart("1"))
+eq("counterpart /", nil, tr.counterpart("/"))
+eq("counterpart х", "[", tr.counterpart("х"))
+eq("is_cyrillic слово", true, tr.is_cyrillic("Привет"))
+eq("is_cyrillic ё", true, tr.is_cyrillic("ёЁ"))
+eq("is_cyrillic смесь", false, tr.is_cyrillic("приvет"))
+eq("is_cyrillic пусто", false, tr.is_cyrillic(""))
+eq("lhs <leader>ff", "<leader>аа", tr.lhs_to_ru("<leader>ff"))
+eq("lhs <M-d>", "<M-в>", tr.lhs_to_ru("<M-d>"))
+eq("lhs <Plug>", "<Plug>(x)", tr.lhs_to_ru("<Plug>(x)"))
+eq("lhs gsa", "пыф", tr.lhs_to_ru("gsa"))
+eq("lhs <C-r>", "<C-к>", tr.lhs_to_ru("<C-r>"))
+eq("lhs <CR>", "<CR>", tr.lhs_to_ru("<CR>"))
+eq("lhs ]b", "ъи", tr.lhs_to_ru("]b"))
+eq("lhs <C-S-x>", "<C-S-ч>", tr.lhs_to_ru("<C-S-x>"))
+eq("lhs <A-j>", "<A-о>", tr.lhs_to_ru("<A-j>"))
+eq("lhs <D-s>", "<D-ы>", tr.lhs_to_ru("<D-s>"))
+eq("lhs <localleader>x", "<localleader>ч", tr.lhs_to_ru("<localleader>x"))
+eq(
+  "lhs <F1><Esc><Space><Tab><lt><Bar>",
+  "<F1><Esc><Space><Tab><lt><Bar>",
+  tr.lhs_to_ru("<F1><Esc><Space><Tab><lt><Bar>")
+)
+eq("lhs знаки с ASCII-парой не трогаются", "/?", tr.lhs_to_ru("/?"))
+eq("lhs знаки с кириллической парой", "юбжЖ", tr.lhs_to_ru(".,;:"))
+eq("lhs одиночный <", "Бы", tr.lhs_to_ru("<s"))
+eq("has_modifier <M-d>", true, tr.has_modifier("<M-d>"))
+eq("has_modifier <C-x>", true, tr.has_modifier("<C-x>"))
+eq("has_modifier <A-x>", true, tr.has_modifier("a<A-x>"))
+eq("has_modifier <D-x>", true, tr.has_modifier("<D-x>"))
+eq("has_modifier <CR>", false, tr.has_modifier("<CR>"))
+eq("has_modifier gsa", false, tr.has_modifier("gsa"))
+eq("cesc ]", "\\]", tr.cesc("]"))
+eq("cesc ^", "\\^", tr.cesc("^"))
+eq("cesc -", "\\-", tr.cesc("-"))
+eq("cesc \\", "\\\\", tr.cesc("\\"))
+eq("cesc ы", "ы", tr.cesc("ы"))
+eq("class ы", "\\[ыs]", tr.class("ы"))
+eq("class х", "\\[х[]", tr.class("х"))
+eq("class ъ", "\\[ъ\\]]", tr.class("ъ"))
+eq("class 1", "1", tr.class("1"))
+eq("class \\", "\\\\", tr.class("\\"))
+eq(
+  "class со своей парой",
+  "ж",
+  tr.class("ж", function()
+    return nil
+  end)
+)
+eq("has_cyrillic abcд", true, tr.has_cyrillic("abcд"))
+eq("has_cyrillic abc1", false, tr.has_cyrillic("abc1"))
+eq("has_cyrillic пусто", false, tr.has_cyrillic(""))
+-- layout() без модуля layout в package.loaded: get() == nil → "us".
+eq("layout без Hyprland", "us", tr.layout())
+package.loaded["ru-layout.layout"] = {
+  get = function()
+    return "ru"
+  end,
+}
+eq("layout ru", "ru", tr.layout())
+package.loaded["ru-layout.layout"] = {
+  get = function()
+    return "German"
+  end,
+}
+eq("layout неизвестная → us", "us", tr.layout())
+package.loaded["ru-layout.layout"] = nil
+D.finish()
