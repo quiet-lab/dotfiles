@@ -412,6 +412,16 @@ check(
   "перенос: после ухода диалога окно как было",
   not wrap_on(other_win) and not vim.wo[other_win].wrap
 )
+-- Уход буфера из нетекущего окна возвращает опции этого окна.
+local w_in = vim.fn.win_findbuf(input)[1]
+vim.api.nvim_set_current_win(other_win)
+vim.api.nvim_win_set_buf(w_in, other)
+check(
+  "перенос: уход из нетекущего окна",
+  not vim.wo[w_in].linebreak and not vim.wo[w_in].breakindent
+)
+vim.api.nvim_win_set_buf(w_in, input)
+check("перенос: возврат буфера ввода в окно", wrap_on(w_in))
 vim.cmd("close")
 local long = ("слово "):rep(40)
 local n_before = #fake.sent
