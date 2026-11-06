@@ -430,5 +430,51 @@ D.input("Q<C-в>")
 D.sync()
 D.check("getcharstr в привязке: <C-в> → <C-d>", "<C-D>", D.lua("return _G.GOT"))
 
+-- 6. Кодирование хостами: Ctrl+Shift+в и Ctrl+Alt+в. Вход Neovide (по символу) даёт
+-- тот же результат, что вход wezterm (по физической клавише): `<C-В>` = `<C-S-D>`,
+-- `<M-C-в>` = `<Esc><C-D>`, `<M-C-В>` = `<Esc><C-S-D>`; в insert и `:` Esc выходит
+-- из режима, как у wezterm.
+D.lua([[_G.LOG = {}
+  for _, m in ipairs({ "n", "i", "c", "t" }) do
+    vim.keymap.set(m, "<C-d>", function() LOG[#LOG + 1] = m .. ":C-d"; return "" end, { expr = true })
+    vim.keymap.set(m, "<C-S-d>", function() LOG[#LOG + 1] = m .. ":C-S-d"; return "" end, { expr = true })
+  end]])
+local ENTER = { n = "", i = "i", c = ":", t = "" }
+local function host_log(mode, keys)
+  reset({ "x" }, { 1, 0 })
+  D.lua("_G.LOG = {}")
+  if mode == "t" then
+    D.lua("vim.cmd.terminal('cat'); vim.cmd.startinsert()")
+  elseif ENTER[mode] ~= "" then
+    D.input(ENTER[mode])
+  end
+  D.input(keys)
+  D.sync()
+  local log = D.lua("return _G.LOG")
+  D.input("<C-\\><C-n>")
+  D.input("<Esc>")
+  D.lua("vim.cmd('silent! %bwipe!')")
+  return log
+end
+local HOSTS = {
+  { "Ctrl+Shift+в", "<C-В>", "<C-S-D>", "C-S-d" },
+  { "Ctrl+Alt+в", "<M-C-в>", "<Esc><C-D>", "C-d" },
+  { "Ctrl+Alt+Shift+в", "<M-C-В>", "<Esc><C-S-D>", "C-S-d" },
+}
+for _, m in ipairs({ "n", "i", "c", "t" }) do
+  for _, h in ipairs(HOSTS) do
+    local neovide, wezterm = host_log(m, h[2]), host_log(m, h[3])
+    D.check(m .. " " .. h[1] .. ": Neovide = wezterm", wezterm, neovide)
+    D.check(
+      m .. " " .. h[1] .. ": привязка сработала",
+      true,
+      #neovide > 0 and neovide[#neovide] == ((m == "t" or h[2] == "<C-В>") and m or "n") .. ":" .. h[4]
+    )
+  end
+end
+D.check("alias_rhs <M-C-в> n", "<Esc><C-d>", D.lua([[return require("ru-layout.chords").alias_rhs("<M-C-в>", "n")]]))
+D.check("alias_rhs <M-C-в> c", "<C-c><C-d>", D.lua([[return require("ru-layout.chords").alias_rhs("<M-C-в>", "c")]]))
+D.check("alias_rhs <C-В> n", "<C-S-d>", D.lua([[return require("ru-layout.chords").alias_rhs("<C-В>", "n")]]))
+
 D.stop()
 D.finish()
