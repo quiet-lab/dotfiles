@@ -104,11 +104,84 @@ function M.has_modifier(lhs)
   return lhs:find("<[CcMmAaDd]%-") ~= nil
 end
 
+-- Имя клавиши в записи <…>: символы, которые внутри <…> пишутся словом.
+local NAMES = { ["<"] = "lt", ["\\"] = "Bslash", ["|"] = "Bar" }
+
+-- Латинская форма сочетания с модификатором по физической клавише: mods —
+-- строка модификаторов вида "C-", "M-", "C-S-"; c — символ раскладки ru. Заглавная
+-- латинская буква уходит в модификатор S (`<C-В>` → `<C-S-d>`, `<M-В>` → `<M-S-d>`,
+-- то есть `<M-D>`): так её передаёт терминал, кодирующий клавиши по физическому
+-- положению. Возвращает запись `<…>` или nil, если у символа нет пары.
+function M.mod_to_us(mods, c)
+  local us = M.ru2us[c]
+  if not us then
+    return nil
+  end
+  local m = mods:upper():gsub("A%-", "M-")
+  if us:match("^%u$") then
+    us = us:lower()
+    if not m:find("S%-") then
+      m = m .. "S-"
+    end
+  end
+  return "<" .. m .. (NAMES[us] or us) .. ">"
+end
+
+-- Разбор одной клавиши в записи `<mods-c>`: модификаторы и символ; nil, если это не
+-- сочетание с модификатором из C, M, A, D, S или после модификаторов не один символ.
+function M.split_mod(key)
+  local name = key:match("^<(.+)>$")
+  if not name then
+    return nil
+  end
+  local k = 1
+  while name:sub(k, k + 1):match("^[CcMmAaDdSs]%-$") do
+    k = k + 2
+  end
+  local mods, c = name:sub(1, k - 1), name:sub(k)
+  if k == 1 or vim.fn.strchars(c) ~= 1 or not M.has_modifier("<" .. mods) then
+    return nil
+  end
+  return mods, c
+end
+
+-- Код клавиши (как его возвращают getcharstr() и vim.keycode()) → латинская форма
+-- по физической клавише: `<C-в>` → `<C-d>`, `<M-Ф>` → `<M-A>`. С bare = true
+-- переводится и кириллическая буква без модификатора (`в` → `d`). Остальные клавиши
+-- возвращаются как есть.
+function M.key_to_us(raw, bare)
+  if type(raw) ~= "string" or raw == "" then
+    return raw
+  end
+  if raw:byte(1) ~= 0x80 then
+    return bare and M.ru2us[raw] or raw
+  end
+  local mods, c = M.split_mod(vim.fn.keytrans(raw))
+  local us = mods and M.mod_to_us(mods, c)
+  return us and vim.keycode(us) or raw
+end
+
+-- Перевод lhs в латинскую форму только у сочетаний с модификатором (`<C-ц>ч` →
+-- `<C-w>ч`, `<M-в>` → `<M-d>`): так lhs, записанный для хоста, передающего
+-- кириллицу, набирается на хосте, передающем физическую клавишу. Буквы без
+-- модификатора не меняются: их оба вида хостов передают кириллицей.
+function M.lhs_mods_to_us(lhs)
+  return (
+    lhs:gsub("%b<>", function(k)
+      local mods, c = M.split_mod(k)
+      return mods and M.mod_to_us(mods, c) or k
+    end)
+  )
+end
+
 -- Перевод lhs привязки. Обычные символы вне <…> переводятся по us → ru, но только
 -- в кириллицу: ASCII-знаки раскладки ru не подставляются, их ведёт модуль punct.
 -- Внутри <…> переводится лишь одиночный символ после модификатора (<M-d> → <M-в>);
 -- имена <leader>, <CR>, <Esc>, <F1>, <lt> и прочие остаются как есть; всё после <Plug> и <SNR> тоже.
-function M.lhs_to_ru(lhs)
+-- С keep_mods = true сочетания с модификатором не переводятся (`<C-w>x` → `<C-w>ч`):
+-- такую форму даёт в русской раскладке хост, передающий сочетания по физической
+-- клавише (wezterm), а полную (`<C-ц>ч`) — хост, передающий символ (Neovide).
+function M.lhs_to_ru(lhs, keep_mods)
   local function conv(c)
     local ru = M.us2ru[c]
     if ru and not is_ascii(ru) then
@@ -136,7 +209,7 @@ function M.lhs_to_ru(lhs)
           k = k + 2
         end
         local mods, key = name:sub(1, k - 1), name:sub(k)
-        if k > 1 and vim.fn.strchars(key) == 1 and M.has_modifier("<" .. mods) then
+        if k > 1 and vim.fn.strchars(key) == 1 and M.has_modifier("<" .. mods) and not keep_mods then
           out[#out + 1] = "<" .. mods .. conv(key) .. ">"
         else
           out[#out + 1] = "<" .. name .. ">"

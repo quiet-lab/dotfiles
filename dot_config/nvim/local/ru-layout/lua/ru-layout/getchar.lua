@@ -57,6 +57,50 @@ function M.with_tr(f, ...)
   return unpack(r, 2, r.n)
 end
 
+-- Постоянный перевод сочетаний с модификатором: `<C-в>`, `<M-в>`, прочитанные
+-- через vim.fn.getchar()/getcharstr(), возвращаются латинской формой той же
+-- физической клавиши (`<C-d>`, `<M-d>`) — так, как их передаёт хост, кодирующий
+-- клавиши по физическому положению. Буквы без модификатора не трогаются: кириллица —
+-- текст (поиск flash, метки). getchar() возвращает число, если латинская форма —
+-- один байт (`<C-d>` → 4), как встроенная функция; с { number = false } — строку.
+local installed
+function M.install()
+  if installed then
+    return
+  end
+  local gc, gs = fn.getchar, fn.getcharstr
+  installed = { gc, gs }
+  fn.getchar = function(...)
+    local c = gc(...)
+    if type(c) == "string" and c:byte(1) == 0x80 then
+      local us = tr.key_to_us(c)
+      if us ~= c and #us == 1 then
+        local o = select(2, ...)
+        if not (type(o) == "table" and o.number == false) then
+          return us:byte()
+        end
+      end
+      return us
+    end
+    return c
+  end
+  fn.getcharstr = function(...)
+    local c = gs(...)
+    if type(c) == "string" and c:byte(1) == 0x80 then
+      return tr.key_to_us(c)
+    end
+    return c
+  end
+end
+
+-- Снять постоянный перевод (для тестов).
+function M.uninstall()
+  if installed then
+    fn.getchar, fn.getcharstr = installed[1], installed[2]
+    installed = nil
+  end
+end
+
 -- Функция-обёртка: f с переводом на время вызова. Обёртка над обёрткой не строится.
 function M.wrap_fn(f)
   if wrappers[f] then

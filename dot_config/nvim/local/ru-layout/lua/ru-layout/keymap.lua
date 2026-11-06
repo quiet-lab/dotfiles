@@ -15,6 +15,15 @@
 --   v = x + s, "" = n + x + s + o, ! = i + c — правило применяется к каждому режиму.
 -- lhs с <Plug> или <SNR> в начале не переводится. Кириллическая привязка, которую
 -- поставил не модуль (пользовательская), не перекрывается дублем.
+--
+-- Независимость от хоста. В русской раскладке хост, передающий сочетания по
+-- физической клавише (wezterm), шлёт `<C-w>` и `ч`, а хост, передающий символ
+-- (Neovide), — `<C-ц>` и `ч`. Поэтому у lhs с модификатором и буквами дублей два:
+-- `<C-w>x` → `<C-ц>ч` и `<C-w>ч`. Обратное направление: у кириллической привязки
+-- с модификатором (`<M-в>`, `<C-ц>ч`, поставленной для хоста, передающего символ)
+-- ставится дубль с латинским сочетанием (`<M-d>`, `<C-w>ч`), если место свободно.
+-- Алиасы модуля chords (`<C-в>` → `<C-d>`) ниже дублей: дубль их перекрывает, после
+-- снятия дубля алиас ставится снова.
 local tr = require("ru-layout.tr")
 
 local M = {}
@@ -73,7 +82,8 @@ end
 local ALWAYS = { n = true, x = true, o = true }
 local WITH_MOD = { i = true, c = true, t = true, s = true }
 
--- Память переводов: lhs → { ru, коды клавиш ru }. Коды зависят от mapleader
+-- Память переводов: lhs → список форм { ru, коды клавиш ru }: полная (`<C-ц>ч`) и,
+-- если отличается, с латинскими сочетаниями (`<C-w>ч`). Коды зависят от mapleader
 -- и maplocalleader, поэтому при смене любого из них память сбрасывается.
 local memo, memo_leader, memo_local = {}, nil, nil
 local function to_ru(lhs)
@@ -83,11 +93,18 @@ local function to_ru(lhs)
   end
   local r = memo[lhs]
   if r == nil then
-    local ru = tr.lhs_to_ru(lhs)
-    r = { ru, ru ~= lhs and vim.keycode(ru) or nil }
+    r = {}
+    local full = tr.lhs_to_ru(lhs)
+    if full ~= lhs then
+      r[1] = { full, vim.keycode(full) }
+      local phys = tr.lhs_to_ru(lhs, true)
+      if phys ~= lhs and phys ~= full then
+        r[2] = { phys, vim.keycode(phys) }
+      end
+    end
     memo[lhs] = r
   end
-  return r[1], r[2]
+  return r
 end
 
 local function is_special(lhs)
@@ -103,16 +120,65 @@ local function key(mode, lhs)
   return mode .. "\0" .. vim.keycode(lhs)
 end
 
--- Перевод lhs и его коды клавиш, если перевод нужен; иначе nil.
+local NONE = {}
+
+-- Формы перевода lhs ({ ru, коды клавиш ru }), если перевод нужен; иначе пустой список.
 local function translatable(lhs)
   if is_special(lhs) or has_non_ascii(lhs) then
+    return NONE
+  end
+  return to_ru(lhs)
+end
+
+-- Латинская форма кириллического lhs с модификатором (`<M-в>` → `<M-d>`) и её коды;
+-- nil, если в lhs нет сочетаний с кириллицей.
+local function reverse_of(lhs)
+  if is_special(lhs) or not tr.has_modifier(lhs) then
     return nil
   end
-  local ru, rawru = to_ru(lhs)
-  if ru == lhs then
+  local us = tr.lhs_mods_to_us(lhs)
+  if us == lhs then
     return nil
   end
-  return ru, rawru
+  return us, vim.keycode(us)
+end
+
+-- Модуль chords: восстановление алиаса и признак его привязок, если модуль загружен.
+local function chords()
+  return package.loaded["ru-layout.chords"]
+end
+local function restore(m, raw)
+  local c = chords()
+  if c then
+    c.restore(m, raw)
+  end
+end
+local function is_chord(d, m)
+  local c = chords()
+  return c ~= nil and c.is_ours(d, m)
+end
+
+-- Место (режим m, lhs) занято привязкой, которую нельзя перекрыть дублем: не алиасом
+-- chords и не дублем модуля.
+local function occupied(s, buf, m, lhs, dk)
+  if s.dup[dk] then
+    return true
+  end
+  local d
+  if buf then
+    d = api.nvim_buf_call(buf, function()
+      return vim.fn.maparg(lhs, m, false, true)
+    end)
+    if d.buffer ~= 1 then
+      d = {}
+    end
+  else
+    d = vim.fn.maparg(lhs, m, false, true)
+    if d.buffer == 1 then
+      d = {}
+    end
+  end
+  return d.lhs ~= nil and not is_chord(d, m)
 end
 
 local function allowed(m, lhs)
@@ -146,7 +212,8 @@ local function mark_foreign(s, dk)
   s.foreign[dk] = true
 end
 
--- Удаление дублей источника sk (после удаления самого источника).
+-- Удаление дублей источника sk (после удаления самого источника). На месте снятого
+-- глобального дубля ставится алиас chords, если он там был.
 local function drop_dups(s, sk, buf)
   local list = s.src[sk]
   if not list then
@@ -165,42 +232,76 @@ local function drop_dups(s, sk, buf)
         pcall(orig.del, d.mode, lhs)
       end
       s.dup[dk] = nil
+      if not buf then
+        restore(d.mode, dk:sub(#d.mode + 2))
+      end
     end
   end
   s.src[sk] = nil
+end
+
+-- Поставить дубль lhs=ru с rhs и opts в режиме m и записать его за источником sk.
+local function put_dup(s, buf, m, ru, rawru, rhs, o, sk)
+  local ok
+  if buf then
+    ok = pcall(orig.buf_set, buf, m, ru, rhs, o)
+  else
+    ok = pcall(orig.set, m, ru, rhs, o)
+  end
+  if ok then
+    register(s, sk, m .. "\0" .. rawru, m, ru)
+  end
+end
+
+-- Привязка на месте прежнего дубля (дубль перезаписан): дубль забывается.
+local function forget_dup(s, k)
+  local d = s.dup[k]
+  if d then
+    if s.src[d.src] then
+      s.src[d.src][k] = nil
+    end
+    s.dup[k] = nil
+  end
 end
 
 -- Дубли для только что поставленной привязки (buf == nil — глобальная).
 local function on_set(buf, mode, lhs, rhs, opts)
   local s = scope(buf)
   local modes = expand(mode)
-  if has_non_ascii(lhs) then
-    for _, m in ipairs(modes) do
-      mark_foreign(s, key(m, lhs))
-    end
-    return
-  end
-  local ru, rawru = translatable(lhs)
-  if not ru then
-    return
-  end
   local o = opts
   if o and o.unique then
     o = vim.tbl_extend("force", o, { unique = false })
   end
+  if has_non_ascii(lhs) then
+    for _, m in ipairs(modes) do
+      mark_foreign(s, key(m, lhs))
+    end
+    local us, rawus = reverse_of(lhs)
+    if us then
+      local sk_raw = vim.keycode(lhs)
+      for _, m in ipairs(modes) do
+        local dk = m .. "\0" .. rawus
+        if m ~= "l" and not occupied(s, buf, m, us, dk) then
+          put_dup(s, buf, m, us, rawus, rhs, o, m .. "\0" .. sk_raw)
+        end
+      end
+    end
+    return
+  end
   local raw = vim.keycode(lhs)
   for _, m in ipairs(modes) do
+    forget_dup(s, m .. "\0" .. raw)
+  end
+  local list = translatable(lhs)
+  if #list == 0 then
+    return
+  end
+  for _, m in ipairs(modes) do
     if allowed(m, lhs) then
-      local dk = m .. "\0" .. rawru
-      if not s.foreign[dk] then
-        local ok
-        if buf then
-          ok = pcall(orig.buf_set, buf, m, ru, rhs, o)
-        else
-          ok = pcall(orig.set, m, ru, rhs, o)
-        end
-        if ok then
-          register(s, m .. "\0" .. raw, dk, m, ru)
+      for _, f in ipairs(list) do
+        local dk = m .. "\0" .. f[2]
+        if not s.foreign[dk] then
+          put_dup(s, buf, m, f[1], f[2], rhs, o, m .. "\0" .. raw)
         end
       end
     end
@@ -219,8 +320,12 @@ local function on_del(buf, mode, lhs)
       end
       s.dup[k] = nil
     end
+    local was_foreign = s.foreign[k]
     s.foreign[k] = nil
     drop_dups(s, k, buf)
+    if was_foreign and not buf then
+      restore(m, vim.keycode(lhs))
+    end
   end
 end
 
@@ -254,42 +359,71 @@ local function sweep_list(s, m, list, buf)
   -- существующих: дубль из реестра, снятый мимо API (`:mapclear <buffer>` при
   -- перечитывании буфера плагином), ставится заново.
   local present = {}
+  -- Привязки модуля chords (алиасы, чтецы) не чужие и не переводятся.
+  local own = {}
   for _, e in ipairs(list) do
-    if has_non_ascii(e.lhs) then
+    if is_chord(e, m) then
+      own[e] = true
+    else
+      present[m .. "\0" .. e.lhsraw] = true
+    end
+  end
+  local foreign = {}
+  for _, e in ipairs(list) do
+    if not own[e] and has_non_ascii(e.lhs) then
       local dk = m .. "\0" .. e.lhsraw
-      present[dk] = true
       if not s.dup[dk] then
         s.foreign[dk] = true
+        foreign[#foreign + 1] = e
       end
     end
   end
-  for _, e in ipairs(list) do
-    local lhs = e.lhs
-    local ru, rawru
-    if allowed(m, lhs) then
-      ru, rawru = translatable(lhs)
+  -- Словарь привязки меняется на месте: формы перевода и ключ источника берутся
+  -- до первой подстановки, а список после прохода не нужен.
+  local function put(e, sk, ru, rawru)
+    e.lhs = ru
+    e.lhsraw = rawru
+    e.lhsrawalt = nil
+    e.mode = m
+    local ok
+    if buf then
+      ok = pcall(api.nvim_buf_call, buf, function()
+        vim.fn.mapset(m, false, e)
+      end)
+    else
+      ok = pcall(vim.fn.mapset, m, false, e)
     end
-    if ru then
+    if ok then
+      register(s, sk, m .. "\0" .. rawru, m, ru)
+    end
+  end
+  -- Обратные дубли чужих кириллических привязок: lhs и коды — до подстановок.
+  local rev = {}
+  for _, e in ipairs(foreign) do
+    local us, rawus = reverse_of(e.lhs)
+    if us then
+      rev[#rev + 1] = { e, m .. "\0" .. e.lhsraw, us, rawus }
+    end
+  end
+  for _, e in ipairs(list) do
+    if not own[e] and allowed(m, e.lhs) then
       local sk = m .. "\0" .. e.lhsraw
-      local dk = m .. "\0" .. rawru
-      local d = s.dup[dk]
-      if not s.foreign[dk] and not (d and d.src == sk and present[dk]) then
-        e.lhs = ru
-        e.lhsraw = rawru
-        e.lhsrawalt = nil
-        e.mode = m
-        local ok
-        if buf then
-          ok = pcall(api.nvim_buf_call, buf, function()
-            vim.fn.mapset(m, false, e)
-          end)
-        else
-          ok = pcall(vim.fn.mapset, m, false, e)
-        end
-        if ok then
-          register(s, sk, dk, m, ru)
+      for _, f in ipairs(translatable(e.lhs)) do
+        local dk = m .. "\0" .. f[2]
+        local d = s.dup[dk]
+        if not s.foreign[dk] and not (d and d.src == sk and present[dk]) then
+          put(e, sk, f[1], f[2])
         end
       end
+    end
+  end
+  -- Обратные дубли чужих кириллических привязок с модификатором.
+  for _, r in ipairs(rev) do
+    local e, sk, us, rawus = r[1], r[2], r[3], r[4]
+    local dk = m .. "\0" .. rawus
+    local d = s.dup[dk]
+    if not (d and d.src == sk and present[dk]) and not (present[dk] and not d) then
+      put(e, sk, us, rawus)
     end
   end
 end
@@ -319,6 +453,27 @@ M.filetypes = { "fugitive", "fugitiveblame", "git", "dbui", "dbout", "sql" }
 
 function M.installed()
   return orig ~= nil
+end
+
+-- Занятые места глобальных привязок для алиасов chords: режим → { [коды lhs] = true }
+-- по дублям и чужим кириллическим привязкам реестра.
+function M.taken()
+  local t = {}
+  for _, tbl in ipairs({ G.dup, G.foreign }) do
+    for k in pairs(tbl) do
+      local m, raw = k:match("^(%a)%z(.*)$")
+      if m then
+        t[m] = t[m] or {}
+        t[m][raw] = true
+      end
+    end
+  end
+  return t
+end
+
+-- Установка привязки мимо подмены (без дублей): для алиасов модуля chords.
+function M.raw_set(mode, lhs, rhs, opts)
+  return (orig and orig.set or api.nvim_set_keymap)(mode, lhs, rhs, opts)
 end
 
 -- Подмена функций API привязок и автокоманды прохода по буферным привязкам.
