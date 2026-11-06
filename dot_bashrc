@@ -33,6 +33,24 @@ function y() {
 }
 export PULSE_SERVER=unix:/run/user/1000/pulse/native
 
+# OSC 7: сообщить терминалу (herdr, foot, kitty) текущий каталог после каждой
+# команды. Хост в URI пустой: herdr отвергает URI с именем хоста. Путь
+# кодируется по RFC 3986 встроенными командами bash, без подпроцессов.
+if [[ $- == *i* && $TERM != dumb && $TERM != linux ]]; then
+  __osc7_cwd() {
+    local LC_ALL=C str=$PWD out= i c
+    for ((i = 0; i < ${#str}; i++)); do
+      c=${str:i:1}
+      case $c in
+        [a-zA-Z0-9/._~-]) out+=$c ;;
+        *) printf -v c '%%%02X' "'$c"; out+=$c ;;
+      esac
+    done
+    printf '\e]7;file://%s\a' "$out"
+  }
+  PROMPT_COMMAND="__osc7_cwd${PROMPT_COMMAND:+;$PROMPT_COMMAND}"
+fi
+
 [[ ! ${BLE_VERSION-} ]] || ble-attach
 
 # Added by LM Studio CLI (lms)
