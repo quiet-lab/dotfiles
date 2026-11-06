@@ -16,12 +16,26 @@ delivery = "off"
 rows = [["state_icon", "tab"]]
 
 # Значки состояния агентов (форк duty-herdr): ширина 2 ячейки, без U+FE0F.
+# Список кадров — анимация по кругу, период frame_interval_ms (форк duty-herdr).
+# frame_phase per_row — фаза кадра своя у каждой строки; frame_speed_spread — разброс скорости по состояниям.
 [ui.status_icons]
-idle = "🟡"
-working = "🟢"
-blocked = "🔴"
+idle = "☕"
+working = ["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"]
+frame_interval_ms = { working = 83, blocked = 333 }
+frame_phase = "per_row"
+frame_speed_spread = { working = 0.10 }
+blocked = ["🆘", "🚨"]
 done = "✅"
-unknown = "·"
+unknown = "🗿"
+
+# Форма курсора по строке состояния Claude Code (форк duty-herdr): в режиме
+# INSERT редактора vim — черта, иначе блок. Требует CLAUDE_CODE_NATIVE_CURSOR=1
+# в ~/.claude/settings.json, иначе Claude Code рисует свой блок поверх.
+[ui.cursor_shape_by_screen.claude]
+default = "steady_block"
+rules = [
+  { contains = "-- INSERT --", shape = "steady_bar", bottom_non_empty_lines = 2 },
+]
 
 # Заголовок workspace — одна строка: значок состояния и подпись.
 # Цвет заголовка задаёт токен метаданных color
