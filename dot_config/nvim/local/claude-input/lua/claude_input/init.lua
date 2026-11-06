@@ -576,8 +576,9 @@ local function d_decide(job, status, text, send, done)
     d = nil
   end
   if not d or (state.mode ~= "dialog" and status ~= "blocked") then
-    if not d then
-      -- Экран перестал быть диалогом: такой же диалог дальше новый.
+    if not d or status ~= "blocked" then
+      -- Экран перестал быть диалогом или статус вышел из blocked:
+      -- ответ принят, такой же диалог дальше новый.
       state.answered = nil
     end
     if state.mode == "dialog" then
@@ -686,6 +687,8 @@ d_step = function()
   end
   local function fail(err)
     state.d_busy = false
+    -- Ответ мог не уйти: диалог должен открываться снова.
+    state.answered = nil
     report_error(err)
   end
   local function with_status(cb)
@@ -764,6 +767,10 @@ function M.watch()
       state.watch_events = state.watch_events + 1
       local data = ev.data
       state.status = type(data) == "table" and data.agent_status or nil
+      if state.status ~= "blocked" then
+        -- Статус вышел из blocked: ответ принят, такой же диалог дальше новый.
+        state.answered = nil
+      end
       state.d_refresh = true
       d_step()
     end

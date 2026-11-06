@@ -274,6 +274,14 @@ check(
   st.mode == "input" and cur_name():match("claude://input$") ~= nil
 )
 check("тот же экран: буфер диалога скрыт", vim.fn.bufwinid(st.dbuf) == -1)
+-- Выход из blocked сбрасывает память: такой же диалог дальше новый.
+push_status("working", fake.screen)
+wait(idle_chain)
+push_status("blocked", fake.screen)
+wait(function()
+  return st.mode == "dialog"
+end)
+check("после working тот же диалог — новый", cur_name():match("claude://dialog$") ~= nil)
 
 -- 8. Множественный выбор (следующий вопрос — другой экран): диалог открывается заново.
 push_status("blocked", screen("ask-q2-multi"))
