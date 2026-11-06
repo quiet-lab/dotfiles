@@ -2,7 +2,7 @@
 
 Поведение задаёт спецификация `claude-input` (`openspec/specs/claude-input/`),
 выбор последовательностей и замеры — `design.md` изменения
-`claude-input-buffer` (после архивации — в `openspec/changes/archive/`).
+`claude-input-buffer` в `openspec/changes/archive/`.
 Здесь — устройство и проверка после обновления Claude Code.
 
 ## Устройство
