@@ -76,7 +76,11 @@ local function start_hypr(keymap)
 end
 
 -- opts: { plugins = {каталоги из ~/.local/share/nvim/lazy}, langmap = bool,
---         hypr = "ru"|"us", env = {…} }
+--         hypr = "ru"|"us", env = {…},
+--         config = <каталог конфигурации Neovim> }
+-- С config испытуемый читает настоящую конфигурацию (без --clean и -u): в
+-- XDG_CONFIG_HOME временного каталога лежит ссылка nvim -> config, а данные,
+-- состояние и кэш (плагины lazy) остаются настоящими.
 function M.start(opts)
   opts = opts or {}
   tmp = vim.fn.tempname()
@@ -92,6 +96,14 @@ function M.start(opts)
     EXP_LANGMAP = opts.langmap and "1" or "0",
     EXP_PLUGINS = table.concat(opts.plugins or {}, ","),
   }
+  if opts.config then
+    vim.fn.mkdir(tmp .. "/config", "p")
+    vim.uv.fs_symlink(opts.config, tmp .. "/config/nvim")
+    env.XDG_DATA_HOME = vim.env.XDG_DATA_HOME or vim.fn.expand("~/.local/share")
+    env.XDG_STATE_HOME = vim.env.XDG_STATE_HOME or vim.fn.expand("~/.local/state")
+    env.XDG_CACHE_HOME = vim.env.XDG_CACHE_HOME or vim.fn.expand("~/.cache")
+    env.EXP_LANGMAP, env.EXP_PLUGINS = nil, nil
+  end
   if opts.hypr then
     start_hypr(opts.hypr == "ru" and "Russian" or "English (US)")
     env.HYPRLAND_INSTANCE_SIGNATURE = "test"
@@ -99,10 +111,11 @@ function M.start(opts)
   for k, v in pairs(opts.env or {}) do
     env[k] = v
   end
-  M.ch = vim.fn.jobstart(
-    { "nvim", "--embed", "--headless", "--clean", "-n", "-i", "NONE", "-u", here .. "/init.lua" },
-    { rpc = true, env = env }
-  )
+  local cmd = { "nvim", "--embed", "--headless", "--clean", "-n", "-i", "NONE", "-u", here .. "/init.lua" }
+  if opts.config then
+    cmd = { "nvim", "--embed", "--headless", "-n", "-i", "NONE" }
+  end
+  M.ch = vim.fn.jobstart(cmd, { rpc = true, env = env })
   assert(M.ch > 0, "nvim не запустился")
   M.pid = M.req("nvim_call_function", "getpid", {})
   M.req("nvim_get_api_info")

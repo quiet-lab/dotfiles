@@ -14,6 +14,13 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
+-- Подмена nvim_set_keymap и родственных функций должна стоять до lazy.setup:
+-- привязки плагинов и LazyVim ставятся при разборе спецификаций и загрузке, и
+-- каждая должна получить кириллический дубль. Каталог модуля добавляется в rtp
+-- заранее, потому что сам плагин ru-layout lazy подключит позже.
+vim.opt.rtp:prepend(vim.fn.stdpath("config") .. "/local/ru-layout")
+require("ru-layout.keymap").install()
+
 require("lazy").setup({
   spec = {
     -- add LazyVim and import its plugins
