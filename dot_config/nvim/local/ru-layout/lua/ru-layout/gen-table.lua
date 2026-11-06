@@ -113,7 +113,7 @@ if stylua == "" then
   stylua = vim.fn.executable(mason) == 1 and mason or nil
 end
 if stylua then
-  local here = debug.getinfo(1, "S").source:sub(2):match("^(.*)/lua/ru%-layout/[^/]*$") or "."
+  local here = vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":p"):match("^(.*)/lua/ru%-layout/[^/]*$") or "."
   local cfg = here .. "/stylua.toml"
   local r = vim.system({ stylua, "--config-path", cfg, out }):wait()
   if r.code ~= 0 then

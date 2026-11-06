@@ -61,6 +61,30 @@ function M.setup(opts)
   run("keymap", function()
     mod("keymap").sweep()
   end)
+  -- Алиасы сочетаний после прохода keymap: места дублей из реестра пропускаются,
+  -- а проход не перебирает сотни алиасов. При запуске Neovim они ставятся сразу
+  -- после VimEnter (vim.schedule), вне времени запуска (~3 мс на сотни `:map`):
+  -- порядок с привязками, поставленными позже, на итог не влияет (абзац о
+  -- приоритете в заголовке chords.lua). Вызов после запуска (тесты, `:lua setup()`) ставит
+  -- их сразу.
+  local function chords()
+    run("chords", function()
+      mod("chords").setup()
+    end)
+  end
+  if vim.v.vim_did_enter == 1 then
+    chords()
+  else
+    vim.api.nvim_create_autocmd("VimEnter", {
+      once = true,
+      callback = function()
+        vim.schedule(chords)
+      end,
+    })
+  end
+  run("getchar", function()
+    mod("getchar").install()
+  end)
   run("punct", function()
     mod("punct").setup()
   end)
