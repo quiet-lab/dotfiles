@@ -77,7 +77,7 @@ ratio=$(awk -v h="$h" 'BEGIN { printf "%.4f", (h - 15) / h }')
 # workspace. Основной путь — `herdr pane activate` (панель становится
 # сфокусированной в своём workspace, активный workspace клиента не меняется):
 # делим с --no-focus, активируем после запуска nvim. Запасной путь — для
-# herdr без `pane activate` (WARNING: убирается отдельным изменением после
+# herdr без `pane activate` (убирается отдельным изменением после
 # выпуска форка): `split --focus` в невидимом workspace переключает клиент,
 # поэтому --focus только в активном workspace клиента, иначе --no-focus
 # (фокус остаётся у Claude).
