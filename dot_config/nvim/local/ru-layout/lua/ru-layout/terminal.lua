@@ -44,17 +44,46 @@ local function listed(prog)
   return prog ~= nil and vim.tbl_contains(M.opts.programs, prog)
 end
 
+local DESC = "ru-layout: терминал"
+
+local function set_pairs(buf)
+  for ru, us in pairs(pairs_map()) do
+    -- № парой не считается: у него нет клавиши в us.
+    if ru ~= "№" then
+      vim.keymap.set("t", ru, us, { buffer = buf, nowait = true, desc = DESC })
+    end
+  end
+end
+
+local function del_pairs(buf)
+  for ru in pairs(pairs_map()) do
+    pcall(vim.keymap.del, "t", ru, { buffer = buf })
+  end
+end
+
+-- Переключатель перевода в буфере: `<M-l>` снимает и ставит привязки по паре, чтобы
+-- набрать русский текст внутри программы (сообщение коммита в lazygit, поиск).
+-- Состояние — переменная буфера `ru_layout_terminal_off`.
+local function toggle(buf)
+  if vim.b[buf].ru_layout_terminal_off then
+    vim.b[buf].ru_layout_terminal_off = false
+    set_pairs(buf)
+  else
+    vim.b[buf].ru_layout_terminal_off = true
+    del_pairs(buf)
+  end
+end
+
 -- Включить привязки кириллица → латиница в терминальном режиме буфера.
 function M.enable(buf, kind)
   if M.active[buf] then
     return
   end
-  for ru, us in pairs(pairs_map()) do
-    -- № парой не считается: у него нет клавиши в us.
-    if ru ~= "№" then
-      vim.keymap.set("t", ru, us, { buffer = buf, nowait = true, desc = "ru-layout: терминал" })
-    end
-  end
+  vim.b[buf].ru_layout_terminal_off = false
+  set_pairs(buf)
+  vim.keymap.set("t", "<M-l>", function()
+    toggle(buf)
+  end, { buffer = buf, desc = "ru-layout: переключатель перевода в терминале" })
   M.active[buf] = kind
 end
 
@@ -66,9 +95,9 @@ function M.disable(buf)
   if not vim.api.nvim_buf_is_valid(buf) then
     return
   end
-  for ru in pairs(pairs_map()) do
-    pcall(vim.keymap.del, "t", ru, { buffer = buf })
-  end
+  vim.b[buf].ru_layout_terminal_off = false
+  del_pairs(buf)
+  pcall(vim.keymap.del, "t", "<M-l>", { buffer = buf })
 end
 
 -- Заголовок из OSC 0/2: `\27]0;текст` или `\27]2;текст`.
@@ -77,10 +106,8 @@ local function osc_title(seq)
 end
 
 function M.setup(opts)
-  M.opts = vim.tbl_deep_extend("force", vim.deepcopy(DEFAULTS), opts or {})
-  if opts and opts.programs then
-    M.opts.programs = vim.deepcopy(opts.programs)
-  end
+  -- Список программ заменяется целиком: он берётся из opts или из DEFAULTS.
+  M.opts = { programs = vim.deepcopy((opts and opts.programs) or DEFAULTS.programs) }
   M.group = vim.api.nvim_create_augroup("ru-layout-terminal", { clear = true })
 
   vim.api.nvim_create_autocmd("TermOpen", {

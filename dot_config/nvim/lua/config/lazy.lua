@@ -19,7 +19,16 @@ vim.opt.rtp:prepend(lazypath)
 -- каждая должна получить кириллический дубль. Каталог модуля добавляется в rtp
 -- заранее, потому что сам плагин ru-layout lazy подключит позже.
 vim.opt.rtp:prepend(vim.fn.stdpath("config") .. "/local/ru-layout")
-require("ru-layout.keymap").install()
+-- Без каталога модуля (частичный apply, свежая машина) конфигурация грузится без него.
+local ok_ru, ru_keymap = pcall(require, "ru-layout.keymap")
+if ok_ru then
+  ru_keymap.install()
+else
+  vim.notify(
+    "ru-layout: каталог local/ru-layout не найден, русская раскладка отключена",
+    vim.log.levels.WARN
+  )
+end
 
 require("lazy").setup({
   spec = {

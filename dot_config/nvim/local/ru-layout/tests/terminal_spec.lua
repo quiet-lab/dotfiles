@@ -60,6 +60,21 @@ eq("cat в списке: привязок 66", 66, tmaps())
 D.input("<CR>")
 D.sync()
 
+-- 1а. Переключатель <M-l>: выключает перевод в буфере, повторное нажатие включает.
+open({ "cat" })
+D.input("<M-l>")
+D.sync()
+eq("<M-l>: привязок нет", 0, tmaps())
+D.input("ыф<CR>")
+eq("<M-l>: ыф как есть", true, has(wait_text("ыф"), "ыф"))
+D.input("<M-l>")
+D.sync()
+eq("<M-l> ещё раз: привязок 66", 66, tmaps())
+D.input("ыф")
+eq("<M-l> ещё раз: ыф → sa", true, has(wait_text("sa"), "sa"))
+D.input("<CR>")
+D.sync()
+
 -- 2. Ё/ё → ~ и `, заглавные — по регистру.
 open({ "cat" })
 D.input("ёЁФ")
