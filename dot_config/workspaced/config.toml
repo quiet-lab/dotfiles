@@ -43,6 +43,27 @@ desktops = 4
 # неописанной программы на столе без workspace и без того свободно.
 ignore_classes = ["termfilechooser", "xdg-desktop-portal-gtk", "pinentry.*", "zenity", "hyprland-dialog"]
 
+# Сторож внимания (спецификация ws-attention): когда агент в herdr ждёт ответа,
+# а фокус у другого окна, играющие плееры MPRIS встают на паузу, процесс
+# полноэкранного окна останавливается (SIGSTOP), фокус переходит на herdr;
+# когда вопросов не осталось — всё возвращается. Браузеры, терминалы,
+# редактор и видеоплееры не останавливаются: видео в них ставится на паузу
+# через MPRIS, а останавливать их процессы незачем.
+[attention]
+enabled = true
+media_pause = true
+freeze_fullscreen = true
+freeze_exclude_classes = [
+  "(?i)chromium(-browser)?",
+  "(?i)google-chrome.*",
+  "(?i)yandex-browser.*",
+  "(?i)firefox.*",
+  "(?i).*wezterm.*",
+  "neovide",
+  "org\\.telegram\\.desktop",
+  "(?i)mpv|vlc|celluloid|io\\.github\\.celluloid_player\\.Celluloid",
+]
+
 # Общее окружение для всех приложений; переопределяется в workspace и приложении. Редактор задаёт hyprland.lua.
 [env]
 
