@@ -6,6 +6,7 @@
 local root = vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":p:h:h")
 vim.opt.rtp:prepend(root)
 local uv = vim.uv
+io.stdout:setvbuf("no")
 
 local dir = vim.fn.tempname()
 vim.fn.mkdir(dir, "p")
@@ -53,6 +54,9 @@ server:listen(16, function()
       reply({ read = { text = fake.screen } })
     elseif req.method == "pane.send_text" then
       table.insert(fake.sent, req.params.text)
+      reply({ type = "ok" })
+    elseif req.method == "pane.send_keys" then
+      table.insert(fake.sent, "<" .. table.concat(req.params.keys, " ") .. ">")
       reply({ type = "ok" })
     elseif req.method == "events.subscribe" then
       table.insert(fake.subs, client)
@@ -136,6 +140,21 @@ wait(function()
 end)
 check("черновик передан", last_sent() == P .. "черновик")
 
+-- :w буфера ввода: текст без `\r`, затем Enter клавишей, буфер очищен.
+vim.api.nvim_buf_set_lines(input, 0, -1, false, { "/help" })
+vim.cmd("write")
+wait(function()
+  return last_sent() == "<enter>" and not st.in_flight
+end)
+check(":w ввода: текст", fake.sent[#fake.sent - 1] == P .. "/help", fake.sent[#fake.sent - 1])
+check(":w ввода: Enter клавишей", last_sent() == "<enter>")
+check(":w ввода: буфер пуст", table.concat(vim.api.nvim_buf_get_lines(input, 0, -1, false), "") == "")
+vim.api.nvim_buf_set_lines(input, 0, -1, false, { "черновик" })
+ci.schedule_send()
+wait(function()
+  return last_sent() == P .. "черновик"
+end)
+
 -- Местный /model (idle) буфер диалога не открывает.
 push_status("idle", screen("model"))
 wait(idle_chain)
@@ -202,7 +221,7 @@ dialog_set({})
 -- 7. :w в одиночном выборе — Enter.
 vim.cmd("write")
 wait(idle_chain)
-check(":w одиночный: Enter", last_sent() == "\r", last_sent())
+check(":w одиночный: Enter клавишей", last_sent() == "<enter>", last_sent())
 check(":w: буфер не изменён", not vim.bo[st.dbuf].modified)
 
 -- 8. Множественный выбор: цифра — клавиша цифры, :w — к Submit и Enter.
@@ -211,7 +230,11 @@ dialog_set({ "2" })
 check("множественный: клавиша 2", last_sent() == "2", last_sent())
 vim.cmd("write")
 wait(idle_chain)
-check(":w множественный: к Submit", last_sent() == D:rep(4) .. "\r", last_sent())
+check(
+  ":w множественный: к Submit и Enter",
+  fake.sent[#fake.sent - 1] == D:rep(4) and last_sent() == "<enter>",
+  { fake.sent[#fake.sent - 1], last_sent() }
+)
 
 -- 9. Запрос разрешения: цифра 2 — стрелка, подтверждение только по :w.
 push_status("working", IDLE)
@@ -222,10 +245,12 @@ push_status("blocked", screen("perm-bash"))
 wait(function()
   return st.mode == "dialog"
 end)
+local perm_from = #fake.sent
 dialog_set({ "2" })
 check("разрешение: стрелка вместо цифры", last_sent() == D, last_sent())
-for _, t in ipairs(fake.sent) do
-  if t:find("\r", 1, true) and t ~= "\r" and not t:find(D, 1, true) then
+for i = perm_from + 1, #fake.sent do
+  local t = fake.sent[i]
+  if t == "<enter>" then
     check("разрешение: нет Enter без :w", false, t)
   end
 end
@@ -258,7 +283,7 @@ dialog_set({ "2" })
 check("доверие: стрелка", last_sent() == D, last_sent())
 vim.cmd("write")
 wait(idle_chain)
-check("доверие: :w — Enter", last_sent() == "\r", last_sent())
+check("доверие: :w — Enter", last_sent() == "<enter>", last_sent())
 
 -- Esc уходит только в префиксе очистки поля.
 for _, t in ipairs(fake.sent) do

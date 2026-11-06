@@ -59,8 +59,8 @@ function M.payload(lines)
   return PASTE_BEGIN .. text .. PASTE_END
 end
 
-function M.request_text(lines, submit)
-  return M.PREFIX .. M.payload(lines) .. (submit and "\r" or "")
+function M.request_text(lines)
+  return M.PREFIX .. M.payload(lines)
 end
 
 local function socket_path()
@@ -165,6 +165,29 @@ local function request(method, params, cb, on_line)
   return close
 end
 M._request = request
+
+-- Текст сырыми байтами, затем Enter клавишей: сырой `\r` строка ввода
+-- Claude Code 2.1.319 запросом не считает, а клавишу herdr кодирует по режиму
+-- клавиатуры терминала. Порядок байтов сохраняется: запросы идут друг за другом.
+local function send_then_enter(pane, text, enter, cb)
+  local function press()
+    if not enter then
+      return cb()
+    end
+    request("pane.send_keys", { pane_id = pane, keys = { "enter" } }, function(_, err)
+      cb(err)
+    end)
+  end
+  if text == "" then
+    return press()
+  end
+  request("pane.send_text", { pane_id = pane, text = text }, function(_, err)
+    if err then
+      return cb(err)
+    end
+    press()
+  end)
+end
 
 local function pane_id()
   local p = vim.env.CLAUDE_INPUT_PANE
@@ -351,7 +374,7 @@ function M.submit()
       vim.notify("Claude Code ждёт ответа в диалоге", vim.log.levels.WARN)
       return
     end
-    request("pane.send_text", { pane_id = pane, text = M.request_text(buf_lines(), true) }, function(_, serr)
+    send_then_enter(pane, M.request_text(buf_lines()), true, function(serr)
       if serr then
         state.in_flight = false
         return report_error(serr)
@@ -573,7 +596,11 @@ d_step = function()
         return fail(rerr)
       end
       d_decide(job, status, text, function(keys)
-        request("pane.send_text", { pane_id = pane, text = keys }, function(_, serr)
+        local enter = keys:sub(-#dialog.ENTER) == dialog.ENTER
+        if enter then
+          keys = keys:sub(1, -#dialog.ENTER - 1)
+        end
+        send_then_enter(pane, keys, enter, function(serr)
           if serr then
             return fail(serr)
           end
