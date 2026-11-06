@@ -22,8 +22,8 @@ local state = {
   error_shown = false,
   warned_pane = false,
   seq = 0,
-  -- Последний переданный текст: строка ввода Claude Code уже его содержит.
-  last_payload = "",
+  -- Сразу после успешного `:w` строка ввода Claude Code пуста.
+  just_submitted = false,
 }
 
 -- Текст запроса: сырой, если короткий и без управляющих символов, иначе в рамке bracketed paste.
@@ -32,7 +32,9 @@ function M.payload(lines)
   if text == "" then
     return ""
   end
-  local raw = vim.fn.strchars(text) <= M.RAW_LIMIT and not text:find("[%z\1-\9\11-\31\127]")
+  -- Порог в единицах UTF-16, как длина строки JS в Claude Code.
+  local units = vim.str_utfindex(text, "utf-16")
+  local raw = units <= M.RAW_LIMIT and not text:find("[%z\1-\9\11-\31\127]")
   if raw then
     return text
   end
@@ -202,8 +204,24 @@ local function open_subscription(pane)
     if err then
       state.waiting = false
       state.sub = nil
-      report_error(err)
+      if close then
+        close()
+      end
+      return report_error(err)
     end
+    -- Статус мог покинуть blocked до установки подписки.
+    get_status(pane, function(status)
+      if not state.waiting or state.sub ~= close or not status or status == "blocked" then
+        return
+      end
+      close()
+      state.sub = nil
+      state.waiting = false
+      if state.dirty then
+        state.dirty = false
+        schedule_send()
+      end
+    end)
   end, function(ev)
     if not state.waiting then
       return
@@ -241,7 +259,7 @@ schedule_send = function()
   end
   -- После `:w` строка ввода уже пуста: лишний Esc очистки закрыл бы открытый
   -- запросом диалог Claude Code (например, /help).
-  if M.payload(buf_lines()) == state.last_payload then
+  if state.just_submitted and M.payload(buf_lines()) == "" then
     return
   end
   state.in_flight = true
@@ -271,7 +289,7 @@ schedule_send = function()
         return report_error(serr)
       end
       state.error_shown = false
-      state.last_payload = payload
+      state.just_submitted = false
       chain_done()
     end)
   end)
@@ -321,7 +339,14 @@ function M.submit()
         return report_error(serr)
       end
       state.error_shown = false
-      state.last_payload = ""
+      state.just_submitted = true
+      if state.waiting then
+        if state.sub then
+          state.sub()
+        end
+        state.sub = nil
+        state.waiting = false
+      end
       if vim.api.nvim_buf_is_valid(buf) then
         vim.api.nvim_buf_set_lines(buf, 0, -1, false, {})
         vim.bo[buf].modified = false
@@ -350,6 +375,30 @@ local function open()
   vim.bo[buf].bufhidden = "hide"
   vim.bo[buf].filetype = "markdown"
   local group = vim.api.nvim_create_augroup("claude_input", { clear = true })
+  -- Файл соответствия панелей после `:q` устарел: удаляется, если он указывает на эту панель.
+  vim.api.nvim_create_autocmd("VimLeavePre", {
+    group = group,
+    callback = function()
+      local cp, own = pane_id(), vim.env.HERDR_PANE_ID
+      if not cp or not own then
+        return
+      end
+      local dir = vim.env.XDG_STATE_HOME
+      if not dir or dir == "" then
+        dir = vim.fn.expand("~/.local/state")
+      end
+      local f = dir .. "/claude-input/" .. cp:gsub(":", "_")
+      local fh = io.open(f, "r")
+      if not fh then
+        return
+      end
+      local content = (fh:read("*a") or ""):gsub("\n$", "")
+      fh:close()
+      if content == own then
+        os.remove(f)
+      end
+    end,
+  })
   vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI", "TextChangedP" }, {
     group = group,
     buffer = buf,

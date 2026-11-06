@@ -17,6 +17,25 @@ input=$(cat)
 command -v jq > /dev/null && command -v herdr > /dev/null || exit 0
 [ -z "$(jq -r '.agent_id // empty' <<< "$input")" ] || exit 0
 
+# Вложенный `claude -p` (например, из инструмента Bash) наследует HERDR_PANE_ID,
+# но панели Claude не владеет: хук работает, только когда среди ближайших
+# предков найден процесс claude с терминалом (pty) на стандартном вводе.
+pid=$PPID
+found=
+for _ in 1 2 3 4; do
+    [ -n "$pid" ] && [ "$pid" -gt 1 ] || break
+    if [ "$(cat "/proc/$pid/comm")" = "claude" ]; then
+        found=$pid
+        break
+    fi
+    pid=$(awk '/^PPid:/ { print $2 }' "/proc/$pid/status")
+done
+[ -n "$found" ] || exit 0
+case "$(readlink "/proc/$found/fd/0")" in
+    /dev/pts/*) ;;
+    *) exit 0 ;;
+esac
+
 state_dir=${XDG_STATE_HOME:-$HOME/.local/state}/claude-input
 map_file=$state_dir/${HERDR_PANE_ID//:/_}
 rows_wanted=13
