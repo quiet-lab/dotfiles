@@ -13,6 +13,11 @@
   `close` по `SessionEnd`. `open` делит панель Claude Code в herdr вниз,
   выводит новую панель на 13 строк и запускает в ней `exec nvim +ClaudeInput`
   с переменной `CLAUDE_INPUT_PANE` — идентификатором панели Claude Code.
+  Фокус после открытия — у панели ввода, клиент на другой workspace не
+  переключается: панель делится с `--no-focus`, затем `herdr pane activate`.
+  Пока в herdr этой команды нет, запасной путь: `--focus` только в workspace,
+  активном у клиента (`focused` в `herdr workspace list`), иначе фокус
+  остаётся у Claude Code.
   Хук действует и у исполнителей duty в дочерних workspace (задана
   `DUTY_TASK`); не действует вне herdr и у субагентов.
 - Окна буферов `claude://input` и `claude://dialog` переносят строки

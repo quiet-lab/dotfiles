@@ -73,7 +73,24 @@ h=$(pane_height "$HERDR_PANE_ID")
 [ -n "$h" ] && [ "$h" -ge 20 ] || exit 0
 ratio=$(awk -v h="$h" 'BEGIN { printf "%.4f", (h - 15) / h }')
 
-new_info=$(herdr pane split "$HERDR_PANE_ID" --direction down --no-focus \
+# Фокус на панель ввода без переключения клиента пользователя на чужой
+# workspace. Основной путь — `herdr pane activate` (панель становится
+# сфокусированной в своём workspace, активный workspace клиента не меняется):
+# делим с --no-focus, активируем после запуска nvim. Запасной путь — для
+# herdr без `pane activate` (убирается отдельным изменением после
+# выпуска форка): `split --focus` в невидимом workspace переключает клиент,
+# поэтому --focus только в активном workspace клиента, иначе --no-focus
+# (фокус остаётся у Claude).
+focus_flag=--no-focus
+use_activate=
+if herdr pane activate --help > /dev/null 2>&1; then
+    use_activate=1
+else
+    active_ws=$(herdr workspace list | jq -r '.result.workspaces[] | select(.focused == true) | .workspace_id' | head -n 1)
+    [ -z "$active_ws" ] || [ "$active_ws" != "${HERDR_WORKSPACE_ID:-}" ] || focus_flag=--focus
+fi
+
+new_info=$(herdr pane split "$HERDR_PANE_ID" --direction down "$focus_flag" \
     --ratio "$ratio" --env CLAUDE_INPUT_PANE="$HERDR_PANE_ID")
 new=$(jq -r '.result.pane.pane_id // empty' <<< "$new_info")
 [ -n "$new" ] || exit 0
@@ -95,4 +112,5 @@ if [ -n "$rows" ] && [ "$rows" != "$rows_wanted" ]; then
 fi
 
 herdr pane run "$new" 'exec nvim +ClaudeInput' > /dev/null
+[ -z "$use_activate" ] || herdr pane activate "$new" > /dev/null
 exit 0
