@@ -9,5 +9,5 @@
 
 ## 3. Проверка вживую (агент)
 
-- [ ] 3.1 В своём (активном у клиента) workspace панель nvim с `focused: true`.
-- [ ] 3.2 В невидимом workspace без `pane activate`: клиент не переключён, панель nvim открыта, фокус у Claude.
+- [x] 3.1 В своём (активном у клиента) workspace панель nvim с `focused: true`.
+- [x] 3.2 В невидимом workspace без `pane activate`: клиент не переключён, панель nvim открыта, фокус у Claude.
