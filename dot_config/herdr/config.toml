@@ -113,6 +113,13 @@ rows = [["state_icon", { token = "workspace", fg = "$color|#ffffff" }]]
 [ui.sound]
 enabled = false
 
+# Следование за диалогами агентов (duty-v0.9.5.7): клиент по очереди
+# переключается на workspace, где агент ждёт ответа в диалоге, ставит фокус
+# на панель ввода (токен input_pane), а после последнего диалога возвращается
+# на исходный workspace.
+[ui.follow_blocked]
+enabled = true
+
 [theme]
 name = "catppuccin"
 auto_switch = false
