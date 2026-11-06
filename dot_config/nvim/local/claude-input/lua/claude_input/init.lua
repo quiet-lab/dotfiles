@@ -436,6 +436,43 @@ local function swap_window(from, to)
   return true
 end
 
+-- Визуальный перенос строк в окнах, показывающих буфер модуля: текст буфера
+-- не меняется. Настройка — на окно, не глобально: по каждому показу буфера
+-- в любом окне состав окон сверяется (окно текущим может не быть), у окна
+-- с буфером модуля опции включаются, а у окна, из которого буфер ушёл,
+-- возвращаются прежние значения; соседние буферы настройку не наследуют.
+local WRAP_OPTS = { "wrap", "linebreak", "breakindent" }
+
+local function sync_wrap()
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    local b = vim.api.nvim_win_get_buf(win)
+    local ours = b == state.buf or b == state.dbuf
+    local saved = vim.w[win].claude_input_wrap_saved
+    if ours and not saved then
+      saved = {}
+      for _, o in ipairs(WRAP_OPTS) do
+        -- Окно, созданное делением окна модуля, унаследовало уже включённые
+        -- опции: возвращается значение по умолчанию, а не унаследованное.
+        saved[o] = vim.wo[win][o] and vim.go[o]
+        vim.wo[win][o] = true
+      end
+      vim.w[win].claude_input_wrap_saved = saved
+    elseif not ours and saved then
+      for o, v in pairs(saved) do
+        vim.wo[win][o] = v
+      end
+      vim.w[win].claude_input_wrap_saved = nil
+    end
+  end
+end
+
+local function wrap_on_show()
+  vim.api.nvim_create_autocmd("BufWinEnter", {
+    group = vim.api.nvim_create_augroup("claude_input_wrap", { clear = true }),
+    callback = sync_wrap,
+  })
+end
+
 local d_step
 
 local function ensure_dialog_buf()
@@ -448,6 +485,7 @@ local function ensure_dialog_buf()
   vim.bo[buf].buftype = "acwrite"
   vim.bo[buf].swapfile = false
   vim.bo[buf].bufhidden = "hide"
+  wrap_on_show()
   -- Пустой буфер отмечается на каждом изменении: несколько клавиш одного куска
   -- (Ctrl+U и цифра) дают одно событие TextChangedI уже без пустого состояния.
   vim.api.nvim_buf_attach(buf, false, {
@@ -776,6 +814,7 @@ local function open()
   vim.bo[buf].swapfile = false
   vim.bo[buf].bufhidden = "hide"
   vim.bo[buf].filetype = "markdown"
+  wrap_on_show()
   local group = vim.api.nvim_create_augroup("claude_input", { clear = true })
   -- Файл соответствия панелей после `:q` устарел: удаляется, если он указывает на эту панель.
   vim.api.nvim_create_autocmd("VimLeavePre", {

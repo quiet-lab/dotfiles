@@ -388,6 +388,58 @@ check(
   cur_name()
 )
 
+-- 15. Визуальный перенос: на окне буферов модуля, соседний буфер не затронут,
+-- в herdr длинная строка уходит одной строкой без переносов.
+local function wrap_on(win)
+  return vim.wo[win].wrap and vim.wo[win].linebreak and vim.wo[win].breakindent
+end
+local other = vim.api.nvim_create_buf(false, true)
+vim.cmd("vsplit")
+local other_win = vim.api.nvim_get_current_win()
+vim.api.nvim_win_set_buf(other_win, other)
+vim.wo[other_win].wrap = false
+vim.wo[other_win].linebreak = false
+vim.wo[other_win].breakindent = false
+check("перенос: окно буфера ввода", wrap_on(vim.fn.win_findbuf(input)[1]))
+check(
+  "перенос: соседнее окно не затронуто",
+  not wrap_on(other_win) and not vim.wo[other_win].wrap
+)
+vim.api.nvim_win_set_buf(other_win, st.dbuf)
+check("перенос: окно буфера диалога", wrap_on(other_win))
+vim.api.nvim_win_set_buf(other_win, other)
+check(
+  "перенос: после ухода диалога окно как было",
+  not wrap_on(other_win) and not vim.wo[other_win].wrap
+)
+-- Уход буфера из нетекущего окна возвращает опции этого окна.
+local w_in = vim.fn.win_findbuf(input)[1]
+vim.api.nvim_set_current_win(other_win)
+vim.api.nvim_win_set_buf(w_in, other)
+check(
+  "перенос: уход из нетекущего окна",
+  not vim.wo[w_in].linebreak and not vim.wo[w_in].breakindent
+)
+vim.api.nvim_win_set_buf(w_in, input)
+check("перенос: возврат буфера ввода в окно", wrap_on(w_in))
+vim.cmd("close")
+local long = ("слово "):rep(40)
+local n_before = #fake.sent
+vim.api.nvim_buf_set_lines(input, 0, -1, false, { long })
+ci.schedule_send()
+wait(function()
+  return #fake.sent > n_before and idle_chain()
+end)
+check(
+  "перенос: в буфере одна строка",
+  vim.api.nvim_buf_line_count(input) == 1 and vim.api.nvim_buf_get_lines(input, 0, 1, false)[1] == long
+)
+check(
+  "перенос: в herdr без переносов",
+  not last_sent():find("\n", 1, true) and last_sent():find(long, 1, true) ~= nil,
+  last_sent()
+)
+
 -- Esc уходит только в префиксе очистки поля.
 for _, t in ipairs(fake.sent) do
   local rest = t:gsub(vim.pesc(P), "")
