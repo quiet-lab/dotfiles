@@ -435,6 +435,15 @@ local function ensure_dialog_buf()
   vim.bo[buf].buftype = "acwrite"
   vim.bo[buf].swapfile = false
   vim.bo[buf].bufhidden = "hide"
+  -- Пустой буфер отмечается на каждом изменении: несколько клавиш одного куска
+  -- (Ctrl+U и цифра) дают одно событие TextChangedI уже без пустого состояния.
+  vim.api.nvim_buf_attach(buf, false, {
+    on_lines = function(_, b)
+      if vim.api.nvim_buf_line_count(b) == 1 and vim.api.nvim_buf_get_lines(b, 0, 1, false)[1] == "" then
+        state.seen_empty = true
+      end
+    end,
+  })
   local group = vim.api.nvim_create_augroup("claude_input_dialog", { clear = true })
   vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI", "TextChangedP" }, {
     group = group,

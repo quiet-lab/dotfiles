@@ -55,6 +55,12 @@ check("ask-q1: 1 — ничего", d and dialog.digit_keys(d, 1) == "")
 check("ask-q1: 9 — пункта нет", d and dialog.digit_keys(d, 9) == nil)
 check("ask-q1: :w — Enter", d and dialog.submit_keys(d) == "\r")
 
+-- AskUserQuestion из одного вопроса (без вкладки Submit).
+d = dialog.parse(screen("ask-single"))
+check("single: пункты 1–5", d and nums(d) == "1,2,3,4,5", d and nums(d))
+check("single: свободный ввод 4", d and d.free == 4 and not d.multi)
+check("single: 3 — две стрелки", d and dialog.digit_keys(d, 3) == D .. D)
+
 -- Множественный выбор: строка Submit — позиция выделения.
 d = dialog.parse(screen("ask-q2-multi"))
 check("multi: диалог", d ~= nil)

@@ -206,6 +206,21 @@ wait(idle_chain)
 check("передумал: очистка поля и стрелки", last_sent() == P .. U .. U, last_sent())
 check("передумал: буфер пуст", dialog_lines() == "")
 
+-- 5а. Ctrl+U и цифра одним куском нажатий: одно событие TextChangedI уже с «2»,
+-- пустое состояние буфера отмечает on_lines.
+-- Экран другой, чем до прежних стрелок: Claude Code их обработал.
+fake.screen = select_row(q1, 4):gsub("4%. Type something%.", "4. другой")
+st.field_text = "другой"
+vim.api.nvim_buf_set_lines(st.dbuf, 0, -1, false, { "другой" })
+st.seen_empty = false
+vim.api.nvim_set_current_win(vim.fn.win_findbuf(st.dbuf)[1])
+local before = #fake.sent
+vim.api.nvim_feedkeys(vim.keycode("A<C-u>2<Esc>"), "xt", false)
+ci.dialog_changed()
+wait(idle_chain)
+check("одним куском: одна отправка", #fake.sent == before + 1, #fake.sent - before)
+check("одним куском: очистка поля и стрелки", last_sent() == P .. U .. U, last_sent())
+
 -- 6. Защита: экран ещё прежний после стрелок — текст в поле не уходит.
 fake.screen = select_row(q1, 4)
 dialog_set({ "1" })
