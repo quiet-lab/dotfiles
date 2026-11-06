@@ -10,10 +10,11 @@ kitty_graphics = true
 [ui.toast]
 delivery = "off"
 
-# Заголовок агента — одна строка: значок состояния и название вкладки
-# (подпись вкладки равна подписи workspace).
+# Заголовок агента — одна строка: значок состояния и подпись вкладки.
+# Цвет — токен color workspace: выбранная строка — цвет на фоне панели,
+# остальные — фон цвета и цвет панели на тексте.
 [ui.sidebar.agents]
-rows = [["state_icon", "tab"]]
+rows = [["state_icon", { token = "tab", fg = "$panel", bg = "$color", rules = [{ active = true, fg = "$color", bg = "$panel" }] }]]
 
 # Значки состояния агентов (форк duty-herdr): ширина 2 ячейки, без U+FE0F.
 # Список кадров — анимация по кругу, период frame_interval_ms (форк duty-herdr).
@@ -37,13 +38,85 @@ rules = [
   { contains = "-- INSERT --", shape = "steady_bar", bottom_non_empty_lines = 2 },
 ]
 
+# Символы workspace по каталогам (форк duty-herdr). Источник символов —
+# раздел [symbols] файла .duty/duty.toml каждого репозитория (main — корневой
+# workspace, tasks — дочерние), вне репозиториев — symbols.outside из
+# ~/.config/duty/config.toml. Палитра — scripts/colors.txt плагина duty;
+# у проектов своей палитры нет. Токен report-metadata любого источника
+# (хук herdr-session-label.sh, dispatch.sh плагина duty) главнее токена herdr.
+# Ручная подпись workspace видна только при живом агенте в первой вкладке,
+# иначе herdr показывает «<символ> <место> · <приложение>».
+
+[[ui.workspace_symbols.dirs]]
+path = "~/work/pets/duty-herdr"
+main = "🦁"
+tasks = [
+  "🦄", "🦌", "🦊", "🦇", "🦍", "🦏", "🦒", "🦓", "🦔", "🦘", "🦙", "🦛", "🦝", "🦡", "🦣",
+  "🦥", "🦦", "🦧", "🦨", "🦫", "🦬", "🦮", "🫎", "🫏", "🐂", "🐃", "🐄", "🐅", "🐆", "🐇",
+  "🐈", "🐎", "🐏", "🐐", "🐑", "🐒", "🐕", "🐖", "🐗", "🐘", "🐨", "🐩", "🐪", "🐫", "🐭",
+  "🐮", "🐯", "🐰", "🐼", "🐻", "🐺", "🐹", "🐷", "🐶", "🐵", "🐴", "🐱", "🐁", "🐀",
+]
+colors = [
+  "#f5e0dc", "#f2cdcd", "#f5c2e7", "#cba6f7", "#f38ba8", "#eba0ac",
+  "#fab387", "#f9e2af", "#a6e3a1", "#94e2d5", "#89dceb", "#74c7ec",
+  "#89b4fa", "#b4befe",
+]
+
+[[ui.workspace_symbols.dirs]]
+path = "~/work/telecom/axata/monorepo-ocp"
+main = "🍀"
+tasks = [
+  "🌱", "🌲", "🌳", "🌴", "🌵", "🌾", "🌿", "🍃", "🪴", "🍏", "🍐", "🥝", "🍈", "🫒", "🥦",
+  "🥬", "🫑", "🫛", "🫝", "🥑", "🌽",
+]
+colors = [
+  "#f5e0dc", "#f2cdcd", "#f5c2e7", "#cba6f7", "#f38ba8", "#eba0ac",
+  "#fab387", "#f9e2af", "#a6e3a1", "#94e2d5", "#89dceb", "#74c7ec",
+  "#89b4fa", "#b4befe",
+]
+
+[[ui.workspace_symbols.dirs]]
+path = "~/work/pets/duty"
+main = "🦑"
+tasks = [
+  "🐋", "🐙", "🐚", "🐟", "🐠", "🐡", "🐬", "🐳", "🦀", "🦈", "🦐", "🦞", "🦭", "🪼", "🫍",
+]
+colors = [
+  "#f5e0dc", "#f2cdcd", "#f5c2e7", "#cba6f7", "#f38ba8", "#eba0ac",
+  "#fab387", "#f9e2af", "#a6e3a1", "#94e2d5", "#89dceb", "#74c7ec",
+  "#89b4fa", "#b4befe",
+]
+
+[[ui.workspace_symbols.dirs]]
+path = "~/.local/share/chezmoi"
+main = "🏠"
+tasks = [
+  "🏡", "🏢", "🏣", "🏤", "🏦", "🏨", "🏩", "🏫", "🏬", "🏭", "🏯", "🏰", "💒", "🛖",
+]
+colors = [
+  "#f5e0dc", "#f2cdcd", "#f5c2e7", "#cba6f7", "#f38ba8", "#eba0ac",
+  "#fab387", "#f9e2af", "#a6e3a1", "#94e2d5", "#89dceb", "#74c7ec",
+  "#89b4fa", "#b4befe",
+]
+
+[ui.workspace_symbols.outside]
+main = "📁"  # значение по умолчанию: выбор главной сессии, пользователь может заменить
+tasks = [
+  "🍺", "🍻", "🍷", "🍸", "🍹", "🍵", "☕", "🍾", "🥂", "🥃", "🥛", "🧉", "🧋",
+]
+colors = [
+  "#f5e0dc", "#f2cdcd", "#f5c2e7", "#cba6f7", "#f38ba8", "#eba0ac",
+  "#fab387", "#f9e2af", "#a6e3a1", "#94e2d5", "#89dceb", "#74c7ec",
+  "#89b4fa", "#b4befe",
+]
+
 # Заголовок workspace — одна строка: значок состояния и подпись.
-# Цвет заголовка задаёт токен метаданных color
+# Цвет задаёт токен метаданных color
 # (herdr workspace report-metadata <ws> --source <id> --token color=#hex):
 # главная сессия репозитория — белый из хука herdr-session-label.sh,
-# задачи duty — из конфига duty.
+# задачи duty — из dispatch.sh, дочерние workspace без токена duty — из colors.
 [ui.sidebar.spaces]
-rows = [["state_icon", { token = "workspace", fg = "$color" }]]
+rows = [["state_icon", { token = "workspace", fg = "$panel", bg = "$color", rules = [{ active = true, fg = "$color", bg = "$panel" }] }]]
 
 [ui.sound]
 enabled = false
