@@ -14,3 +14,7 @@
 #### Scenario: Запуск Claude Code в невидимом workspace без pane activate
 - **WHEN** `claude` запускается в workspace, который клиент не смотрит, и команды `herdr pane activate` нет
 - **THEN** панель с neovim открыта, фокус остаётся у панели Claude Code, активный workspace клиента не изменился
+
+#### Scenario: herdr без `--token`
+- **WHEN** `herdr pane report-metadata` отвергает `--token`
+- **THEN** хук продолжает работу, панель с neovim открыта, ошибки не выводится
