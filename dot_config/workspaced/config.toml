@@ -62,6 +62,8 @@ freeze_exclude_classes = [
   "neovide",
   "org\\.telegram\\.desktop",
   "(?i)mpv|vlc|celluloid|io\\.github\\.celluloid_player\\.Celluloid",
+  # Клиент Steam (Big Picture во весь экран) — родитель запущенных игр и загрузок.
+  "steam",
 ]
 
 # Общее окружение для всех приложений; переопределяется в workspace и приложении. Редактор задаёт hyprland.lua.
