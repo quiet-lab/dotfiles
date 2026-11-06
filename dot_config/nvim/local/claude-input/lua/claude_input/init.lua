@@ -22,6 +22,8 @@ local state = {
   error_shown = false,
   warned_pane = false,
   seq = 0,
+  -- Последний переданный текст: строка ввода Claude Code уже его содержит.
+  last_payload = "",
 }
 
 -- Текст запроса: сырой, если короткий и без управляющих символов, иначе в рамке bracketed paste.
@@ -237,6 +239,11 @@ schedule_send = function()
     state.dirty = true
     return
   end
+  -- После `:w` строка ввода уже пуста: лишний Esc очистки закрыл бы открытый
+  -- запросом диалог Claude Code (например, /help).
+  if M.payload(buf_lines()) == state.last_payload then
+    return
+  end
   state.in_flight = true
   get_status(pane, function(status, err)
     if err then
@@ -257,12 +264,14 @@ schedule_send = function()
       end
       return
     end
-    request("pane.send_text", { pane_id = pane, text = M.request_text(buf_lines(), false) }, function(_, serr)
+    local payload = M.payload(buf_lines())
+    request("pane.send_text", { pane_id = pane, text = M.PREFIX .. payload }, function(_, serr)
       if serr then
         state.in_flight = false
         return report_error(serr)
       end
       state.error_shown = false
+      state.last_payload = payload
       chain_done()
     end)
   end)
@@ -312,6 +321,7 @@ function M.submit()
         return report_error(serr)
       end
       state.error_shown = false
+      state.last_payload = ""
       if vim.api.nvim_buf_is_valid(buf) then
         vim.api.nvim_buf_set_lines(buf, 0, -1, false, {})
         vim.bo[buf].modified = false
@@ -363,7 +373,19 @@ local function open()
       end
     end,
   })
+  local start = vim.api.nvim_get_current_buf()
   vim.api.nvim_set_current_buf(buf)
+  -- Пустой безымянный буфер запуска не нужен: без него строка вкладок скрыта.
+  if
+    start ~= buf
+    and vim.api.nvim_buf_get_name(start) == ""
+    and vim.bo[start].buftype == ""
+    and not vim.bo[start].modified
+    and vim.api.nvim_buf_line_count(start) == 1
+    and vim.api.nvim_buf_get_lines(start, 0, 1, false)[1] == ""
+  then
+    pcall(vim.api.nvim_buf_delete, start, {})
+  end
   vim.cmd("startinsert")
 end
 
