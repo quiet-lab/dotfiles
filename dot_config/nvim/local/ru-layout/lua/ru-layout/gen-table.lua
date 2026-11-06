@@ -3,6 +3,9 @@
 -- Запуск: nvim -l gen-table.lua <карта.xkb> <выход.lua> [путь-для-шапки]
 -- Третий аргумент — путь к карте в источнике chezmoi (`dot_config/X11/xkb_custom`),
 -- он пишется в шапку вместо абсолютного пути.
+-- После генерации файл форматируется stylua (конфиг stylua.toml плагина): без этого
+-- `stylua --check lua tests` в источнике красный. Генератор вызывает stylua сам,
+-- если находит его в PATH или в каталоге mason.
 local ffi = require("ffi")
 ffi.cdef([[
 typedef uint32_t xkb_keycode_t; typedef uint32_t xkb_keysym_t; typedef uint32_t xkb_layout_index_t; typedef uint32_t xkb_level_index_t;
@@ -103,3 +106,20 @@ f:close()
 print(
   ("layouts=%s keys=%d langmap_pairs=%d ascii_conflicts=%d"):format(table.concat(names, ","), #keys, #from, #conflicts)
 )
+
+local stylua = vim.fn.exepath("stylua")
+if stylua == "" then
+  local mason = vim.fn.expand("~/.local/share/nvim/mason/bin/stylua")
+  stylua = vim.fn.executable(mason) == 1 and mason or nil
+end
+if stylua then
+  local here = debug.getinfo(1, "S").source:sub(2):match("^(.*)/lua/ru%-layout/[^/]*$") or "."
+  local cfg = here .. "/stylua.toml"
+  local r = vim.system({ stylua, "--config-path", cfg, out }):wait()
+  if r.code ~= 0 then
+    io.stderr:write("stylua: " .. (r.stderr or "") .. "\n")
+    os.exit(1)
+  end
+else
+  print("stylua не найден: отформатируйте выходной файл вручную")
+end

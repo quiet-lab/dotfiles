@@ -2,378 +2,461 @@
 -- Раскладки: English (US), Russian
 -- Не править руками.
 return {
-  ascii_conflicts = { 'AE02 L2: ru "\\"" = ASCII, на us это "@"', 'AE04 L2: ru ";" = ASCII, на us это "$"', 'AE06 L2: ru ":" = ASCII, на us это "^"', 'AE07 L2: ru "?" = ASCII, на us это "&"', 'BKSL L2: ru "/" = ASCII, на us это "|"', 'AB10 L1: ru "." = ASCII, на us это "/"', 'AB10 L2: ru "," = ASCII, на us это "?"' },
-  keys = { {
+  ascii_conflicts = {
+    'AE02 L2: ru "\\"" = ASCII, на us это "@"',
+    'AE04 L2: ru ";" = ASCII, на us это "$"',
+    'AE06 L2: ru ":" = ASCII, на us это "^"',
+    'AE07 L2: ru "?" = ASCII, на us это "&"',
+    'BKSL L2: ru "/" = ASCII, на us это "|"',
+    'AB10 L1: ru "." = ASCII, на us это "/"',
+    'AB10 L2: ru "," = ASCII, на us это "?"',
+  },
+  keys = {
+    {
       key = "AB01",
       level = 1,
       ru = "я",
-      us = "z"
-    }, {
+      us = "z",
+    },
+    {
       key = "AB01",
       level = 2,
       ru = "Я",
-      us = "Z"
-    }, {
+      us = "Z",
+    },
+    {
       key = "AB02",
       level = 1,
       ru = "ч",
-      us = "x"
-    }, {
+      us = "x",
+    },
+    {
       key = "AB02",
       level = 2,
       ru = "Ч",
-      us = "X"
-    }, {
+      us = "X",
+    },
+    {
       key = "AB03",
       level = 1,
       ru = "с",
-      us = "c"
-    }, {
+      us = "c",
+    },
+    {
       key = "AB03",
       level = 2,
       ru = "С",
-      us = "C"
-    }, {
+      us = "C",
+    },
+    {
       key = "AB04",
       level = 1,
       ru = "м",
-      us = "v"
-    }, {
+      us = "v",
+    },
+    {
       key = "AB04",
       level = 2,
       ru = "М",
-      us = "V"
-    }, {
+      us = "V",
+    },
+    {
       key = "AB05",
       level = 1,
       ru = "и",
-      us = "b"
-    }, {
+      us = "b",
+    },
+    {
       key = "AB05",
       level = 2,
       ru = "И",
-      us = "B"
-    }, {
+      us = "B",
+    },
+    {
       key = "AB06",
       level = 1,
       ru = "т",
-      us = "n"
-    }, {
+      us = "n",
+    },
+    {
       key = "AB06",
       level = 2,
       ru = "Т",
-      us = "N"
-    }, {
+      us = "N",
+    },
+    {
       key = "AB07",
       level = 1,
       ru = "ь",
-      us = "m"
-    }, {
+      us = "m",
+    },
+    {
       key = "AB07",
       level = 2,
       ru = "Ь",
-      us = "M"
-    }, {
+      us = "M",
+    },
+    {
       key = "AB08",
       level = 1,
       ru = "б",
-      us = ","
-    }, {
+      us = ",",
+    },
+    {
       key = "AB08",
       level = 2,
       ru = "Б",
-      us = "<"
-    }, {
+      us = "<",
+    },
+    {
       key = "AB09",
       level = 1,
       ru = "ю",
-      us = "."
-    }, {
+      us = ".",
+    },
+    {
       key = "AB09",
       level = 2,
       ru = "Ю",
-      us = ">"
-    }, {
+      us = ">",
+    },
+    {
       key = "AB10",
       level = 1,
       ru = ".",
-      us = "/"
-    }, {
+      us = "/",
+    },
+    {
       key = "AB10",
       level = 2,
       ru = ",",
-      us = "?"
-    }, {
+      us = "?",
+    },
+    {
       key = "AC01",
       level = 1,
       ru = "ф",
-      us = "a"
-    }, {
+      us = "a",
+    },
+    {
       key = "AC01",
       level = 2,
       ru = "Ф",
-      us = "A"
-    }, {
+      us = "A",
+    },
+    {
       key = "AC02",
       level = 1,
       ru = "ы",
-      us = "s"
-    }, {
+      us = "s",
+    },
+    {
       key = "AC02",
       level = 2,
       ru = "Ы",
-      us = "S"
-    }, {
+      us = "S",
+    },
+    {
       key = "AC03",
       level = 1,
       ru = "в",
-      us = "d"
-    }, {
+      us = "d",
+    },
+    {
       key = "AC03",
       level = 2,
       ru = "В",
-      us = "D"
-    }, {
+      us = "D",
+    },
+    {
       key = "AC04",
       level = 1,
       ru = "а",
-      us = "f"
-    }, {
+      us = "f",
+    },
+    {
       key = "AC04",
       level = 2,
       ru = "А",
-      us = "F"
-    }, {
+      us = "F",
+    },
+    {
       key = "AC05",
       level = 1,
       ru = "п",
-      us = "g"
-    }, {
+      us = "g",
+    },
+    {
       key = "AC05",
       level = 2,
       ru = "П",
-      us = "G"
-    }, {
+      us = "G",
+    },
+    {
       key = "AC06",
       level = 1,
       ru = "р",
-      us = "h"
-    }, {
+      us = "h",
+    },
+    {
       key = "AC06",
       level = 2,
       ru = "Р",
-      us = "H"
-    }, {
+      us = "H",
+    },
+    {
       key = "AC07",
       level = 1,
       ru = "о",
-      us = "j"
-    }, {
+      us = "j",
+    },
+    {
       key = "AC07",
       level = 2,
       ru = "О",
-      us = "J"
-    }, {
+      us = "J",
+    },
+    {
       key = "AC08",
       level = 1,
       ru = "л",
-      us = "k"
-    }, {
+      us = "k",
+    },
+    {
       key = "AC08",
       level = 2,
       ru = "Л",
-      us = "K"
-    }, {
+      us = "K",
+    },
+    {
       key = "AC09",
       level = 1,
       ru = "д",
-      us = "l"
-    }, {
+      us = "l",
+    },
+    {
       key = "AC09",
       level = 2,
       ru = "Д",
-      us = "L"
-    }, {
+      us = "L",
+    },
+    {
       key = "AC10",
       level = 1,
       ru = "ж",
-      us = ";"
-    }, {
+      us = ";",
+    },
+    {
       key = "AC10",
       level = 2,
       ru = "Ж",
-      us = ":"
-    }, {
+      us = ":",
+    },
+    {
       key = "AC11",
       level = 1,
       ru = "э",
-      us = "'"
-    }, {
+      us = "'",
+    },
+    {
       key = "AC11",
       level = 2,
       ru = "Э",
-      us = '"'
-    }, {
+      us = '"',
+    },
+    {
       key = "AD01",
       level = 1,
       ru = "й",
-      us = "q"
-    }, {
+      us = "q",
+    },
+    {
       key = "AD01",
       level = 2,
       ru = "Й",
-      us = "Q"
-    }, {
+      us = "Q",
+    },
+    {
       key = "AD02",
       level = 1,
       ru = "ц",
-      us = "w"
-    }, {
+      us = "w",
+    },
+    {
       key = "AD02",
       level = 2,
       ru = "Ц",
-      us = "W"
-    }, {
+      us = "W",
+    },
+    {
       key = "AD03",
       level = 1,
       ru = "у",
-      us = "e"
-    }, {
+      us = "e",
+    },
+    {
       key = "AD03",
       level = 2,
       ru = "У",
-      us = "E"
-    }, {
+      us = "E",
+    },
+    {
       key = "AD04",
       level = 1,
       ru = "к",
-      us = "r"
-    }, {
+      us = "r",
+    },
+    {
       key = "AD04",
       level = 2,
       ru = "К",
-      us = "R"
-    }, {
+      us = "R",
+    },
+    {
       key = "AD05",
       level = 1,
       ru = "е",
-      us = "t"
-    }, {
+      us = "t",
+    },
+    {
       key = "AD05",
       level = 2,
       ru = "Е",
-      us = "T"
-    }, {
+      us = "T",
+    },
+    {
       key = "AD06",
       level = 1,
       ru = "н",
-      us = "y"
-    }, {
+      us = "y",
+    },
+    {
       key = "AD06",
       level = 2,
       ru = "Н",
-      us = "Y"
-    }, {
+      us = "Y",
+    },
+    {
       key = "AD07",
       level = 1,
       ru = "г",
-      us = "u"
-    }, {
+      us = "u",
+    },
+    {
       key = "AD07",
       level = 2,
       ru = "Г",
-      us = "U"
-    }, {
+      us = "U",
+    },
+    {
       key = "AD08",
       level = 1,
       ru = "ш",
-      us = "i"
-    }, {
+      us = "i",
+    },
+    {
       key = "AD08",
       level = 2,
       ru = "Ш",
-      us = "I"
-    }, {
+      us = "I",
+    },
+    {
       key = "AD09",
       level = 1,
       ru = "щ",
-      us = "o"
-    }, {
+      us = "o",
+    },
+    {
       key = "AD09",
       level = 2,
       ru = "Щ",
-      us = "O"
-    }, {
+      us = "O",
+    },
+    {
       key = "AD10",
       level = 1,
       ru = "з",
-      us = "p"
-    }, {
+      us = "p",
+    },
+    {
       key = "AD10",
       level = 2,
       ru = "З",
-      us = "P"
-    }, {
+      us = "P",
+    },
+    {
       key = "AD11",
       level = 1,
       ru = "х",
-      us = "["
-    }, {
+      us = "[",
+    },
+    {
       key = "AD11",
       level = 2,
       ru = "Х",
-      us = "{"
-    }, {
+      us = "{",
+    },
+    {
       key = "AD12",
       level = 1,
       ru = "ъ",
-      us = "]"
-    }, {
+      us = "]",
+    },
+    {
       key = "AD12",
       level = 2,
       ru = "Ъ",
-      us = "}"
-    }, {
+      us = "}",
+    },
+    {
       key = "AE02",
       level = 2,
       ru = '"',
-      us = "@"
-    }, {
+      us = "@",
+    },
+    {
       key = "AE03",
       level = 2,
       ru = "№",
-      us = "#"
-    }, {
+      us = "#",
+    },
+    {
       key = "AE04",
       level = 2,
       ru = ";",
-      us = "$"
-    }, {
+      us = "$",
+    },
+    {
       key = "AE06",
       level = 2,
       ru = ":",
-      us = "^"
-    }, {
+      us = "^",
+    },
+    {
       key = "AE07",
       level = 2,
       ru = "?",
-      us = "&"
-    }, {
+      us = "&",
+    },
+    {
       key = "BKSL",
       level = 2,
       ru = "/",
-      us = "|"
-    }, {
+      us = "|",
+    },
+    {
       key = "TLDE",
       level = 1,
       ru = "ё",
-      us = "`"
-    }, {
+      us = "`",
+    },
+    {
       key = "TLDE",
       level = 2,
       ru = "Ё",
-      us = "~"
-    } },
+      us = "~",
+    },
+  },
   langmap = "яЯчЧсСмМиИтТьЬбБюЮфФыЫвВаАпПрРоОлЛдДжЖэЭйЙцЦуУкКеЕнНгГшШщЩзЗхХъЪ№ёЁ;zZxXcCvVbBnNmM\\,<.>aAsSdDfFgGhHjJkKlL\\;:'\\\"qQwWeErRtTyYuUiIoOpP[{]}#`~",
   layouts = { "English (US)", "Russian" },
   ru_ascii_to_us = {
@@ -383,7 +466,7 @@ return {
     ["/"] = "|",
     [":"] = "^",
     [";"] = "$",
-    ["?"] = "&"
+    ["?"] = "&",
   },
   ru_to_us = {
     ["Ё"] = "~",
@@ -452,7 +535,7 @@ return {
     ["ю"] = ".",
     ["я"] = "z",
     ["ё"] = "`",
-    ["№"] = "#"
+    ["№"] = "#",
   },
   us_to_ru = {
     ['"'] = "Э",
@@ -528,6 +611,6 @@ return {
     ["{"] = "Х",
     ["|"] = "/",
     ["}"] = "Ъ",
-    ["~"] = "Ё"
-  }
+    ["~"] = "Ё",
+  },
 }
