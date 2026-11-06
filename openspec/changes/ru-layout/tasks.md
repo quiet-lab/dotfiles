@@ -46,4 +46,4 @@
 
 - [x] 12.1 `chords.lua` (алиасы, чтецы, явные сочетания), перечень `index.lua` и генератор `gen-index.lua` из `index.txt`, две формы дубля и обратный дубль в `keymap.lua`, перевод сочетаний в `getchar.lua` по D10. Проверка: `tests/chords_spec.lua`, `tests/run-all.sh`, тесты `claude-input`.
 - [x] 12.2 Раздел о независимости от хоста и живые проверки в `docs/ru-layout.md`, требование «Поведение не зависит от хоста».
-- [ ] 12.3 Живая проверка обеих форм в wezterm и Neovide нажатиями ydotool (сценарий `check2.py` главной сессии).
+- [x] 12.3 Живая проверка в wezterm и Neovide нажатиями ydotool (сценарий `live-check/run.py` задачи host-keys): insert Ctrl+ц, Ctrl+к ф, normal Ctrl+ц ы, терминал Ctrl+ф и Alt+в, `:` Ctrl+к ф — одинаковый итог в обоих хостах; прежний модуль в Neovide даёт 6 расхождений из 6.
