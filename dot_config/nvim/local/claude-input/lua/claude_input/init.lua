@@ -42,6 +42,10 @@ local state = {
   -- Подпись экрана до отправки стрелок или Enter: пока экран с ней совпадает,
   -- Claude Code ещё не обработал клавиши, и решения по нему не принимаются.
   guard = nil,
+  -- Подпись диалога, на который ответ отправлен по `:w`: пока экран с ней
+  -- совпадает, буфер диалога не открывается снова (design.md изменения
+  -- claude-input-dialog-close).
+  answered = nil,
   -- Образец выделения, которого ждёт защита, и закрытие подписки на него.
   expect = nil,
   expect_close = nil,
@@ -610,12 +614,22 @@ local function d_decide(job, status, text, send, done)
     d = nil
   end
   if not d or (state.mode ~= "dialog" and status ~= "blocked") then
+    if not d or status ~= "blocked" then
+      -- Экран перестал быть диалогом или статус вышел из blocked:
+      -- ответ принят, такой же диалог дальше новый.
+      state.answered = nil
+    end
     if state.mode == "dialog" then
       show_input()
     end
     return done()
   end
   if state.mode ~= "dialog" then
+    if state.answered ~= nil and state.answered == dialog.signature(d) then
+      -- Ответ на этот экран уже отправлен, Claude Code его не перерисовал.
+      return done()
+    end
+    state.answered = nil
     show_dialog()
     return done()
   end
@@ -640,8 +654,9 @@ local function d_decide(job, status, text, send, done)
     set_lines_clean(dbuf, {})
     state.field_text = ""
     state.seen_empty = true
-    state.guard = sig
-    state.expect = nil
+    -- Ввод возвращается сразу, не дожидаясь смены экрана панели.
+    show_input()
+    state.answered = sig
     return send(keys)
   end
   if job ~= "edit" then
@@ -710,6 +725,8 @@ d_step = function()
   end
   local function fail(err)
     state.d_busy = false
+    -- Ответ мог не уйти: диалог должен открываться снова.
+    state.answered = nil
     report_error(err)
   end
   local function with_status(cb)
@@ -788,6 +805,10 @@ function M.watch()
       state.watch_events = state.watch_events + 1
       local data = ev.data
       state.status = type(data) == "table" and data.agent_status or nil
+      if state.status ~= "blocked" then
+        -- Статус вышел из blocked: ответ принят, такой же диалог дальше новый.
+        state.answered = nil
+      end
       state.d_refresh = true
       d_step()
     end
