@@ -73,7 +73,7 @@ h=$(pane_height "$HERDR_PANE_ID")
 [ -n "$h" ] && [ "$h" -ge 20 ] || exit 0
 ratio=$(awk -v h="$h" 'BEGIN { printf "%.4f", (h - 15) / h }')
 
-new_info=$(herdr pane split "$HERDR_PANE_ID" --direction down --no-focus \
+new_info=$(herdr pane split "$HERDR_PANE_ID" --direction down --focus \
     --ratio "$ratio" --env CLAUDE_INPUT_PANE="$HERDR_PANE_ID")
 new=$(jq -r '.result.pane.pane_id // empty' <<< "$new_info")
 [ -n "$new" ] || exit 0
