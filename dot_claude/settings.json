@@ -40,6 +40,16 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "matcher": "^(startup|resume)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/herdr-claude-input.sh\" open",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "Notification": [
@@ -49,6 +59,18 @@
           {
             "type": "command",
             "command": "$HOME/.local/bin/claude-sound-notify.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "^(?!clear$).*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/herdr-claude-input.sh\" close",
             "timeout": 10
           }
         ]
