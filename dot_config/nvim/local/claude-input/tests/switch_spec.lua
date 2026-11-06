@@ -484,6 +484,35 @@ check(
   last_sent()
 )
 
+-- 14. Shift+Enter и Shift+Пробел в буфере диалога — то же, что :w; в буфере ввода — ничего.
+for _, key in ipairs({ "<S-CR>", "<S-Space>" }) do
+  push_status("working", IDLE)
+  wait(function()
+    return st.mode == "input"
+  end)
+  local before = #fake.sent
+  vim.api.nvim_feedkeys(vim.keycode("i" .. key .. "<Esc>"), "xt", false)
+  wait(idle_chain)
+  check(
+    key .. " в буфере ввода: ничего не отправлено",
+    #fake.sent == before,
+    fake.sent[#fake.sent]
+  )
+  push_status("blocked", screen("trust"))
+  wait(function()
+    return st.mode == "dialog"
+  end)
+  dialog_set({ "2" })
+  check(key .. ": стрелка по цифре", last_sent() == D, last_sent())
+  vim.api.nvim_feedkeys(vim.keycode("i" .. key), "xt", false)
+  wait(idle_chain)
+  check(key .. " в режиме вставки: Enter", last_sent() == "<enter>", last_sent())
+  check(
+    key .. ": окно возвращено к вводу",
+    st.mode == "input" and cur_name():match("claude://input$") ~= nil
+  )
+end
+
 -- Esc уходит только в префиксе очистки поля.
 for _, t in ipairs(fake.sent) do
   local rest = t:gsub(vim.pesc(P), "")

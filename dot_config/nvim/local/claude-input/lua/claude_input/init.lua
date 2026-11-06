@@ -507,15 +507,25 @@ local function ensure_dialog_buf()
       M.dialog_changed()
     end,
   })
+  -- Подтверждение выбора: :w, Shift+Enter и Shift+Пробел идут одним путём.
+  local function confirm()
+    vim.bo[buf].modified = false
+    state.d_write = true
+    d_step()
+  end
   vim.api.nvim_create_autocmd("BufWriteCmd", {
     group = group,
     buffer = buf,
-    callback = function()
-      vim.bo[buf].modified = false
-      state.d_write = true
-      d_step()
-    end,
+    callback = confirm,
   })
+  for _, key in ipairs({ "<S-CR>", "<S-Space>" }) do
+    vim.keymap.set(
+      { "i", "n" },
+      key,
+      confirm,
+      { buffer = buf, desc = "claude-input: подтвердить выбор" }
+    )
+  end
   return buf
 end
 
