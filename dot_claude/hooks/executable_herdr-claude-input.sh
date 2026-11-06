@@ -59,7 +59,12 @@ if [ -f "$map_file" ]; then
         if [ -n "$info" ] && [ -z "$(jq -r '.error // empty' <<< "$info")" ]; then
             ws=$(jq -r '.result.pane.workspace_id // empty' <<< "$info")
             [ -z "${HERDR_WORKSPACE_ID:-}" ] || [ "$ws" = "$HERDR_WORKSPACE_ID" ] || old=
-            [ -z "$old" ] || exit 0
+            if [ -n "$old" ]; then
+                # Возобновлённая сессия получает токен заново (идемпотентно).
+                herdr pane report-metadata "$HERDR_PANE_ID" --source claude-input \
+                    --token input_pane="$old" > /dev/null
+                exit 0
+            fi
         fi
     fi
 fi
@@ -97,10 +102,10 @@ new=$(jq -r '.result.pane.pane_id // empty' <<< "$new_info")
 mkdir -p "$state_dir"
 printf '%s\n' "$new" > "$map_file"
 
-# Токен для форка herdr: панель ввода той же вкладки, что панель Claude Code.
-# Ошибка (herdr без --token) хук не прерывает.
-herdr pane report-metadata "$new" --source claude-input \
-    --token input_for="$HERDR_PANE_ID" > /dev/null
+# Токен для форка herdr на панели Claude Code: снимок клиента несёт токены
+# только панелей с агентом. Ошибка (herdr без --token) хук не прерывает.
+herdr pane report-metadata "$HERDR_PANE_ID" --source claude-input \
+    --token input_pane="$new" > /dev/null
 
 # Одна поправка разделителя, если в панели не 13 строк вывода.
 rows=$(jq -r '.result.pane.scroll.viewport_rows // empty' <<< "$new_info")
