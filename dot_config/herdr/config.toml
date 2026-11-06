@@ -17,10 +17,11 @@ delivery = "off"
 rows = [["state_icon", { token = "tab", fg = "$color|#ffffff" }]]
 
 # Полоса вкладок workspace. Активная вкладка — текст цветом токена color
-# workspace на фоне панели, неактивные — заливка цветом workspace, текст цветом
-# фона панели (инверсия по фокусу). Без токена color заливка белая.
+# workspace на фоне области терминала ($terminal: фон не задаётся, виден фон
+# хост-терминала), неактивные — заливка цветом workspace, текст цветом фона
+# панели (инверсия по фокусу). Без токена color заливка белая.
 [ui.tab_bar]
-active = { fg = "$color|#ffffff", bg = "$panel" }
+active = { fg = "$color|#ffffff", bg = "$terminal" }
 inactive = { fg = "$panel", bg = "$color|#ffffff" }
 
 # Значки состояния агентов (форк duty-herdr): ширина 2 ячейки, без U+FE0F.
@@ -48,11 +49,17 @@ rules = [
 # Символы workspace по каталогам (форк duty-herdr). Источник символов —
 # раздел [symbols] файла .duty/duty.toml каждого репозитория (main — корневой
 # workspace, tasks — дочерние), вне репозиториев — symbols.outside из
-# ~/.config/duty/config.toml. Палитра — scripts/colors.txt плагина duty;
-# у проектов своей палитры нет. Токен report-metadata любого источника
+# ~/.config/duty/config.toml. Цвет: корневые workspace белые ($color|#ffffff),
+# дочерним herdr выбирает случайный оттенок по правилу color_rule — шаг оттенка
+# 10°, насыщенность 50–70 %, яркость 70–100 % (HSV), незанятые оттенки первыми;
+# палитры у плагина duty больше нет. Токен report-metadata любого источника
 # (хук herdr-session-label.sh, dispatch.sh плагина duty) главнее токена herdr.
 # Ручная подпись workspace видна только при живом агенте в первой вкладке,
 # иначе herdr показывает «<символ> <место> · <приложение>».
+[ui.workspace_symbols.color_rule]
+hue_step = 10
+saturation = [50, 70]
+value = [70, 100]
 
 [[ui.workspace_symbols.dirs]]
 path = "~/work/pets/duty-herdr"
@@ -63,11 +70,6 @@ tasks = [
   "🐈", "🐎", "🐏", "🐐", "🐑", "🐒", "🐕", "🐖", "🐗", "🐘", "🐨", "🐩", "🐪", "🐫", "🐭",
   "🐮", "🐯", "🐰", "🐼", "🐻", "🐺", "🐹", "🐷", "🐶", "🐵", "🐴", "🐱", "🐁", "🐀",
 ]
-colors = [
-  "#f5e0dc", "#f2cdcd", "#f5c2e7", "#cba6f7", "#f38ba8", "#eba0ac",
-  "#fab387", "#f9e2af", "#a6e3a1", "#94e2d5", "#89dceb", "#74c7ec",
-  "#89b4fa", "#b4befe",
-]
 
 [[ui.workspace_symbols.dirs]]
 path = "~/work/telecom/axata/monorepo-ocp"
@@ -76,22 +78,12 @@ tasks = [
   "🌱", "🌲", "🌳", "🌴", "🌵", "🌾", "🌿", "🍃", "🪴", "🍏", "🍐", "🥝", "🍈", "🫒", "🥦",
   "🥬", "🫑", "🫛", "🫝", "🥑", "🌽",
 ]
-colors = [
-  "#f5e0dc", "#f2cdcd", "#f5c2e7", "#cba6f7", "#f38ba8", "#eba0ac",
-  "#fab387", "#f9e2af", "#a6e3a1", "#94e2d5", "#89dceb", "#74c7ec",
-  "#89b4fa", "#b4befe",
-]
 
 [[ui.workspace_symbols.dirs]]
 path = "~/work/pets/duty"
 main = "🦑"
 tasks = [
   "🐋", "🐙", "🐚", "🐟", "🐠", "🐡", "🐬", "🐳", "🦀", "🦈", "🦐", "🦞", "🦭", "🪼", "🫍",
-]
-colors = [
-  "#f5e0dc", "#f2cdcd", "#f5c2e7", "#cba6f7", "#f38ba8", "#eba0ac",
-  "#fab387", "#f9e2af", "#a6e3a1", "#94e2d5", "#89dceb", "#74c7ec",
-  "#89b4fa", "#b4befe",
 ]
 
 [[ui.workspace_symbols.dirs]]
@@ -100,28 +92,18 @@ main = "🏠"
 tasks = [
   "🏡", "🏢", "🏣", "🏤", "🏦", "🏨", "🏩", "🏫", "🏬", "🏭", "🏯", "🏰", "💒", "🛖",
 ]
-colors = [
-  "#f5e0dc", "#f2cdcd", "#f5c2e7", "#cba6f7", "#f38ba8", "#eba0ac",
-  "#fab387", "#f9e2af", "#a6e3a1", "#94e2d5", "#89dceb", "#74c7ec",
-  "#89b4fa", "#b4befe",
-]
 
 [ui.workspace_symbols.outside]
 main = "📁"  # значение по умолчанию: выбор главной сессии, пользователь может заменить
 tasks = [
   "🍺", "🍻", "🍷", "🍸", "🍹", "🍵", "☕", "🍾", "🥂", "🥃", "🥛", "🧉", "🧋",
 ]
-colors = [
-  "#f5e0dc", "#f2cdcd", "#f5c2e7", "#cba6f7", "#f38ba8", "#eba0ac",
-  "#fab387", "#f9e2af", "#a6e3a1", "#94e2d5", "#89dceb", "#74c7ec",
-  "#89b4fa", "#b4befe",
-]
 
 # Заголовок workspace — одна строка: значок состояния и подпись.
 # Цвет задаёт токен метаданных color
 # (herdr workspace report-metadata <ws> --source <id> --token color=#hex):
 # главная сессия репозитория — белый из хука herdr-session-label.sh,
-# задачи duty — из dispatch.sh, дочерние workspace без токена duty — из colors.
+# задачи duty — из dispatch.sh, дочерние workspace без токена duty — по правилу color_rule.
 # Без токена подпись белая (запасной цвет после «|»).
 [ui.sidebar.spaces]
 rows = [["state_icon", { token = "workspace", fg = "$color|#ffffff" }]]
