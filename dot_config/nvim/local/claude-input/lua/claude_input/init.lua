@@ -42,6 +42,10 @@ local state = {
   -- Подпись экрана до отправки стрелок или Enter: пока экран с ней совпадает,
   -- Claude Code ещё не обработал клавиши, и решения по нему не принимаются.
   guard = nil,
+  -- Подпись диалога, на который ответ отправлен по `:w`: пока экран с ней
+  -- совпадает, буфер диалога не открывается снова (design.md изменения
+  -- claude-input-dialog-close).
+  answered = nil,
   -- Образец выделения, которого ждёт защита, и закрытие подписки на него.
   expect = nil,
   expect_close = nil,
@@ -572,12 +576,21 @@ local function d_decide(job, status, text, send, done)
     d = nil
   end
   if not d or (state.mode ~= "dialog" and status ~= "blocked") then
+    if not d then
+      -- Экран перестал быть диалогом: такой же диалог дальше новый.
+      state.answered = nil
+    end
     if state.mode == "dialog" then
       show_input()
     end
     return done()
   end
   if state.mode ~= "dialog" then
+    if state.answered ~= nil and state.answered == dialog.signature(d) then
+      -- Ответ на этот экран уже отправлен, Claude Code его не перерисовал.
+      return done()
+    end
+    state.answered = nil
     show_dialog()
     return done()
   end
@@ -602,8 +615,9 @@ local function d_decide(job, status, text, send, done)
     set_lines_clean(dbuf, {})
     state.field_text = ""
     state.seen_empty = true
-    state.guard = sig
-    state.expect = nil
+    -- Ввод возвращается сразу, не дожидаясь смены экрана панели.
+    show_input()
+    state.answered = sig
     return send(keys)
   end
   if job ~= "edit" then

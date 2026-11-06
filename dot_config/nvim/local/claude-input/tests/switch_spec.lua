@@ -256,9 +256,34 @@ vim.cmd("write")
 wait(idle_chain)
 check(":w одиночный: Enter клавишей", last_sent() == "<enter>", last_sent())
 check(":w: буфер не изменён", not vim.bo[st.dbuf].modified)
+-- Ввод возвращается сразу, пока сервер не сменил экран.
+check(
+  ":w: сразу буфер ввода",
+  cur_name():match("claude://input$") ~= nil and st.mode == "input",
+  cur_name()
+)
+check(
+  ":w: прежний текст ввода",
+  table.concat(vim.api.nvim_buf_get_lines(input, 0, -1, false), "\n") == "черновик"
+)
+-- Тот же экран (подпись отвеченного диалога) диалог не открывает.
+push_status("blocked", fake.screen)
+wait(idle_chain)
+check(
+  "тот же экран: диалог не открывается",
+  st.mode == "input" and cur_name():match("claude://input$") ~= nil
+)
+check("тот же экран: буфер диалога скрыт", vim.fn.bufwinid(st.dbuf) == -1)
 
--- 8. Множественный выбор: цифра — клавиша цифры, :w — к Submit и Enter.
-fake.screen = screen("ask-q2-multi")
+-- 8. Множественный выбор (следующий вопрос — другой экран): диалог открывается заново.
+push_status("blocked", screen("ask-q2-multi"))
+wait(function()
+  return st.mode == "dialog"
+end)
+check(
+  "следующий вопрос: пустой диалог",
+  cur_name():match("claude://dialog$") ~= nil and dialog_lines() == ""
+)
 dialog_set({ "2" })
 check("множественный: клавиша 2", last_sent() == "2", last_sent())
 vim.cmd("write")
@@ -267,6 +292,10 @@ check(
   ":w множественный: к Submit и Enter",
   fake.sent[#fake.sent - 1] == D:rep(4) and last_sent() == "<enter>",
   { fake.sent[#fake.sent - 1], last_sent() }
+)
+check(
+  ":w множественный: сразу буфер ввода",
+  st.mode == "input" and cur_name():match("claude://input$") ~= nil
 )
 
 -- 9. Запрос разрешения: цифра 2 — стрелка, подтверждение только по :w.
@@ -352,6 +381,13 @@ wait(function()
   return last_sent() == "<enter>" and idle_chain()
 end)
 check(":w после перерисовки: к Submit", fake.sent[#fake.sent - 1] == D, fake.sent[#fake.sent - 1])
+check(":w после перерисовки: буфер ввода", st.mode == "input")
+push_status("working", IDLE)
+wait(idle_chain)
+push_status("blocked", multi)
+wait(function()
+  return st.mode == "dialog"
+end)
 -- Цифра на прежнем экране не теряется.
 render(multi)
 st.guard = nil
