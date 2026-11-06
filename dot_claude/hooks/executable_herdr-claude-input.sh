@@ -97,6 +97,11 @@ new=$(jq -r '.result.pane.pane_id // empty' <<< "$new_info")
 mkdir -p "$state_dir"
 printf '%s\n' "$new" > "$map_file"
 
+# Токен для форка herdr: панель ввода той же вкладки, что панель Claude Code.
+# Ошибка (herdr без --token) хук не прерывает.
+herdr pane report-metadata "$new" --source claude-input \
+    --token input_for="$HERDR_PANE_ID" > /dev/null
+
 # Одна поправка разделителя, если в панели не 13 строк вывода.
 rows=$(jq -r '.result.pane.scroll.viewport_rows // empty' <<< "$new_info")
 if [ -n "$rows" ] && [ "$rows" != "$rows_wanted" ]; then
