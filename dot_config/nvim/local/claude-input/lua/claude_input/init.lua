@@ -436,6 +436,44 @@ local function swap_window(from, to)
   return true
 end
 
+-- Визуальный перенос строк в окне, показывающем буфер модуля: текст буфера
+-- не меняется. Настройка — на окно при каждом показе, при уходе буфера из
+-- окна прежние значения возвращаются, чтобы не затронуть соседние буферы.
+local function wrap_on_show(buf)
+  local group = vim.api.nvim_create_augroup("claude_input_wrap_" .. buf, { clear = true })
+  local opts = { "wrap", "linebreak", "breakindent" }
+  vim.api.nvim_create_autocmd("BufWinEnter", {
+    group = group,
+    buffer = buf,
+    callback = function()
+      local win = vim.api.nvim_get_current_win()
+      if vim.w[win].claude_input_wrap_saved then
+        return
+      end
+      local saved = {}
+      for _, o in ipairs(opts) do
+        saved[o] = vim.wo[win][o]
+        vim.wo[win][o] = true
+      end
+      vim.w[win].claude_input_wrap_saved = saved
+    end,
+  })
+  vim.api.nvim_create_autocmd("BufWinLeave", {
+    group = group,
+    buffer = buf,
+    callback = function()
+      local win = vim.api.nvim_get_current_win()
+      local saved = vim.w[win].claude_input_wrap_saved
+      if saved then
+        for o, v in pairs(saved) do
+          vim.wo[win][o] = v
+        end
+        vim.w[win].claude_input_wrap_saved = nil
+      end
+    end,
+  })
+end
+
 local d_step
 
 local function ensure_dialog_buf()
@@ -448,6 +486,7 @@ local function ensure_dialog_buf()
   vim.bo[buf].buftype = "acwrite"
   vim.bo[buf].swapfile = false
   vim.bo[buf].bufhidden = "hide"
+  wrap_on_show(buf)
   -- Пустой буфер отмечается на каждом изменении: несколько клавиш одного куска
   -- (Ctrl+U и цифра) дают одно событие TextChangedI уже без пустого состояния.
   vim.api.nvim_buf_attach(buf, false, {
@@ -776,6 +815,7 @@ local function open()
   vim.bo[buf].swapfile = false
   vim.bo[buf].bufhidden = "hide"
   vim.bo[buf].filetype = "markdown"
+  wrap_on_show(buf)
   local group = vim.api.nvim_create_augroup("claude_input", { clear = true })
   -- Файл соответствия панелей после `:q` устарел: удаляется, если он указывает на эту панель.
   vim.api.nvim_create_autocmd("VimLeavePre", {
