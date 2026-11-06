@@ -42,6 +42,11 @@ local state = {
   -- Подпись экрана до отправки стрелок или Enter: пока экран с ней совпадает,
   -- Claude Code ещё не обработал клавиши, и решения по нему не принимаются.
   guard = nil,
+  -- Образец выделения, которого ждёт защита, и закрытие подписки на него.
+  expect = nil,
+  expect_close = nil,
+  -- Последний известный статус панели Claude Code (из событий подписки и pane.get).
+  status = nil,
 }
 
 -- Текст запроса: сырой, если короткий и без управляющих символов, иначе в рамке bracketed paste.
@@ -294,6 +299,10 @@ schedule_send = function()
   if not pane then
     return
   end
+  -- Подписка буфера диалога, потерянная при обрыве, поднимается правкой буфера ввода.
+  if not state.watch and M.watch then
+    M.watch()
+  end
   if state.in_flight or state.waiting then
     state.dirty = true
     return
@@ -417,10 +426,14 @@ local function set_lines_clean(buf, lines)
 end
 
 -- Окно, показывающее буфер from, переводится на буфер to.
+-- false — буфер from нигде не показан, окна не меняются.
 local function swap_window(from, to)
-  local wins = vim.fn.win_findbuf(from)
-  local win = wins[1] or vim.api.nvim_get_current_win()
+  local win = vim.fn.win_findbuf(from)[1]
+  if not win then
+    return false
+  end
   vim.api.nvim_win_set_buf(win, to)
+  return true
 end
 
 local d_step
@@ -464,14 +477,62 @@ local function ensure_dialog_buf()
   return buf
 end
 
+-- Ожидание выделения state.expect по событию pane.output_matched: после него
+-- отложенное задание job выполняется заново. Без образца задание ждёт следующей
+-- правки или события подписки.
+local function wait_expect(job)
+  local pane = pane_id()
+  if not pane or not state.expect or state.expect_close then
+    return
+  end
+  local close
+  local function release()
+    if state.expect_close ~= close then
+      return
+    end
+    state.expect_close = nil
+    close()
+    if job == "write" then
+      state.d_write = true
+    end
+    state.d_edit = true
+    d_step()
+  end
+  close = request("events.subscribe", {
+    subscriptions = {
+      {
+        type = "pane.output_matched",
+        pane_id = pane,
+        source = "detection",
+        match = { type = "regex", value = state.expect },
+      },
+    },
+  }, function(_, err)
+    if err then
+      release()
+    end
+  end, function(ev)
+    if ev == nil or ev.event == "pane.output_matched" then
+      release()
+    end
+  end)
+  state.expect_close = close
+end
+
+local function stop_expect()
+  if state.expect_close then
+    local c = state.expect_close
+    state.expect_close = nil
+    c()
+  end
+  state.expect = nil
+end
+
 -- Правка буфера диалога.
 function M.dialog_changed()
   local buf = state.dbuf
   if not buf or not vim.api.nvim_buf_is_valid(buf) then
     return
-  end
-  if table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n") == "" then
-    state.seen_empty = true
   end
   state.d_edit = true
   d_step()
@@ -481,18 +542,19 @@ local function show_dialog()
   local dbuf = ensure_dialog_buf()
   set_lines_clean(dbuf, {})
   state.guard = nil
+  stop_expect()
   state.field_text = ""
   state.seen_empty = true
   state.mode = "dialog"
-  if state.buf and vim.api.nvim_buf_is_valid(state.buf) then
-    swap_window(state.buf, dbuf)
+  if state.buf and vim.api.nvim_buf_is_valid(state.buf) and swap_window(state.buf, dbuf) then
+    vim.cmd("startinsert")
   end
-  vim.cmd("startinsert")
 end
 
 local function show_input()
   state.mode = "input"
   state.guard = nil
+  stop_expect()
   state.field_text = ""
   if state.buf and vim.api.nvim_buf_is_valid(state.buf) and state.dbuf then
     swap_window(state.dbuf, state.buf)
@@ -504,6 +566,11 @@ end
 -- done() завершает цепочку; send(keys) отправляет клавиши и затем завершает её.
 local function d_decide(job, status, text, send, done)
   local d = text and dialog.parse(text)
+  if d and state.mode == "dialog" and status ~= "blocked" and not dialog.on_free(d) then
+    -- Не blocked бывает только при выделенном поле свободного ввода (Д3);
+    -- иначе экран — прежний кадр закрытого диалога.
+    d = nil
+  end
   if not d or (state.mode ~= "dialog" and status ~= "blocked") then
     if state.mode == "dialog" then
       show_input()
@@ -522,31 +589,42 @@ local function d_decide(job, status, text, send, done)
   local stale = state.guard ~= nil and state.guard == sig
   if not stale then
     state.guard = nil
+    stop_expect()
+  end
+  if stale and (job == "edit" or (job == "write" and state.expect)) then
+    -- Прежний экран: задание повторяется по событию выделения или при
+    -- следующей правке; буфер не трогается.
+    wait_expect(job)
+    return done()
   end
   if job == "write" then
-    -- Enter безопасен и на прежнем экране: Claude Code обрабатывает клавиши по порядку.
     local keys = dialog.submit_keys(d)
     set_lines_clean(dbuf, {})
     state.field_text = ""
     state.seen_empty = true
     state.guard = sig
+    state.expect = nil
     return send(keys)
   end
-  if job ~= "edit" or stale then
-    -- Прежний экран: решение — при следующей правке или событии подписки.
+  if job ~= "edit" then
     return done()
   end
   local n = content:match("^%s*(%d+)%s*$")
   if n and (not on_free or state.field_text == "" or state.seen_empty) then
+    n = tonumber(n)
     local dirty_field = on_free and (state.field_text ~= "" or d.free_text ~= "")
-    local keys = dialog.digit_keys(d, tonumber(n), dirty_field and M.PREFIX or nil)
+    local keys = dialog.digit_keys(d, n, dirty_field and M.PREFIX or nil)
     set_lines_clean(dbuf, {})
     state.seen_empty = true
     if dirty_field then
       state.field_text = ""
     end
     if keys and keys ~= "" then
-      state.guard = sig
+      if keys ~= tostring(n) then
+        -- Стрелки меняют выделение: до перерисовки экран прежний.
+        state.guard = sig
+        state.expect = dialog.selected_regex(d.rows[dialog.index(d, n)])
+      end
       return send(keys)
     end
     return done()
@@ -596,7 +674,18 @@ d_step = function()
     state.d_busy = false
     report_error(err)
   end
-  get_status(pane, function(status, err)
+  local function with_status(cb)
+    if state.status then
+      return cb(state.status)
+    end
+    get_status(pane, function(status, err)
+      if status then
+        state.status = status
+      end
+      cb(status, err)
+    end)
+  end
+  with_status(function(status, err)
     if err then
       return fail(err)
     end
@@ -637,8 +726,10 @@ function M.watch()
         state.watch = nil
       end
       close()
-      return
+      return report_error(err)
     end
+    -- Статус до подписки неизвестен: следующая цепочка спросит pane.get.
+    state.status = nil
     state.d_refresh = true
     d_step()
   end, function(ev)
@@ -647,6 +738,7 @@ function M.watch()
     end
     if ev == nil then
       state.watch = nil
+      state.status = nil
       -- Обрыв после событий — подписка открывается заново один раз;
       -- обрыв без событий — следующая правка буфера диалога.
       if state.watch_events > 0 then
@@ -656,6 +748,8 @@ function M.watch()
     end
     if ev.event == "pane.agent_status_changed" then
       state.watch_events = state.watch_events + 1
+      local data = ev.data
+      state.status = type(data) == "table" and data.agent_status or nil
       state.d_refresh = true
       d_step()
     end

@@ -125,7 +125,8 @@ local function plain_rows(lines, last)
   local rows = {}
   for i = first, final do
     local _, selected, body = split_sel(lines[i])
-    table.insert(rows, { num = #rows + 1, label = body:gsub("%s+$", ""), selected = selected, line = i })
+    local label = body:gsub("%s+$", "")
+    table.insert(rows, { num = #rows + 1, label = label, selected = selected, line = i, plain = true })
   end
   return rows
 end
@@ -236,6 +237,17 @@ end
 -- Выделен пункт свободного ввода.
 function M.on_free(d)
   return d.free ~= nil and d.rows[d.sel].num == d.free
+end
+
+-- Образец (регулярное выражение Rust для pane.output_matched) строки пункта row,
+-- когда он выделен; nil — образца нет (пункт без номера).
+function M.selected_regex(row)
+  if row.submit then
+    return "(?m)^\\s*❯\\s+Submit\\s*$"
+  end
+  if row.num and not row.plain then
+    return "(?m)^\\s*❯\\s*" .. row.num .. "\\.\\s"
+  end
 end
 
 local function arrows(from, to)

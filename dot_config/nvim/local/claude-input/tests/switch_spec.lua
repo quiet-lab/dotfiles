@@ -24,7 +24,7 @@ local function screen(name)
 end
 
 local IDLE = "──────\n❯ \n──────\n  -- INSERT -- ⏸ manual mode on\n"
-local fake = { status = "idle", screen = IDLE, sent = {}, subs = {} }
+local fake = { status = "idle", screen = IDLE, sent = {}, subs = {}, matchers = {} }
 
 -- Поддельный сервер: строка JSON на запрос, подписки держат соединение.
 local server = uv.new_pipe(false)
@@ -59,7 +59,12 @@ server:listen(16, function()
       table.insert(fake.sent, "<" .. table.concat(req.params.keys, " ") .. ">")
       reply({ type = "ok" })
     elseif req.method == "events.subscribe" then
-      table.insert(fake.subs, client)
+      local sub = req.params.subscriptions[1]
+      if sub.type == "pane.output_matched" then
+        table.insert(fake.matchers, { client = client, regex = sub.match.value })
+      else
+        table.insert(fake.subs, client)
+      end
       reply({ type = "subscribed" })
     end
   end)
@@ -74,6 +79,19 @@ local function push_status(status, scr)
         vim.json.encode({ event = "pane.agent_status_changed", data = { pane_id = "w1:p1", agent_status = status } })
           .. "\n"
       )
+    end
+  end
+end
+
+-- Перерисовка экрана: подписчики pane.output_matched получают событие
+-- (образец в тесте не сверяется: каждый ждёт ровно эту перерисовку).
+local function render(scr)
+  fake.screen = scr
+  local ms = fake.matchers
+  fake.matchers = {}
+  for _, m in ipairs(ms) do
+    if not m.client:is_closing() then
+      m.client:write(vim.json.encode({ event = "pane.output_matched", data = { pane_id = "w1:p1" } }) .. "\n")
     end
   end
 end
@@ -299,6 +317,76 @@ check("доверие: стрелка", last_sent() == D, last_sent())
 vim.cmd("write")
 wait(idle_chain)
 check("доверие: :w — Enter", last_sent() == "<enter>", last_sent())
+
+-- 13. Прежний экран после стрелок: :w и цифра ждут перерисовки (pane.output_matched).
+push_status("working", IDLE)
+wait(function()
+  return st.mode == "input"
+end)
+local multi = screen("ask-q2-multi")
+push_status("blocked", multi)
+wait(function()
+  return st.mode == "dialog"
+end)
+dialog_set({ "4" })
+check("к полю: стрелки", last_sent() == D:rep(3), last_sent())
+n_sent = #fake.sent
+vim.cmd("write")
+wait(idle_chain)
+check(":w на прежнем экране отложен", #fake.sent == n_sent)
+local function open_matchers()
+  local n = 0
+  for _, m in ipairs(fake.matchers) do
+    if not m.client:is_closing() then
+      n = n + 1
+    end
+  end
+  return n
+end
+wait(function()
+  return open_matchers() == 1
+end)
+check("ожидание выделения", open_matchers() == 1, open_matchers())
+render((multi:gsub("\n❯ 1%.", "\n  1."):gsub("\n  4%. %[ %]", "\n❯ 4. [ ]")))
+wait(function()
+  return last_sent() == "<enter>" and idle_chain()
+end)
+check(":w после перерисовки: к Submit", fake.sent[#fake.sent - 1] == D, fake.sent[#fake.sent - 1])
+-- Цифра на прежнем экране не теряется.
+render(multi)
+st.guard = nil
+dialog_set({ "4" })
+dialog_set({ "1" })
+check("цифра на прежнем экране отложена", last_sent() == D:rep(3), last_sent())
+wait(function()
+  return open_matchers() == 1
+end)
+render((multi:gsub("\n❯ 1%.", "\n  1."):gsub("\n  4%. %[ %]", "\n❯ 4. [ ]")))
+wait(function()
+  return last_sent() == U:rep(3) .. "1" and idle_chain()
+end)
+check("цифра после перерисовки", last_sent() == U:rep(3) .. "1", last_sent())
+-- Отметки подряд без перерисовки: защита не ставится.
+render(multi)
+st.guard = nil
+dialog_set({ "2" })
+dialog_set({ "3" })
+check(
+  "отметки подряд",
+  fake.sent[#fake.sent - 1] == "2" and last_sent() == "3",
+  { fake.sent[#fake.sent - 1], last_sent() }
+)
+
+-- 14. Статус idle, а кадр ещё диалога без выделенного поля — возврат к буферу ввода.
+push_status("idle", multi)
+wait(function()
+  return st.mode == "input"
+end)
+check(
+  "idle с прежним кадром: буфер ввода",
+  cur_name():match("claude://input$") ~= nil,
+  cur_name()
+)
 
 -- Esc уходит только в префиксе очистки поля.
 for _, t in ipairs(fake.sent) do
