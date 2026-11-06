@@ -4,3 +4,4 @@ CLAUDE.md
 todo.md
 system
 docs
+.config/nvim/local/claude-input/tests

@@ -4,6 +4,7 @@
 local M = {}
 
 local uv = vim.uv or vim.loop
+local dialog = require("claude_input.dialog")
 
 -- Очистка строки ввода Claude Code: i, Ctrl+U, Esc (кодировка kitty), ggdG, i, Backspace.
 M.PREFIX = "i\21\27[27uggdGi\127"
@@ -11,6 +12,7 @@ M.RAW_LIMIT = 700
 local PASTE_BEGIN = "\27[200~"
 local PASTE_END = "\27[201~"
 local BUF_NAME = "claude://input"
+local DIALOG_NAME = "claude://dialog"
 
 local state = {
   buf = nil,
@@ -24,6 +26,27 @@ local state = {
   seq = 0,
   -- Сразу после успешного `:w` строка ввода Claude Code пуста.
   just_submitted = false,
+  -- Буфер диалога (design.md изменения claude-dialog-buffer, E2–E6).
+  dbuf = nil,
+  mode = "input",
+  watch = nil,
+  watch_events = 0,
+  d_busy = false,
+  d_refresh = false,
+  d_edit = false,
+  d_write = false,
+  -- Текст, переданный плагином в поле свободного ввода текущего вопроса.
+  field_text = "",
+  -- Буфер диалога был пуст после последней передачи текста в поле.
+  seen_empty = true,
+  -- Подпись экрана до отправки стрелок или Enter: пока экран с ней совпадает,
+  -- Claude Code ещё не обработал клавиши, и решения по нему не принимаются.
+  guard = nil,
+  -- Образец выделения, которого ждёт защита, и закрытие подписки на него.
+  expect = nil,
+  expect_close = nil,
+  -- Последний известный статус панели Claude Code (из событий подписки и pane.get).
+  status = nil,
 }
 
 -- Текст запроса: сырой, если короткий и без управляющих символов, иначе в рамке bracketed paste.
@@ -41,8 +64,8 @@ function M.payload(lines)
   return PASTE_BEGIN .. text .. PASTE_END
 end
 
-function M.request_text(lines, submit)
-  return M.PREFIX .. M.payload(lines) .. (submit and "\r" or "")
+function M.request_text(lines)
+  return M.PREFIX .. M.payload(lines)
 end
 
 local function socket_path()
@@ -147,6 +170,29 @@ local function request(method, params, cb, on_line)
   return close
 end
 M._request = request
+
+-- Текст сырыми байтами, затем Enter клавишей: сырой `\r` строка ввода
+-- Claude Code 2.1.319 запросом не считает, а клавишу herdr кодирует по режиму
+-- клавиатуры терминала. Порядок байтов сохраняется: запросы идут друг за другом.
+local function send_then_enter(pane, text, enter, cb)
+  local function press()
+    if not enter then
+      return cb()
+    end
+    request("pane.send_keys", { pane_id = pane, keys = { "enter" } }, function(_, err)
+      cb(err)
+    end)
+  end
+  if text == "" then
+    return press()
+  end
+  request("pane.send_text", { pane_id = pane, text = text }, function(_, err)
+    if err then
+      return cb(err)
+    end
+    press()
+  end)
+end
 
 local function pane_id()
   local p = vim.env.CLAUDE_INPUT_PANE
@@ -253,6 +299,10 @@ schedule_send = function()
   if not pane then
     return
   end
+  -- Подписка буфера диалога, потерянная при обрыве, поднимается правкой буфера ввода.
+  if not state.watch and M.watch then
+    M.watch()
+  end
   if state.in_flight or state.waiting then
     state.dirty = true
     return
@@ -333,7 +383,7 @@ function M.submit()
       vim.notify("Claude Code ждёт ответа в диалоге", vim.log.levels.WARN)
       return
     end
-    request("pane.send_text", { pane_id = pane, text = M.request_text(buf_lines(), true) }, function(_, serr)
+    send_then_enter(pane, M.request_text(buf_lines()), true, function(serr)
       if serr then
         state.in_flight = false
         return report_error(serr)
@@ -356,6 +406,358 @@ function M.submit()
     end)
   end)
 end
+
+-- Экран панели Claude Code: cb(text|nil, err).
+local function read_screen(pane, cb)
+  request("pane.read", { pane_id = pane, source = "detection" }, function(res, err)
+    if err or not res then
+      return cb(nil, err or "нет ответа")
+    end
+    local r = res.result and res.result.read
+    cb(r and r.text or "")
+  end)
+end
+
+local function set_lines_clean(buf, lines)
+  if buf and vim.api.nvim_buf_is_valid(buf) then
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+    vim.bo[buf].modified = false
+  end
+end
+
+-- Окно, показывающее буфер from, переводится на буфер to.
+-- false — буфер from нигде не показан, окна не меняются.
+local function swap_window(from, to)
+  local win = vim.fn.win_findbuf(from)[1]
+  if not win then
+    return false
+  end
+  vim.api.nvim_win_set_buf(win, to)
+  return true
+end
+
+local d_step
+
+local function ensure_dialog_buf()
+  if state.dbuf and vim.api.nvim_buf_is_valid(state.dbuf) then
+    return state.dbuf
+  end
+  local buf = vim.api.nvim_create_buf(true, false)
+  state.dbuf = buf
+  vim.api.nvim_buf_set_name(buf, DIALOG_NAME)
+  vim.bo[buf].buftype = "acwrite"
+  vim.bo[buf].swapfile = false
+  vim.bo[buf].bufhidden = "hide"
+  -- Пустой буфер отмечается на каждом изменении: несколько клавиш одного куска
+  -- (Ctrl+U и цифра) дают одно событие TextChangedI уже без пустого состояния.
+  vim.api.nvim_buf_attach(buf, false, {
+    on_lines = function(_, b)
+      if vim.api.nvim_buf_line_count(b) == 1 and vim.api.nvim_buf_get_lines(b, 0, 1, false)[1] == "" then
+        state.seen_empty = true
+      end
+    end,
+  })
+  local group = vim.api.nvim_create_augroup("claude_input_dialog", { clear = true })
+  vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI", "TextChangedP" }, {
+    group = group,
+    buffer = buf,
+    callback = function()
+      M.dialog_changed()
+    end,
+  })
+  vim.api.nvim_create_autocmd("BufWriteCmd", {
+    group = group,
+    buffer = buf,
+    callback = function()
+      vim.bo[buf].modified = false
+      state.d_write = true
+      d_step()
+    end,
+  })
+  return buf
+end
+
+-- Ожидание выделения state.expect по событию pane.output_matched: после него
+-- отложенное задание job выполняется заново. Без образца задание ждёт следующей
+-- правки или события подписки.
+local function wait_expect(job)
+  local pane = pane_id()
+  if not pane or not state.expect or state.expect_close then
+    return
+  end
+  local close
+  local function release()
+    if state.expect_close ~= close then
+      return
+    end
+    state.expect_close = nil
+    close()
+    if job == "write" then
+      state.d_write = true
+    end
+    state.d_edit = true
+    d_step()
+  end
+  close = request("events.subscribe", {
+    subscriptions = {
+      {
+        type = "pane.output_matched",
+        pane_id = pane,
+        source = "detection",
+        match = { type = "regex", value = state.expect },
+      },
+    },
+  }, function(_, err)
+    if err then
+      release()
+    end
+  end, function(ev)
+    if ev == nil or ev.event == "pane.output_matched" then
+      release()
+    end
+  end)
+  state.expect_close = close
+end
+
+local function stop_expect()
+  if state.expect_close then
+    local c = state.expect_close
+    state.expect_close = nil
+    c()
+  end
+  state.expect = nil
+end
+
+-- Правка буфера диалога.
+function M.dialog_changed()
+  local buf = state.dbuf
+  if not buf or not vim.api.nvim_buf_is_valid(buf) then
+    return
+  end
+  state.d_edit = true
+  d_step()
+end
+
+local function show_dialog()
+  local dbuf = ensure_dialog_buf()
+  set_lines_clean(dbuf, {})
+  state.guard = nil
+  stop_expect()
+  state.field_text = ""
+  state.seen_empty = true
+  state.mode = "dialog"
+  if state.buf and vim.api.nvim_buf_is_valid(state.buf) and swap_window(state.buf, dbuf) then
+    vim.cmd("startinsert")
+  end
+end
+
+local function show_input()
+  state.mode = "input"
+  state.guard = nil
+  stop_expect()
+  state.field_text = ""
+  if state.buf and vim.api.nvim_buf_is_valid(state.buf) and state.dbuf then
+    swap_window(state.dbuf, state.buf)
+  end
+  set_lines_clean(state.dbuf, {})
+end
+
+-- Решение по свежему экрану: job — "write", "edit" или "refresh".
+-- done() завершает цепочку; send(keys) отправляет клавиши и затем завершает её.
+local function d_decide(job, status, text, send, done)
+  local d = text and dialog.parse(text)
+  if d and state.mode == "dialog" and status ~= "blocked" and not dialog.on_free(d) then
+    -- Не blocked бывает только при выделенном поле свободного ввода (Д3);
+    -- иначе экран — прежний кадр закрытого диалога.
+    d = nil
+  end
+  if not d or (state.mode ~= "dialog" and status ~= "blocked") then
+    if state.mode == "dialog" then
+      show_input()
+    end
+    return done()
+  end
+  if state.mode ~= "dialog" then
+    show_dialog()
+    return done()
+  end
+  local dbuf = state.dbuf
+  local lines = vim.api.nvim_buf_get_lines(dbuf, 0, -1, false)
+  local content = table.concat(lines, "\n")
+  local on_free = dialog.on_free(d)
+  local sig = dialog.signature(d)
+  local stale = state.guard ~= nil and state.guard == sig
+  if not stale then
+    state.guard = nil
+    stop_expect()
+  end
+  if stale and (job == "edit" or (job == "write" and state.expect)) then
+    -- Прежний экран: задание повторяется по событию выделения или при
+    -- следующей правке; буфер не трогается.
+    wait_expect(job)
+    return done()
+  end
+  if job == "write" then
+    local keys = dialog.submit_keys(d)
+    set_lines_clean(dbuf, {})
+    state.field_text = ""
+    state.seen_empty = true
+    state.guard = sig
+    state.expect = nil
+    return send(keys)
+  end
+  if job ~= "edit" then
+    return done()
+  end
+  local n = content:match("^%s*(%d+)%s*$")
+  if n and (not on_free or state.field_text == "" or state.seen_empty) then
+    n = tonumber(n)
+    local dirty_field = on_free and (state.field_text ~= "" or d.free_text ~= "")
+    local keys = dialog.digit_keys(d, n, dirty_field and M.PREFIX or nil)
+    set_lines_clean(dbuf, {})
+    state.seen_empty = true
+    if dirty_field then
+      state.field_text = ""
+    end
+    if keys and keys ~= "" then
+      if keys ~= tostring(n) then
+        -- Стрелки меняют выделение: до перерисовки экран прежний.
+        state.guard = sig
+        state.expect = dialog.selected_regex(d.rows[dialog.index(d, n)])
+      end
+      return send(keys)
+    end
+    return done()
+  end
+  if on_free then
+    if content == state.field_text and content == d.free_text then
+      return done()
+    end
+    state.field_text = content
+    if content ~= "" then
+      state.seen_empty = false
+    end
+    return send(M.PREFIX .. M.payload(lines))
+  end
+  return done()
+end
+
+-- Цепочка буфера диалога: статус, экран, решение, отправка; в полёте одна.
+d_step = function()
+  local pane = pane_id()
+  if not pane or state.d_busy then
+    return
+  end
+  -- Правка раньше записи: последний текст поля уходит до Enter.
+  local job
+  if state.d_edit then
+    job = "edit"
+    state.d_edit = false
+  elseif state.d_write then
+    job = "write"
+    state.d_write = false
+  elseif state.d_refresh then
+    job = "refresh"
+  else
+    return
+  end
+  state.d_refresh = false
+  state.d_busy = true
+  if not state.watch then
+    M.watch()
+  end
+  local function done()
+    state.d_busy = false
+    d_step()
+  end
+  local function fail(err)
+    state.d_busy = false
+    report_error(err)
+  end
+  local function with_status(cb)
+    if state.status then
+      return cb(state.status)
+    end
+    get_status(pane, function(status, err)
+      if status then
+        state.status = status
+      end
+      cb(status, err)
+    end)
+  end
+  with_status(function(status, err)
+    if err then
+      return fail(err)
+    end
+    read_screen(pane, function(text, rerr)
+      if rerr then
+        return fail(rerr)
+      end
+      d_decide(job, status, text, function(keys)
+        local enter = keys:sub(-#dialog.ENTER) == dialog.ENTER
+        if enter then
+          keys = keys:sub(1, -#dialog.ENTER - 1)
+        end
+        send_then_enter(pane, keys, enter, function(serr)
+          if serr then
+            return fail(serr)
+          end
+          state.error_shown = false
+          done()
+        end)
+      end, done)
+    end)
+  end)
+end
+
+-- Постоянная подписка на смену статуса панели Claude Code (E2).
+function M.watch()
+  local pane = pane_id()
+  if not pane or state.watch then
+    return
+  end
+  state.watch_events = 0
+  local close
+  close = request("events.subscribe", {
+    subscriptions = { { type = "pane.agent_status_changed", pane_id = pane } },
+  }, function(_, err)
+    if err then
+      if state.watch == close then
+        state.watch = nil
+      end
+      close()
+      return report_error(err)
+    end
+    -- Статус до подписки неизвестен: следующая цепочка спросит pane.get.
+    state.status = nil
+    state.d_refresh = true
+    d_step()
+  end, function(ev)
+    if state.watch ~= close then
+      return
+    end
+    if ev == nil then
+      state.watch = nil
+      state.status = nil
+      -- Обрыв после событий — подписка открывается заново один раз;
+      -- обрыв без событий — следующая правка буфера диалога.
+      if state.watch_events > 0 then
+        M.watch()
+      end
+      return
+    end
+    if ev.event == "pane.agent_status_changed" then
+      state.watch_events = state.watch_events + 1
+      local data = ev.data
+      state.status = type(data) == "table" and data.agent_status or nil
+      state.d_refresh = true
+      d_step()
+    end
+  end)
+  state.watch = close
+end
+
+M._state = state
 
 local function open()
   if not pane_id() and not state.warned_pane then
@@ -420,6 +822,9 @@ local function open()
       if vim.api.nvim_buf_is_valid(buf) then
         vim.bo[buf].modified = false
       end
+      if state.dbuf and vim.api.nvim_buf_is_valid(state.dbuf) then
+        vim.bo[state.dbuf].modified = false
+      end
     end,
   })
   local start = vim.api.nvim_get_current_buf()
@@ -436,6 +841,7 @@ local function open()
     pcall(vim.api.nvim_buf_delete, start, {})
   end
   vim.cmd("startinsert")
+  M.watch()
 end
 
 function M.setup()
