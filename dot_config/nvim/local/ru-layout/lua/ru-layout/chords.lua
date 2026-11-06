@@ -86,12 +86,16 @@ for _, k in ipairs(require("ru-layout.table").keys) do
 end
 
 -- Формы сочетаний символа ru: { lhs, латинский rhs, только terminal }. Строчная
--- буква — `<C-в>` и `<M-в>`; заглавная — `<C-S-В>` и `<M-В>`: так их передаёт хост,
--- передающий символ (Shift+в приходит как `В`, Alt+Shift+в — как `<M-В>`).
+-- буква — `<C-в>`, `<M-в>` и `<M-C-в>`; заглавная — `<C-S-В>`, `<C-В>`, `<M-В>` и
+-- `<M-C-В>`: так их передаёт хост, передающий символ (Shift+в приходит как `В`,
+-- Ctrl+Shift+в — как `<C-В>`, Alt+Shift+в — как `<M-В>`, Ctrl+Alt+в — одним ключом
+-- `<M-C-в>`). `<M-C-кир>` ставится во всех режимах: непривязанное `<M-C-в>`, в отличие
+-- от `<M-в>`, в `<Esc>` и `<C-в>` не раскладывается, а `<M-C-d>` из rhs привязки —
+-- тоже; алиас ставит `<Esc><C-d>`, как кодирует Ctrl+Alt+в wezterm.
 local function forms(ru)
   local is_upper = UPPER[ru] == true
   local out = {}
-  for _, m in ipairs(is_upper and { "C-S-", "M-" } or { "C-", "M-" }) do
+  for _, m in ipairs(is_upper and { "C-S-", "C-", "M-", "M-C-" } or { "C-", "M-", "M-C-" }) do
     local us = tr.mod_to_us(m, ru)
     if us then
       out[#out + 1] = { "<" .. m .. ru .. ">", us, m == "M-" }
@@ -106,6 +110,12 @@ local ESC = kc("<Esc>")
 local function mode_rhs(us, m)
   if m == "c" and kc(us) == ESC then
     return "<C-c>"
+  end
+  -- `<M-C-d>` Neovim из привязки не раскладывает: rhs — то, что шлёт wezterm
+  -- (`<Esc><C-d>`); в `:` Esc из привязки выполнил бы строку, поэтому `<C-c>`.
+  local rest = us:match("^<M%-(C%-.+)>$")
+  if rest then
+    return (m == "c" and "<C-c>" or "<Esc>") .. "<" .. rest .. ">"
   end
   return us
 end
