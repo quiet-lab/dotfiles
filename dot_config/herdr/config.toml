@@ -18,11 +18,12 @@ rows = [["state_icon", { token = "tab", fg = "$color|#ffffff" }]]
 
 # Полоса вкладок workspace. Активная вкладка — текст цветом токена color
 # workspace на фоне области терминала ($terminal: фон не задаётся, виден фон
-# хост-терминала), неактивные — заливка цветом workspace, текст цветом фона
-# панели (инверсия по фокусу). Без токена color заливка белая.
+# хост-терминала). Неактивные — текст тем же цветом workspace (без токена
+# белый), фон #11111b: crust catppuccin, чуть темнее фона полосы #181825
+# (panel_bg). Тема зафиксирована; при смене темы значение править вручную.
 [ui.tab_bar]
 active = { fg = "$color|#ffffff", bg = "$terminal" }
-inactive = { fg = "$panel", bg = "$color|#ffffff" }
+inactive = { fg = "$color|#ffffff", bg = "#11111b" }
 
 # Значки состояния агентов (форк duty-herdr): ширина 2 ячейки, без U+FE0F.
 # Список кадров — анимация по кругу, период frame_interval_ms (форк duty-herdr).
