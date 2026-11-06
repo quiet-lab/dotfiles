@@ -9,4 +9,4 @@
 
 ## 3. Проверка вживую (агент)
 
-- [ ] 3.1 Кодирование Shift+Enter и Shift+Пробел в wezterm (herdr) и Neovide.
+- [x] 3.1 Кодирование Shift+Enter и Shift+Пробел в wezterm (herdr) и Neovide.
