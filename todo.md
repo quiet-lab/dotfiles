@@ -57,7 +57,7 @@ cd ~/work/pets/workspaced && cargo test 2>&1 | tail -3   # 209 passed
 chezmoi status && git status -sb          # расхождений и незакоммиченного быть не должно
 ```
 
-Тесты `claude-input` — по [`docs/claude-input.md`](docs/claude-input.md).
+Тесты `claude-input`: `cd dot_config/nvim/local/claude-input && nvim --headless --clean -u NONE -l tests/switch_spec.lua && nvim --headless --clean -u NONE -l tests/dialog_spec.lua` — ALL OK ([`docs/claude-input.md`](docs/claude-input.md)).
 
 ### Что пробовали и отвергли
 
