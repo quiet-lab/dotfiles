@@ -78,8 +78,8 @@ local function numbered_rows(lines, last)
 			expect = n - 1
 		elseif expect then
 			local _, selected2, body = split_sel(lines[i])
-			if body == "Submit" and not submit then
-				local row = { label = "Submit", selected = selected2, submit = true, line = i }
+			if (body == "Submit" or body == "Next") and not submit then
+				local row = { label = body, selected = selected2, submit = true, line = i }
 				submit = {
 					row = row,
 					pos = function(rs)
@@ -264,7 +264,7 @@ end
 -- когда он выделен; nil — образца нет (пункт без номера).
 function M.selected_regex(row)
 	if row.submit then
-		return "(?m)^\\s*❯\\s+Submit\\s*$"
+		return "(?m)^\\s*❯\\s+" .. row.label .. "\\s*$"
 	end
 	if row.num and not row.plain then
 		return "(?m)^\\s*❯\\s*" .. row.num .. "\\.\\s"

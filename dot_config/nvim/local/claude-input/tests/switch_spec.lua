@@ -331,6 +331,22 @@ check(
 	{ fake.sent[#fake.sent - 1], last_sent() }
 )
 check(":w множественный: диалог остаётся", st.mode == "dialog")
+-- Множественный выбор не на последнем вопросе: кнопка Next (до этого — переход карточки).
+render(screen("ask-review"))
+wait(function()
+	return st.guard == nil and idle_chain()
+end)
+render(screen("ask-q1-multi-next"))
+wait(function()
+	return st.guard == nil and idle_chain()
+end)
+vim.cmd("write")
+wait(idle_chain)
+check(
+	":w кнопка Next: стрелки и Enter",
+	fake.sent[#fake.sent - 1] == D:rep(4) and last_sent() == "<enter>",
+	{ fake.sent[#fake.sent - 1], last_sent() }
+)
 render(screen("ask-review"))
 wait(function()
 	return st.guard == nil and idle_chain()

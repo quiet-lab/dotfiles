@@ -72,6 +72,15 @@ check("multi: 4 — стрелки к полю", d and dialog.digit_keys(d, 4) =
 check("multi: 5 — через Submit", d and dialog.digit_keys(d, 5) == D:rep(5))
 check("multi: :w — стрелки к Submit и Enter", d and dialog.submit_keys(d) == D:rep(4) .. "\r")
 
+-- Множественный выбор не на последнем вопросе: кнопка называется Next.
+d = dialog.parse(screen("ask-q1-multi-next"))
+check("next: диалог", d ~= nil)
+check("next: позиции 1–4, кнопка, 5", d and nums(d) == "1,2,3,4,S,5", d and nums(d))
+check("next: кнопка Next", d and d.rows[5].submit and d.rows[5].label == "Next")
+check("next: множественный", d and d.multi)
+check("next: :w — стрелки к Next и Enter", d and dialog.submit_keys(d) == D:rep(4) .. "\r")
+check("next: образец выделения", d and dialog.selected_regex(d.rows[5]) == "(?m)^\\s*❯\\s+Next\\s*$")
+
 -- Множественный выбор, выделено поле с текстом.
 d = dialog.parse(screen("ask-q2-other-text"))
 check("other: диалог при подвале с INSERT", d ~= nil)
