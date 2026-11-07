@@ -81,10 +81,10 @@
 
 ## 10. Хук разбора и документация (Sonnet)
 
-- [ ] 10.1 `.claude/hooks/keys-help-unknown.sh` и запись `SessionStart` в `.claude/settings.json` (D8).
-- [ ] 10.2 `docs/keys-help.md`: устройство, канал, контексты, формат манифеста и конфигурации представления, добавление программы, универсальный извлекатель, файл неизвестных программ и порядок разбора.
-- [ ] 10.3 Строка в `docs/README.md`, абзац в `CLAUDE.md` проекта (клавиша, плагин, ссылка на `docs/keys-help.md`).
-- [ ] 10.4 Запись в `docs/decisions/` по README каталога (Y-statement): плагин herdr с панелью split вместо панели Quickshell или вывода в инфо-области ble.sh, протокол kitty в wezterm, рамки herdr только разделителями.
+- [x] 10.1 `.claude/hooks/keys-help-unknown.sh` и запись `SessionStart` в `.claude/settings.json` (D8).
+- [x] 10.2 `docs/keys-help.md`: устройство, канал, контексты, формат манифеста и конфигурации представления, добавление программы, универсальный извлекатель, файл неизвестных программ и порядок разбора.
+- [x] 10.3 Строка в `docs/README.md`, абзац в `CLAUDE.md` проекта (клавиша, плагин, ссылка на `docs/keys-help.md`).
+- [x] 10.4 Запись в `docs/decisions/` по README каталога (Y-statement): плагин herdr с панелью split вместо панели Quickshell или вывода в инфо-области ble.sh, протокол kitty в wezterm, рамки herdr только разделителями.
 
 ## 11. Завершение (координатор)
 
