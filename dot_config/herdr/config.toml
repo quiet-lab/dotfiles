@@ -7,8 +7,10 @@ status_indicators = "symbols"
 [experimental]
 kitty_graphics = true
 
+# Уведомления нужны, чтобы видеть ошибки команды по клавише ([[keys.command]]),
+# иначе они видны только в ~/.config/herdr/herdr-server.log.
 [ui.toast]
-delivery = "off"
+delivery = "herdr"
 
 # Заголовок агента — одна строка: значок состояния и подпись вкладки цветом
 # токена color workspace, без инверсии. У workspace без токена color подпись
