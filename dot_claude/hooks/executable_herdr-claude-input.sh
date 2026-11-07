@@ -54,6 +54,16 @@ if ! herdr pane activate --help > /dev/null 2>&1; then
     exit 1
 fi
 
+pane_height() {
+    herdr pane layout --pane "$HERDR_PANE_ID" | jq -r --arg p "$1" \
+        '.result.layout.panes[] | select(.pane_id == $p) | .rect.height // empty'
+}
+
+# Высота, которую получит панель Claude после закрытия панели буфера: у режима
+# reopen она измеряется до закрытия (раскладка после `pane close` обновляется
+# не сразу), у режима open остаётся пустой и читается ниже.
+total=
+
 case "$mode" in
     close)
         [ -f "$map_file" ] || exit 0
@@ -75,8 +85,14 @@ case "$mode" in
         if [ -n "$buffer" ]; then
             info=$(herdr pane get "$buffer")
             ws=$(jq -r '.result.pane.workspace_id // empty' <<< "$info")
-            [ -z "$ws" ] || [ "$ws" != "${HERDR_WORKSPACE_ID:-$ws}" ] ||
+            if [ -n "$ws" ] && [ "$ws" = "${HERDR_WORKSPACE_ID:-$ws}" ]; then
+                top=$(pane_height "$HERDR_PANE_ID")
+                bottom=$(pane_height "$buffer")
+                if [ -n "$top" ] && [ -n "$bottom" ]; then
+                    total=$((top + bottom))
+                fi
                 herdr pane close "$buffer" > /dev/null
+            fi
         fi
         rm -f "$map_file"
         ;;
@@ -110,12 +126,7 @@ if [ -f "$map_file" ]; then
     fi
 fi
 
-pane_height() {
-    herdr pane layout --pane "$HERDR_PANE_ID" | jq -r --arg p "$1" \
-        '.result.layout.panes[] | select(.pane_id == $p) | .rect.height // empty'
-}
-
-h=$(pane_height "$HERDR_PANE_ID")
+h=${total:-$(pane_height "$HERDR_PANE_ID")}
 [ -n "$h" ] && [ "$h" -ge 20 ] || fail_open "панель Claude ниже 20 строк, панель ввода не открыта"
 ratio=$(awk -v h="$h" 'BEGIN { printf "%.4f", (h - 15) / h }')
 
