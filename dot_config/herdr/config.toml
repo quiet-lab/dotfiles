@@ -131,3 +131,14 @@ auto_switch = false
 # hyprland-autostart, требование «Предстартовая подготовка herdr»).
 [session]
 resume_agents_on_restore = false
+
+# Ctrl+Alt+R переоткрывает панель ввода Neovim в Claude Code: сервер herdr
+# запускает команду через `/bin/sh -lc` с окружением панели в фокусе
+# (HERDR_PANE_ID, HERDR_WORKSPACE_ID), хук находит панель Claude по токену
+# input_pane (спецификация claude-input, требование «Панель буфера
+# переоткрывается командой»).
+[[keys.command]]
+key = "ctrl+alt+r"
+type = "shell"
+command = 'bash "$HOME/.claude/hooks/herdr-claude-input.sh" reopen'
+description = "reopen input pane"
