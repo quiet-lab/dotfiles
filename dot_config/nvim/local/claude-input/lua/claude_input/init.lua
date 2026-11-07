@@ -26,6 +26,9 @@ local state = {
 	seq = 0,
 	-- Сразу после успешного `:w` строка ввода Claude Code пуста.
 	just_submitted = false,
+	-- История ввода (design.md изменения input-history): nil — позиция сброшена.
+	hist = nil,
+	hist_seq = 0,
 	-- Буфер диалога (design.md изменения claude-dialog-buffer, E2–E6).
 	dbuf = nil,
 	mode = "input",
@@ -230,14 +233,135 @@ local function get_status(pane, cb)
 end
 M._get_status = get_status
 
+-- Путь к файлу истории Claude Code; тесты подставляют свой.
+M.HISTORY_PATH = vim.fn.expand("~/.claude/history.jsonl")
+
+-- Запросы проекта `cwd` из файла истории, от старых к новым; подряд одинаковые
+-- схлопываются. Файла нет — пустой список. Строки чужих проектов отсеиваются
+-- проверкой подстроки до разбора JSON.
+local function history_entries(cwd)
+	local fh = io.open(M.HISTORY_PATH, "r")
+	if not fh then
+		return {}
+	end
+	local needle = '"project":"' .. cwd:gsub('[\\"]', "\\%0") .. '"'
+	local list = {}
+	for line in fh:lines() do
+		if line:find(needle, 1, true) then
+			local ok, rec = pcall(vim.json.decode, line)
+			local text = ok and type(rec) == "table" and rec.project == cwd and rec.display
+			if type(text) == "string" and text ~= "" and list[#list] ~= text then
+				table.insert(list, text)
+			end
+		end
+	end
+	fh:close()
+	return list
+end
+M._history_entries = history_entries
+
+-- Каталог панели Claude Code: cb(cwd|nil).
+local function get_cwd(pane, cb)
+	request("pane.get", { pane_id = pane }, function(res)
+		local p = res and res.result and res.result.pane
+		cb(p and type(p.cwd) == "string" and p.cwd ~= "" and p.cwd or nil)
+	end)
+end
+
+local schedule_send
+
+local function history_reset()
+	state.hist = nil
+	state.hist_seq = state.hist_seq + 1
+end
+M._history_reset = history_reset
+
+-- Подмена содержимого буфера записью истории (или черновиком), курсор в конец.
+local function history_show(text)
+	local buf = state.buf
+	if not buf or not vim.api.nvim_buf_is_valid(buf) then
+		return
+	end
+	state.hist.shown = text
+	local lines = vim.split(text, "\n", { plain = true })
+	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+	if vim.api.nvim_get_current_buf() == buf then
+		vim.api.nvim_win_set_cursor(0, { #lines, #lines[#lines] })
+	end
+	-- Отправка сразу: TextChanged после правки из обратного вызова приходит
+	-- не всегда, а его повтор для этого же текста пропускается.
+	schedule_send()
+end
+
+-- Шаг по истории: dir = -1 — к более старой записи, 1 — к более новой.
+-- Первый шаг после сброса читает файл (по требованию, без наблюдателей).
+local function history_step(dir)
+	if state.mode ~= "input" then
+		return
+	end
+	local function apply()
+		local h = state.hist
+		local to = h.idx + dir
+		if to < 1 or to > #h.list + 1 then
+			return
+		end
+		h.idx = to
+		history_show(to == #h.list + 1 and h.draft or h.list[to])
+	end
+	if state.hist then
+		return apply()
+	end
+	local pane = pane_id()
+	if not pane or dir > 0 then
+		return
+	end
+	local seq = state.hist_seq
+	local draft = table.concat(buf_lines(), "\n")
+	get_cwd(pane, function(cwd)
+		state.hist_replies = (state.hist_replies or 0) + 1
+		-- Буфер правился или отправлялся, пока шёл запрос: ответ устарел.
+		if seq ~= state.hist_seq or not cwd or state.hist or state.mode ~= "input" then
+			return
+		end
+		local list = history_entries(cwd)
+		if #list == 0 then
+			return
+		end
+		state.hist = { list = list, idx = #list + 1, draft = draft }
+		apply()
+	end)
+end
+M.history_step = history_step
+
+-- Привязка стрелки: на крайней строке листает историю, иначе двигает курсор.
+local function history_key(dir)
+	return function()
+		-- Меню автодополнения в режиме вставки листают сами стрелки.
+		if vim.fn.pumvisible() == 1 then
+			return dir < 0 and "<Up>" or "<Down>"
+		end
+		local on_edge
+		if dir < 0 then
+			on_edge = vim.fn.line(".") == 1 and vim.fn.winline() == 1
+		else
+			on_edge = vim.fn.line(".") == vim.fn.line("$")
+		end
+		if not on_edge then
+			return dir < 0 and "<Up>" or "<Down>"
+		end
+		vim.schedule(function()
+			history_step(dir)
+		end)
+		return ""
+	end
+end
+
 local function report_error(err)
 	if not state.error_shown then
 		state.error_shown = true
 		vim.notify("claude-input: сокет herdr: " .. tostring(err), vim.log.levels.ERROR)
 	end
 end
-
-local schedule_send
 
 -- Конец цепочки: если за время её работы буфер менялся, начинается новая.
 local function chain_done()
@@ -358,6 +482,7 @@ M.schedule_send = schedule_send
 
 -- Отправка запроса (`:w`).
 function M.submit()
+	history_reset()
 	local buf = state.buf
 	if not buf or not vim.api.nvim_buf_is_valid(buf) then
 		return
@@ -881,6 +1006,7 @@ end
 
 local function show_input()
 	state.mode = "input"
+	history_reset()
 	state.guard = nil
 	stop_expect()
 	watch_stop("card")
@@ -1215,6 +1341,13 @@ local function open()
 		group = group,
 		buffer = buf,
 		callback = function()
+			-- Правка, не сделанная самим листанием, сбрасывает позицию истории.
+			if state.hist then
+				if table.concat(buf_lines(), "\n") == state.hist.shown then
+					return
+				end
+				history_reset()
+			end
 			schedule_send()
 		end,
 	})
@@ -1225,6 +1358,13 @@ local function open()
 			M.submit()
 		end,
 	})
+	for _, dir in ipairs({ -1, 1 }) do
+		vim.keymap.set({ "i", "n" }, dir < 0 and "<Up>" or "<Down>", history_key(dir), {
+			buffer = buf,
+			expr = true,
+			desc = "claude-input: история ввода",
+		})
+	end
 	-- Shift+Enter и Shift+Пробел отправляют запрос, как `:w`.
 	for _, key in ipairs({ "<S-CR>", "<S-Space>" }) do
 		vim.keymap.set({ "i", "n" }, key, function()

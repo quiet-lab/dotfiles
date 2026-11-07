@@ -25,7 +25,7 @@ local function screen(name)
 end
 
 local IDLE = "──────\n❯ \n──────\n  -- INSERT -- ⏸ manual mode on\n"
-local fake = { status = "idle", screen = IDLE, sent = {}, subs = {}, matchers = {} }
+local fake = { cwd = "/proj/a", status = "idle", screen = IDLE, sent = {}, subs = {}, matchers = {} }
 
 -- Поддельный сервер: строка JSON на запрос, подписки держат соединение.
 local server = uv.new_pipe(false)
@@ -50,7 +50,7 @@ server:listen(16, function()
 			client:write(vim.json.encode({ id = req.id, result = result }) .. "\n")
 		end
 		if req.method == "pane.get" then
-			reply({ pane = { pane_id = req.params.pane_id, agent_status = fake.status } })
+			reply({ pane = { pane_id = req.params.pane_id, agent_status = fake.status, cwd = fake.cwd } })
 		elseif req.method == "pane.read" then
 			reply({ read = { text = fake.screen } })
 		elseif req.method == "pane.send_text" then
@@ -731,6 +731,174 @@ check(
 	"Ctrl+C: окно подсказки закрыто",
 	ci._hint_win() == nil and not vim.api.nvim_win_is_valid(hwin)
 )
+
+-- История ввода: файл с записями двух проектов, дублями и многострочной записью.
+local hist_path = dir .. "/history.jsonl"
+do
+	local rows = {
+		{ "one", "/proj/a" },
+		{ "other", "/proj/b" },
+		{ "two", "/proj/a" },
+		{ "two", "/proj/a" },
+		{ "x", "/proj/b" },
+		{ "три\nстроки [Pasted text #1 +2 lines]", "/proj/a" },
+	}
+	local out = {}
+	for _, r in ipairs(rows) do
+		table.insert(out, vim.json.encode({ display = r[1], project = r[2], sessionId = "s", timestamp = 1 }))
+	end
+	vim.fn.writefile(out, hist_path)
+end
+ci.HISTORY_PATH = hist_path
+local function buf_text()
+	return table.concat(vim.api.nvim_buf_get_lines(input, 0, -1, false), "\n")
+end
+-- Нажатие стрелки и ожидание конца отправки.
+local function arrow(key)
+	local n = #fake.sent
+	vim.api.nvim_feedkeys(vim.keycode(key), "xt", false)
+	return n
+end
+local function settle(n)
+	wait(function()
+		return #fake.sent > n and idle_chain() and not st.in_flight
+	end)
+end
+-- Круг запрос-ответ по сокету: события, посланные раньше, обработаны (без срока).
+local function sync()
+	local done
+	ci._get_status("w1:p1", function()
+		done = true
+	end)
+	wait(function()
+		return done
+	end)
+	vim.wait(0)
+end
+local function set_input(lines)
+	vim.api.nvim_buf_set_lines(input, 0, -1, false, lines)
+	vim.api.nvim_exec_autocmds("TextChanged", { buffer = input })
+	wait(function()
+		return not st.in_flight
+	end)
+end
+
+push_status("idle", IDLE)
+wait(function()
+	return not st.waiting and idle_chain() and not st.in_flight
+end)
+set_input({})
+vim.cmd("startinsert")
+local n = arrow("<Up>")
+settle(n)
+check(
+	"история: <Up> на пустом буфере — последняя запись проекта",
+	buf_text() == "три\nстроки [Pasted text #1 +2 lines]",
+	buf_text()
+)
+check(
+	"история: запись ушла в панель одним pane.send_text",
+	last_sent() == P .. "три\nстроки [Pasted text #1 +2 lines]",
+	last_sent()
+)
+check(
+	"история: курсор в конце последней строки",
+	vim.api.nvim_win_get_cursor(0)[1] == 2
+)
+-- Курсор на второй строке: <Up> двигает курсор, не листает.
+local before = #fake.sent
+vim.api.nvim_feedkeys(vim.keycode("<Up>"), "xt", false)
+check(
+	"история: <Up> в середине текста двигает курсор",
+	vim.api.nvim_win_get_cursor(0)[1] == 1 and buf_text():find("три", 1, true) ~= nil and #fake.sent == before
+)
+vim.api.nvim_win_set_cursor(0, { 1, 0 })
+n = arrow("<Up>")
+settle(n)
+check(
+	"история: второе <Up> — предыдущая, дубль схлопнут",
+	buf_text() == "two",
+	buf_text()
+)
+n = arrow("<Up>")
+settle(n)
+check(
+	"история: третье <Up> — самая старая, чужого проекта нет",
+	buf_text() == "one",
+	buf_text()
+)
+local cnt = #fake.sent
+arrow("<Up>")
+sync()
+check(
+	"история: <Up> на самой старой ничего не делает",
+	buf_text() == "one" and #fake.sent == cnt
+)
+n = arrow("<Down>")
+settle(n)
+check("история: <Down> — следующая запись", buf_text() == "two", buf_text())
+n = arrow("<Down>")
+settle(n)
+n = arrow("<Down>")
+settle(n)
+check(
+	"история: <Down> за самой новой возвращает черновик",
+	buf_text() == "",
+	buf_text()
+)
+
+-- Черновик сохраняется; правка пользователем сбрасывает позицию.
+set_input({ "черновик" })
+vim.cmd("startinsert")
+vim.api.nvim_win_set_cursor(0, { 1, 0 })
+n = arrow("<Up>")
+settle(n)
+check(
+	"история: с черновиком <Up> берёт последнюю запись",
+	buf_text():find("три", 1, true) == 1,
+	buf_text()
+)
+n = arrow("<Down>")
+settle(n)
+check("история: <Down> возвращает черновик", buf_text() == "черновик", buf_text())
+set_input({ "правка" })
+check("история: правка пользователем сбрасывает позицию", st.hist == nil)
+vim.api.nvim_win_set_cursor(0, { 1, 0 })
+n = arrow("<Up>")
+settle(n)
+n = arrow("<Down>")
+settle(n)
+check(
+	"история: после сброса черновик — новая правка",
+	buf_text() == "правка",
+	buf_text()
+)
+
+-- Нет файла или каталога панели: клавиши ведут себя как обычно.
+set_input({ "a", "b" })
+st.hist = nil
+ci.HISTORY_PATH = dir .. "/missing.jsonl"
+vim.api.nvim_win_set_cursor(0, { 1, 0 })
+local replies = st.hist_replies or 0
+arrow("<Up>")
+wait(function()
+	return (st.hist_replies or 0) > replies
+end)
+check("история: нет файла — буфер не тронут", buf_text() == "a\nb" and st.hist == nil)
+ci.HISTORY_PATH = hist_path
+fake.cwd = nil
+local replies = st.hist_replies or 0
+arrow("<Up>")
+wait(function()
+	return (st.hist_replies or 0) > replies
+end)
+check(
+	"история: нет cwd — буфер не тронут",
+	buf_text() == "a\nb" and st.hist == nil,
+	{ buf_text(), st.hist }
+)
+fake.cwd = "/proj/a"
+set_input({})
 
 io.stdout:write(failed == 0 and "ALL OK\n" or ("FAILED " .. failed .. "\n"))
 vim.cmd(failed == 0 and "qa!" or "cq!")
