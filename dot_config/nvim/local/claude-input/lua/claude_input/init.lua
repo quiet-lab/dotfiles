@@ -320,7 +320,7 @@ local function history_step(dir)
 	get_cwd(pane, function(cwd)
 		state.hist_replies = (state.hist_replies or 0) + 1
 		-- Буфер правился или отправлялся, пока шёл запрос: ответ устарел.
-		if seq ~= state.hist_seq or not cwd then
+		if seq ~= state.hist_seq or not cwd or state.hist or state.mode ~= "input" then
 			return
 		end
 		local list = history_entries(cwd)
@@ -336,6 +336,10 @@ M.history_step = history_step
 -- Привязка стрелки: на крайней строке листает историю, иначе двигает курсор.
 local function history_key(dir)
 	return function()
+		-- Меню автодополнения в режиме вставки листают сами стрелки.
+		if vim.fn.pumvisible() == 1 then
+			return dir < 0 and "<Up>" or "<Down>"
+		end
 		local on_edge
 		if dir < 0 then
 			on_edge = vim.fn.line(".") == 1 and vim.fn.winline() == 1

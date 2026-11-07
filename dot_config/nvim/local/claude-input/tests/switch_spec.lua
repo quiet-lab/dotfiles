@@ -798,7 +798,7 @@ check(
 )
 check(
 	"история: запись ушла в панель одним pane.send_text",
-	last_sent() == P .. "три\nстроки [Pasted text #1 +2 lines]" or last_sent():find("три", 1, true) ~= nil,
+	last_sent() == P .. "три\nстроки [Pasted text #1 +2 lines]",
 	last_sent()
 )
 check(
