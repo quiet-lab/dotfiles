@@ -24,23 +24,65 @@ command -v jq > /dev/null && command -v herdr > /dev/null || exit 0
 [ -z "$(jq -r '.agent_id // empty' <<< "$input")" ] || exit 0
 
 # Вложенный `claude -p` (например, из инструмента Bash) наследует HERDR_PANE_ID,
-# но панели Claude не владеет: хук работает, только когда среди ближайших
-# предков найден процесс claude с терминалом (pty) на стандартном вводе.
-pid=$PPID
-found=
-for _ in 1 2 3 4; do
-    [ -n "$pid" ] && [ "$pid" -gt 1 ] || break
-    if [ "$(cat "/proc/$pid/comm")" = "claude" ]; then
-        found=$pid
-        break
+# но панели Claude не владеет: хуки open и close работают, только когда среди
+# ближайших предков найден процесс claude с терминалом (pty) на стандартном
+# вводе. Режим reopen вызывает пользователь, в том числе горячая клавиша herdr
+# (процесс сервера без предка claude), поэтому предков не проверяет: панель
+# Claude он ищет по токену input_pane (find_claude_pane).
+if [ "$mode" != reopen ]; then
+    pid=$PPID
+    found=
+    for _ in 1 2 3 4; do
+        [ -n "$pid" ] && [ "$pid" -gt 1 ] || break
+        if [ "$(cat "/proc/$pid/comm")" = "claude" ]; then
+            found=$pid
+            break
+        fi
+        pid=$(awk '/^PPid:/ { print $2 }' "/proc/$pid/status")
+    done
+    [ -n "$found" ] || exit 0
+    case "$(readlink "/proc/$found/fd/0")" in
+        /dev/pts/*) ;;
+        *) exit 0 ;;
+    esac
+fi
+
+# Панель Claude для reopen: вызов идёт с панели Claude, с панели буфера (nvim)
+# или с любой другой панели workspace. По порядку: у самой панели есть токен
+# input_pane; токен input_pane какой-то панели агента равен этой панели; сама
+# панель — агент Claude без панели буфера; единственная панель агента Claude
+# workspace с токеном (без токена, если она одна). Иначе пусто.
+find_claude_pane() {
+    local self=$HERDR_PANE_ID info ws list found
+    info=$(herdr pane get "$self")
+    if [ -n "$(jq -r '.result.pane.tokens.input_pane // empty' <<< "$info")" ]; then
+        echo "$self"
+        return
     fi
-    pid=$(awk '/^PPid:/ { print $2 }' "/proc/$pid/status")
-done
-[ -n "$found" ] || exit 0
-case "$(readlink "/proc/$found/fd/0")" in
-    /dev/pts/*) ;;
-    *) exit 0 ;;
-esac
+    ws=${HERDR_WORKSPACE_ID:-$(jq -r '.result.pane.workspace_id // empty' <<< "$info")}
+    list=$(herdr agent list)
+    found=$(jq -r --arg w "$ws" --arg p "$self" '
+        [.result.agents[] | select(.workspace_id == $w and .tokens.input_pane == $p) | .pane_id][0] // empty' <<< "$list")
+    if [ -z "$found" ]; then
+        found=$(jq -r --arg w "$ws" --arg p "$self" '
+            [.result.agents[] | select(.workspace_id == $w and .agent == "claude")] as $c
+            | ([$c[] | select(.pane_id == $p)] | length) as $me
+            | if $me > 0 then $p
+              else ([$c[] | select(.tokens.input_pane != null)] | if length == 1 then .[0].pane_id
+                    elif ($c | length) == 1 then $c[0].pane_id else empty end)
+              end' <<< "$list")
+    fi
+    echo "$found"
+}
+
+if [ "$mode" = reopen ]; then
+    claude_pane=$(find_claude_pane)
+    if [ -z "$claude_pane" ]; then
+        echo "herdr-claude-input: панель Claude Code в этом workspace не найдена" >&3
+        exit 1
+    fi
+    HERDR_PANE_ID=$claude_pane
+fi
 
 state_dir=${XDG_STATE_HOME:-$HOME/.local/state}/claude-input
 map_file=$state_dir/${HERDR_PANE_ID//:/_}
