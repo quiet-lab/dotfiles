@@ -3,6 +3,12 @@ onboarding = false
 agent_panel_sort = "spaces"
 show_agent_labels_on_pane_borders = true
 
+# Рамки панелей — только разделители между панелями: без внешней рамки
+# по краю области терминала и без промежутков между панелями. Режим
+# pane_borders остаётся по умолчанию (auto: рамки только у разделённых панелей).
+pane_outer_borders = false
+pane_gaps = false
+
 status_indicators = "symbols"
 [experimental]
 kitty_graphics = true

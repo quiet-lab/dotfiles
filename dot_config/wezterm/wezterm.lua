@@ -34,6 +34,16 @@ config.window_background_opacity = 1.0
 config.window_decorations = "RESIZE"
 config.window_close_confirmation = "AlwaysPrompt"
 config.scrollback_lines = 3000
+
+-- Протокол клавиатуры kitty: herdr при запуске клиента запрашивает его
+-- (CSI > 7 u — различение Esc, типы событий, альтернативные клавиши),
+-- и терминал передаёт модификаторы на пунктуации, например Ctrl+Alt+Shift+/
+-- для подсказки клавиш в панели herdr. Программам в панелях herdr сам
+-- перекодирует клавиши под режим, который запросила панель, поэтому
+-- bash с ble.sh и Neovim получают те же последовательности, что и раньше.
+-- Включение действует на клиент herdr, запущенный после перечитывания
+-- конфига: уже работающий клиент проверяет протокол только при старте.
+config.enable_kitty_keyboard = true
 config.default_workspace = "home"
 
 -- Dim inactive panes
