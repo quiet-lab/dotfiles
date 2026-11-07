@@ -12,6 +12,9 @@ kitty_graphics = true
 [ui.toast]
 delivery = "herdr"
 
+[ui.toast.herdr]
+position = "top-right"
+
 # Заголовок агента — одна строка: значок состояния и подпись вкладки цветом
 # токена color workspace, без инверсии. У workspace без токена color подпись
 # белая (запасной цвет после «|»). Токен tab: у единственной вкладки без
