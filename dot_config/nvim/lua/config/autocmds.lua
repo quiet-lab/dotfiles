@@ -70,3 +70,6 @@ vim.api.nvim_create_autocmd("ColorScheme", {
     vim.api.nvim_set_hl(0, "SnacksLayoutBox", { bg = bg_dark, nocombine = true }) -- Убирает артефакты GUI подложки
   end,
 })
+
+-- Контекст для подсказки клавиш herdr (плагин keys-help); вне панели herdr ничего не делает.
+require("keys_help").setup()

@@ -23,7 +23,7 @@
 ## 3. Поставщики (Opus — ble.sh; Sonnet — Neovim)
 
 - [ ] 3.1 `dot_config/blesh/keys-help.bash` и строка подключения в `dot_blerc` (D10). (Opus)
-- [ ] 3.2 `dot_config/nvim/lua/keys_help.lua`, вызов `setup()` из `lua/config/autocmds.lua` (D11). (Sonnet)
+- [x] 3.2 `dot_config/nvim/lua/keys_help.lua`, вызов `setup()` из `lua/config/autocmds.lua` (D11). (Sonnet)
 
 ## 4. Манифесты первой очереди (Sonnet)
 
@@ -55,7 +55,7 @@
 - [ ] 6.11 Раскладка колонок: ширины 90 → 3, 120 → 4, 140 → 5 колонок; порядок записей по колонкам, заголовки групп, обрезка описания с `…`.
 - [ ] 6.12 Навигация и поиск: `h j k l g G` на раскладках 3/4/5, поиск по клавише и описанию без учёта регистра, подсветка, `n`/`N` по кругу, Esc и смена контекста сбрасывают поиск; окно подробностей показывает `desc_full`, `action`, `source`, `raw`; буквы навигации и скрытия не пересекаются.
 - [ ] 6.13 Короткие описания манифестов: у каждой показываемой записи манифестов первой очереди `desc` не пуст, не совпадает с `action` и не длиннее 32 символов.
-- [ ] 6.9 Модуль Neovim: `nvim --headless` с `HERDR_PANE_ID` — записи `ModeChanged`, удаление на выходе, `dump()` возвращает JSON с `desc`.
+- [x] 6.9 Модуль Neovim: `nvim --headless` с `HERDR_PANE_ID` — записи `ModeChanged`, удаление на выходе, `dump()` возвращает JSON с `desc`.
 
 ## 7. Конфиг herdr и wezterm
 
