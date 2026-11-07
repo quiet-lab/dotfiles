@@ -12,9 +12,10 @@ delivery = "off"
 
 # Заголовок агента — одна строка: значок состояния и подпись вкладки цветом
 # токена color workspace, без инверсии. У workspace без токена color подпись
-# белая (запасной цвет после «|»).
+# белая (запасной цвет после «|»). Токен focused_tab, а не tab: tab у единственной
+# вкладки без ручного имени пуст, focused_tab показывается всегда.
 [ui.sidebar.agents]
-rows = [["state_icon", { token = "tab", fg = "$color|#ffffff" }]]
+rows = [["state_icon", { token = "focused_tab", fg = "$color|#ffffff" }]]
 
 # Полоса вкладок workspace. Активная вкладка — текст цветом токена color
 # workspace на фоне области терминала ($terminal: фон не задаётся, виден фон
