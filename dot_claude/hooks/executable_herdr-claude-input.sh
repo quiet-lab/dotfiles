@@ -5,10 +5,13 @@
 # эту панель. Соответствие «панель Claude -> панель буфера» хранит файл
 # ${XDG_STATE_HOME:-~/.local/state}/claude-input/<панель Claude, ':' -> '_'>
 # с идентификатором панели буфера. Аргумент — open или close.
-# Хук молчит и выходит с кодом 0 при любой ошибке, вне herdr и у
+# Хук молчит и выходит с кодом 0 при любой ошибке (кроме сообщения об
+# отсутствии `herdr pane activate` в stderr), вне herdr и у
 # субагентов, при живой панели буфера того же workspace и когда
 # панель Claude ниже 20 строк (13 строк вывода, 2 строки рамки, 5 строк Claude).
-exec 2>/dev/null
+# Ошибка отсутствия `pane activate` — единственное сообщение хука: оно идёт
+# в stderr через дескриптор 3, остальной stderr отброшен.
+exec 3>&2 2>/dev/null
 mode=${1:-}
 input=$(cat)
 [ "${HERDR_ENV:-}" = "1" ] || exit 0
@@ -79,23 +82,14 @@ h=$(pane_height "$HERDR_PANE_ID")
 ratio=$(awk -v h="$h" 'BEGIN { printf "%.4f", (h - 15) / h }')
 
 # Фокус на панель ввода без переключения клиента пользователя на чужой
-# workspace. Основной путь — `herdr pane activate` (панель становится
-# сфокусированной в своём workspace, активный workspace клиента не меняется):
-# делим с --no-focus, активируем после запуска nvim. Запасной путь — для
-# herdr без `pane activate` (убирается отдельным изменением после
-# выпуска форка): `split --focus` в невидимом workspace переключает клиент,
-# поэтому --focus только в активном workspace клиента, иначе --no-focus
-# (фокус остаётся у Claude).
-focus_flag=--no-focus
-use_activate=
-if herdr pane activate --help > /dev/null 2>&1; then
-    use_activate=1
-else
-    active_ws=$(herdr workspace list | jq -r '.result.workspaces[] | select(.focused == true) | .workspace_id' | head -n 1)
-    [ -z "$active_ws" ] || [ "$active_ws" != "${HERDR_WORKSPACE_ID:-}" ] || focus_flag=--focus
+# workspace: делим с --no-focus, активируем после запуска nvim командой
+# `herdr pane activate`. Без неё панель не открывается: ошибка в stderr.
+if ! herdr pane activate --help > /dev/null 2>&1; then
+    echo "herdr-claude-input: у herdr нет команды pane activate, панель ввода не открыта" >&3
+    exit 0
 fi
 
-new_info=$(herdr pane split "$HERDR_PANE_ID" --direction down "$focus_flag" \
+new_info=$(herdr pane split "$HERDR_PANE_ID" --direction down --no-focus \
     --ratio "$ratio" --env CLAUDE_INPUT_PANE="$HERDR_PANE_ID")
 new=$(jq -r '.result.pane.pane_id // empty' <<< "$new_info")
 [ -n "$new" ] || exit 0
@@ -122,5 +116,5 @@ if [ -n "$rows" ] && [ "$rows" != "$rows_wanted" ]; then
 fi
 
 herdr pane run "$new" 'exec nvim +ClaudeInput' > /dev/null
-[ -z "$use_activate" ] || herdr pane activate "$new" > /dev/null
+herdr pane activate "$new" > /dev/null
 exit 0
