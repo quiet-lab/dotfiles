@@ -541,11 +541,29 @@ local function hint_render()
 		return
 	end
 	local head, rows = hint_lines(d)
+	-- Не помещается по высоте: клавиши внизу остаются, из пунктов
+	-- выбирается окно вокруг выделенного.
+	local maxh = math.max(1, vim.api.nvim_win_get_height(dwin) - 2)
+	if #rows > maxh then
+		local n_items = #d.rows
+		local footer = {}
+		for i = n_items + 1, #rows do
+			table.insert(footer, rows[i])
+		end
+		local avail = maxh - #footer
+		if avail < 1 then
+			rows = vim.list_slice(footer, #footer - maxh + 1)
+		else
+			local first = math.max(1, math.min((d.sel or 1) - math.floor(avail / 2), n_items - avail + 1))
+			rows = vim.list_slice(rows, first, first + avail - 1)
+			vim.list_extend(rows, footer)
+		end
+	end
 	local kw = 1
 	for _, r in ipairs(rows) do
 		kw = math.max(kw, vim.fn.strdisplaywidth(r[1]))
 	end
-	local lines, width = {}, vim.fn.strdisplaywidth(head)
+	local lines, width = {}, vim.fn.strdisplaywidth(head) + 2
 	for _, r in ipairs(rows) do
 		local line = string.rep(" ", kw - vim.fn.strdisplaywidth(r[1])) .. r[1] .. HINT_SEP .. r[2]
 		table.insert(lines, line)
@@ -641,7 +659,17 @@ local function ensure_dialog_buf()
 	wrap_on_show()
 	vim.api.nvim_create_autocmd({ "WinResized", "VimResized" }, {
 		group = vim.api.nvim_create_augroup("claude_input_hint", { clear = true }),
-		callback = hint_render,
+		callback = function()
+			pcall(hint_render)
+		end,
+	})
+	-- Окно диалога могло появиться после показа подсказки.
+	vim.api.nvim_create_autocmd("BufWinEnter", {
+		group = "claude_input_hint",
+		buffer = buf,
+		callback = function()
+			pcall(hint_render)
+		end,
 	})
 	vim.api.nvim_create_autocmd({ "BufWipeout", "BufDelete" }, {
 		group = "claude_input_hint",
