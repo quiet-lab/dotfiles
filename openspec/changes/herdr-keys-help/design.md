@@ -1,0 +1,576 @@
+## Context
+
+Решения пользователя — записка задачи keys-help, решения 1–9, и раздел
+«Переданные» её правил (универсальный извлекатель, файл неизвестных
+программ, хук разбора). Они обязательны; ниже они не пересматриваются,
+а доводятся до устройства. Развилки решены по приоритетам записки:
+(1) решения дословно; (2) без таймеров и опроса; (3) просмотрщик на Rust;
+(4) всё под chezmoi; (5) таблицы из живой конфигурации; (6) ядро не знает
+имён программ.
+
+Исходные факты, проверенные по живой системе и документации форка herdr
+(`~/work/pets/duty-herdr`, ветвь `duty`, документы
+`docs/preview/website/src/content/docs/{plugins,socket-api,cli-reference,configuration}.mdx`):
+
+- Плагин herdr — каталог с `herdr-plugin.toml`; `[[actions]]`, `[[panes]]`,
+  `[[build]]`, `[[events]]`; `plugin link` сборку не запускает,
+  `plugin install` запускает. Действие получает `HERDR_PANE_ID`,
+  `HERDR_TAB_ID`, `HERDR_WORKSPACE_ID`, `HERDR_BIN_PATH`,
+  `HERDR_SOCKET_PATH`. Клавиша — `[[keys.command]] type = "plugin_action"`.
+- `plugin.pane.open` с `placement = "split"` принимает `target_pane_id`,
+  `direction` и `focus`, но не `ratio`; `layout.set_split_ratio` и
+  `pane.resize` меняют доли; `ratio` в herdr — доля **первого** (верхнего)
+  потомка: `pane split --direction down --ratio 0.333` даёт верхней панели
+  треть. Решение 1 называет нижнюю панель третью высоты — устройство ниже
+  (D4) даёт нижней панели треть, то есть доля верхнего потомка 0.667.
+- `PaneInfo` не сообщает плагин-владельца панели, но несёт `tokens`
+  (`pane.report_metadata`), `foreground_process`, `terminal_title`;
+  `pane.process_info` — процессы переднего плана с pid и argv.
+- `events.subscribe`: `pane.focused`, `pane.updated` (заголовок),
+  `pane.closed`, `pane.moved` (при переносе в другой workspace у панели
+  новый `pane_id`), `layout.updated`, `tab.focused`, `workspace.focused`,
+  `pane.output_matched` (по `pane_id`, регулярному выражению, срабатывает
+  на переходе «нет совпадения → есть»). При отставании подписчика —
+  `events_lost`, восстановление — новая подписка и чтение состояния.
+- ble.sh: `ble-bind -m <keymap> -P` печатает строки вида
+  `ble-bind -m 'vi_imap' -f C-a beginning-of-line`, `-x M-f fzf-file-widget`
+  (пользовательские виджеты оболочки), `-c M-d '…'` (команды), `-s`
+  (макросы). Все смены keymap проходят через `ble/decode/keymap/push`
+  и `ble/decode/keymap/pop`, режимы vi завершаются вызовом
+  `ble/keymap:vi/update-mode-indicator` — его же результат выводит
+  `contrib/prompt-vim-mode` (индикатор пересчитывается при каждом его
+  вызове). Привязки `-x` выполняет `ble/widget/.EDIT_COMMAND`, `-c` —
+  `ble/widget/.SHELL_COMMAND`. Хуки `blehook PREEXEC`/`PRECMD` есть.
+- yazi 26.9.1: `~/.config/yazi/init.lua` существует и не под chezmoi,
+  `keymap.toml` в `~/.config/yazi` нет (действуют встроенные умолчания,
+  файла умолчаний на диске нет). `ya sub <kinds>` отдаёт сообщения DDS
+  всех экземпляров; встроенные виды (`hey`, `bye`, `cd`, `hover`, `tab`,
+  …) слоя (manager, input, confirm, …) не сообщают.
+- atuin: `~/.config/atuin/config.toml`, `keymap_mode` закомментирован
+  (умолчание `emacs`), есть раздел `[keys]`. television:
+  `~/.config/television/config.toml`, раздел `[keybindings]`. fzf:
+  `man fzf` перечисляет действия и клавиши по умолчанию, `--bind`
+  приходит из `FZF_DEFAULT_OPTS` процесса fzf.
+
+## Goals / Non-Goals
+
+**Goals:**
+
+- Клавиша Ctrl+Alt+Shift+/ открывает и закрывает нижнюю панель с таблицей
+  клавиш контекста верхней панели; таблица меняется по событиям смены
+  режима, запуска и выхода программ, смены фокуса.
+- Добавление программы — один манифест без правок ядра; любая программа
+  без манифеста проходит универсальный извлекатель, не найденная —
+  попадает в файл неизвестных программ.
+- Конфигурация представления по решению 6, правится и вручную,
+  и клавишами просмотрщика.
+
+**Non-Goals:**
+
+- Замена панели `qs-keys-help` (клавиши композитора).
+- Правка конфигов yazi, atuin, television (только чтение; `init.lua` yazi
+  существует — D9).
+- Редактирование привязок программ из просмотрщика.
+
+## Decisions
+
+### D1. Состав плагина и размещение
+
+Каталог источника `dot_config/herdr/plugins/keys-help/` →
+`~/.config/herdr/plugins/keys-help/`:
+
+```text
+herdr-plugin.toml        манифест herdr: действие toggle, панель viewer, build
+Cargo.toml, Cargo.lock   один пакет, бинарник keys-help
+src/                     ядро (main.rs, herdr.rs, channel.rs, context.rs,
+                         manifest.rs, extract/, view.rs, ui.rs, unknown.rs)
+manifests/               манифесты программ: ble.toml, fzf.toml, atuin.toml,
+                         tv.toml, yazi.toml, nvim.toml, generic.toml
+manifests/data/          данные манифестов, которых нет в живой системе
+                         (умолчания keymap yazi 26.9.1, базовые клавиши vim)
+tests/fixtures/          снимки ble-bind -P, keymap.toml, man-страницы
+```
+
+Манифест herdr:
+
+```toml
+id = "quiet-lab.keys-help"
+name = "Keys help"
+version = "0.1.0"
+min_herdr_version = "0.9.5"
+platforms = ["linux"]
+
+[[build]]
+command = ["cargo", "build", "--release", "--locked"]
+
+[[actions]]
+id = "toggle"
+title = "Подсказка клавиш"
+contexts = ["workspace"]
+command = ["target/release/keys-help", "toggle"]
+
+[[panes]]
+id = "viewer"
+title = "keys"
+placement = "split"
+command = ["target/release/keys-help", "viewer"]
+```
+
+`plugin link` сборку не запускает, поэтому сборку при `chezmoi apply`
+делает сценарий `run_onchange_after_build-herdr-keys-help.sh.tmpl`:
+в шаблоне — хеш исходников (`include` файлов `src/**`, `Cargo.*`), тело —
+`cargo build --release --locked` в `~/.config/herdr/plugins/keys-help`
+и `herdr plugin link` (повторная регистрация безопасна). Каталог `target/`
+лежит в `$HOME` рядом с исходниками, chezmoi им не управляет. Ядро,
+извлекатели и просмотрщик — один бинарник с подкомандами `toggle`,
+`viewer`, `table <контекст> --pane <id>` (печать таблицы для проверок
+и тестов), `unknown list`.
+
+Отвергнуто: просмотрщик на Python (приоритет 3); отдельный бинарник
+извлекателей (лишняя сборка — извлекатели декларативные и программ
+не знают, D6).
+
+### D2. Канал «верхняя панель → просмотрщик»
+
+Каталог `$XDG_RUNTIME_DIR/herdr-keys-help/panes/<HERDR_PANE_ID>/`
+(`:` в имени допустим). Каждый поставщик пишет свою запись — файл
+`<программа>-<pid>.json`, один JSON-объект:
+
+```json
+{"v":1,"program":"ble","mode":"vi_nmap","pid":12345,
+ "state":"active","command":null,"table":"/run/user/1000/herdr-keys-help/ble/12345/vi_nmap.bind",
+ "server":null,"env":{}}
+```
+
+- `program` — имя программы, по нему манифест объявляет себя поставщику
+  (`[detect] provider = "ble"`); `mode` — режим (`null` — без режима);
+  `pid` — процесс поставщика (оболочка, nvim, yazi).
+- `state`: `active` — программа на переднем плане в режиме `mode`;
+  `exec` — оболочка запустила команду `command` (`PREEXEC`);
+  `widget` — оболочка выполняет виджет или команду привязки `command`
+  (`-x`/`-c`), программа запускается внутри него.
+- Необязательные поля — подстановки для источников таблиц манифеста
+  (`table`, `server`, `env`): `{record.table}`, `{record.server}`,
+  `{env.FZF_DEFAULT_OPTS}`.
+
+Запись — целиком одним `write` (bash: `printf … >file`; Lua:
+`io.open(…,"w")`), просмотрщик читает по `IN_CLOSE_WRITE` и `IN_MOVED_TO`,
+неразобранный JSON пропускает до следующего события. Запись удаляется
+поставщиком при выходе (`VimLeavePre`, `EXIT` оболочки); запись
+упавшего процесса снимает просмотрщик по событию pidfd (D3).
+
+Порядок записей — порядок изменения: при старте по `mtime`
+(наносекунды), дальше — по порядку событий inotify. Активна последняя
+изменённая запись живого процесса. Так стек bash → yazi → nvim
+разрешается без счётчиков: nvim пишет позже yazi, при выходе nvim его
+запись удаляется, и активной снова становится запись yazi; после выхода
+yazi оболочка пишет `PRECMD`-запись.
+
+Переменные окружения для подстановок (`env`) оболочка берёт из файла
+`$XDG_RUNTIME_DIR/herdr-keys-help/env-vars` (по строке на имя); файл
+пишет просмотрщик при старте объединением полей `env` всех манифестов.
+Модуль ble.sh перечитывает его в `PRECMD`, только если файл новее
+прочитанного (`[[ -nt ]]`, встроенная проверка).
+
+Отвергнуто: сокет на панель (поставщику bash пришлось бы держать
+соединение или запускать внешний процесс на каждую смену режима); один
+файл на панель (вложенные программы затирали бы друг друга, стек
+пришлось бы восстанавливать).
+
+### D3. Цель просмотрщика: следование за фокусом
+
+Просмотрщик — один поток, цикл `poll` по дескрипторам: подписка herdr
+(сокет `HERDR_SOCKET_PATH`), inotify каталога записей и каталога
+`view.toml`, signalfd (`SIGWINCH`, `SIGTERM`, `SIGHUP`), pidfd процессов
+записей и извлекателей, ввод терминала. Таймеров нет.
+
+1. Старт: `pane.current` по своему `HERDR_PANE_ID` даёт workspace и tab;
+   цель — панель, на которую указывал `--target-pane` при открытии
+   (передаётся окружением `KEYS_HELP_TARGET`).
+2. Подписка `events.subscribe`: `pane.focused`, `pane.updated`,
+   `pane.closed`, `pane.moved`, `layout.updated`.
+3. `pane.focused` в своём workspace на панель, которая не является
+   просмотрщиком (нет токена `keys_help`), меняет цель; фокус на самом
+   просмотрщике и в чужих workspace цель не меняет.
+4. `pane.moved` с `previous_pane_id` цели переносит цель и каталог записей
+   (`rename` каталога на новый `pane_id`); `pane.closed` цели — цель
+   переходит к панели в фокусе своего tab.
+5. Смена цели, событие inotify в каталоге цели, `pane.updated` цели,
+   срабатывание `pane.output_matched` цели, выход pidfd — пересчёт
+   контекста (D5) и, если контекст или таблица изменились, перерисовка.
+6. `events_lost`: новая подписка, `pane.current`/`pane.list` и пересчёт.
+
+Подписки `pane.output_matched` строятся из манифестов (`[detect] screen`)
+для текущей цели и пересоздаются при смене цели (отдельное соединение
+на набор подписок цели).
+
+### D4. Открытие, размер и закрытие (toggle)
+
+Действие `toggle` (`keys-help toggle`):
+
+1. `pane list` по `HERDR_TAB_ID`; панель с токеном `keys_help` = `viewer`
+   источника `plugin:quiet-lab.keys-help` — просмотрщик этого tab.
+2. Есть — `plugin pane close <pane_id>`; конец. Повторное нажатие
+   закрывает панель независимо от того, где фокус в этом tab.
+3. Нет — `plugin pane open --plugin quiet-lab.keys-help --entrypoint viewer
+   --placement split --target-pane $HERDR_PANE_ID --direction down
+   --no-focus --env KEYS_HELP_TARGET=$HERDR_PANE_ID`.
+
+Просмотрщик при старте ставит себе токен (`pane.report_metadata`, без
+TTL; токен снимается вместе с панелью) и задаёт размер: по `pane.layout`
+находит split, вторым потомком которого он является, и
+`layout.set_split_ratio` даёт верхнему потомку долю 0.667 — нижней панели
+треть. Затем и по каждому `SIGWINCH` и `layout.updated` своего tab:
+если строк содержимого (`TIOCGWINSZ`) меньше 5, — `pane.resize`
+своей панели вверх на недостающую долю высоты split; если высоты split
+не хватает на 5 строк и минимальную верхнюю панель, увеличения нет.
+Уменьшение, сделанное пользователем выше минимума, не отменяется.
+
+Выход просмотрщика по `SIGHUP`/`SIGTERM` и по клавише `q`
+(`plugin pane close` своей панели): удаляет свои файлы, закрывает
+подписки и pidfd дочерних извлекателей.
+
+Отвергнуто: `pane split` + `pane run` (панель без владельца-плагина);
+реестр просмотрщиков в файлах (токен herdr исчезает вместе с панелью,
+файл — нет).
+
+### D5. Разрешение контекста
+
+Для цели просмотрщик собирает признаки:
+
+- активная запись (D2) живого процесса;
+- процессы переднего плана — `pane.process_info` цели, запрашивается
+  при каждом пересчёте (это ответ на событие, не опрос);
+- заголовок `terminal_title_stripped`;
+- текущие совпадения `pane.output_matched` цели.
+
+Порядок:
+
+1. Запись `state = active` → манифест с `provider = <program>`,
+   режим — `mode` записи (через `[modes]` манифеста).
+2. Запись `exec`/`widget` или запись отсутствует → кандидаты манифестов
+   по `command` записи (`shell_commands`, шаблоны), по имени процесса
+   переднего плана (`process`), по заголовку (`title`), по экрану
+   (`screen`); при нескольких — наибольший `priority`. Режим — по экрану
+   (`[[modes.screen]]`), по конфигурации программы (`[modes.from_config]`)
+   или `default`.
+3. Манифеста нет → универсальный извлекатель (D7) для команды переднего
+   плана: контекст `<команда>.generic`.
+4. Извлекатель ничего не нашёл → запись в файл неизвестных программ (D8),
+   просмотрщик показывает «клавиши <команда> не найдены».
+
+Команда — имя исполняемого файла (`basename` argv0 процесса или первого
+слова `command` записи без присваиваний и `sudo`/`env`). Оболочка
+с ble.sh без записи (ble.sh не загружен) идёт по шагу 3 как `bash.generic`.
+
+### D6. Формат манифеста программы
+
+```toml
+program = "ble"               # имя, первая часть контекста
+priority = 100                # выбор среди кандидатов; generic — 0
+origins = ["readline", "ble", "fzf", "atuin", "tv", "user"]
+
+[detect]
+provider = "ble"              # записи этого program
+process = []                  # имена процессов переднего плана (glob)
+shell_commands = []           # command записей exec/widget (glob)
+title = ""                    # регулярное выражение по заголовку
+screen = []                   # [{ source = "visible", lines = 30, regex = "…" }]
+
+[modes]
+default = "vi_imap"
+names = { mgr = "manager" }   # родное имя режима → имя в контексте
+# from_config = { file = "~/.config/atuin/config.toml", key = "keymap_mode",
+#                 map = { emacs = "search", vim-insert = "search", vim-normal = "normal" } }
+# [[modes.screen]] mode = "input", regex = "…"
+
+[[source]]                    # источники таблицы, по порядку
+modes = ["*"]                 # к каким режимам относится
+kind = "regex"                # regex | toml | json | static
+file = "{record.table}"       # или command = [...] / env = "NAME"
+regex = '''^ble-bind -m \S+ -(?P<type>[fxcs]) (?P<key>'[^']*'|\S+) (?P<action>.+)$'''
+unquote = ["key", "action"]   # снять кавычки shell
+skip = { key = "^__.*__$", action = "^(bell|nop)$" }
+on_conflict = "override"      # override | keep
+# kind = "toml": path, tables = ["{mode}"], arrays = ["prepend_keymap",
+#   "keymap", "append_keymap"], key_field = "on", action_field = "run",
+#   desc_field = "desc", replace_if = "keymap"
+
+[key]                         # нормализация записи клавиши
+map = { "ctrl-" = "C-", "alt-" = "M-", "<Esc>" = "ESC" }
+
+[[describe]]                  # описание по действию
+action = "^history-isearch-backward$"
+desc = "поиск по истории назад"
+[[group]]                     # группа по действию
+action = "^(history|.*-history)"
+group = "history"
+[[origin]]                    # происхождение по полям совпадения
+type = "^[xc]$"
+origin = "user"
+```
+
+Клавиша нормализуется к записи ble.sh: модификаторы `C-`, `M-`, `S-`
+в порядке `C-M-S-`, именованные клавиши (`ESC`, `RET`, `TAB`, `SP`, `up`,
+`f1`), последовательности — через пробел. По нормализованной записи
+работают `hide`, `pin` и `[entry]`. Описание: поле `desc` источника,
+иначе первое подходящее `[[describe]]`, иначе действие как есть. Таблица —
+записи `{key, desc, group, origin, action}`.
+
+Подстановки в `file`, `command`, `env`, `path`: `{mode}`, `{record.<поле>}`,
+`{env.<ИМЯ>}`, `{command}`, `{pid}`; тильда в начале пути. Источник
+`command` запускается без оболочки, stdin `/dev/null`, без терминала
+(`setsid`), окружение `TERM=dumb MANPAGER=cat PAGER=cat MANWIDTH=200`.
+Его ожидание — по pidfd; процесс живёт не дольше контекста, ради которого
+запущен: смена контекста или выход просмотрщика завершает его по pid.
+Сроков ожидания нет. Таблица кешируется в памяти по ключу «манифест,
+режим, значения подстановок, `mtime` прочитанных файлов».
+
+Ядро знает только виды источников и формат записи; имена программ,
+пути их конфигов, регулярные выражения и описания — в манифестах
+(приоритет 6). Описания пишутся по-русски.
+
+Манифесты первой очереди:
+
+| Манифест | Распознавание | Режимы | Таблица |
+|---|---|---|---|
+| `ble.toml` | `provider = "ble"` | keymap ble.sh (`vi_imap`, `vi_nmap`, `vi_xmap`, `vi_smap`, `vi_omap`, `vi_cmap`, `isearch`, `nsearch`, `menu_complete`, `auto_complete`, `emacs`) | `regex` по `{record.table}` — дамп `ble-bind -m <keymap> -P`; `-x`/`-c` → `user` или по имени функции (`fzf`, `atuin`, `tv`), `vi-rlfunc/` → `readline`, прочие `-f` → `ble` |
+| `fzf.toml` | `process = ["fzf"]`, `shell_commands = ["fzf-*", "__fzf_*"]` | без режима (`fzf`) | `regex` по `man fzf` (раздел действий с клавишами по умолчанию) + `regex` по `{env.FZF_DEFAULT_OPTS}` (`--bind`), `override` |
+| `atuin.toml` | `process = ["atuin"]`, `shell_commands = ["__atuin_*"]` | `search`, `normal` из `keymap_mode` | `static` по `keymap_mode` + `toml` раздела `[keys]` конфига |
+| `tv.toml` | `process = ["tv"]`, `shell_commands = ["tv_*"]` | без режима (`tv`) | `toml` раздела `[keybindings]` `~/.config/television/config.toml` |
+| `yazi.toml` | `process = ["yazi"]`, `provider = "yazi"` | `manager`, `tasks`, `spot`, `pick`, `input`, `confirm`, `cmp`, `help` | `toml` `manifests/data/yazi-keymap-26.9.1.toml`, затем `~/.config/yazi/keymap.toml` (`prepend_keymap`/`append_keymap`/`keymap`) |
+| `nvim.toml` | `provider = "nvim"`, `process = ["nvim"]` | `normal`, `insert`, `visual`, `select`, `cmdline`, `replace`, `terminal`, `operator` | `json` из `nvim --server {record.server} --remote-expr` (дамп `nvim_get_keymap` и `nvim_buf_get_keymap` с `desc`), затем `static` базовых клавиш vim, `keep` |
+
+Таблица fzf, atuin и tv внутри уже открытой программы статична
+(решение 5): она строится один раз при входе в контекст.
+
+### D7. Универсальный извлекатель
+
+`manifests/generic.toml` — обычный манифест с `program = "*"`,
+`priority = 0`, `[detect] fallback = true`; контекст — `<команда>.generic`,
+происхождение всех записей — `generic`. Источники по порядку, первый
+непустой результат побеждает:
+
+1. `man`: `command = ["man", "-P", "cat", "{command}"]`, вид `regex`
+   с `sections` — регулярное выражение заголовков разделов о клавишах
+   (`^(KEY ?BINDINGS|KEYS|KEYBOARD( SHORTCUTS| COMMANDS)?|COMMANDS|INTERACTIVE( COMMANDS| MODE)?|SHORTCUTS|NAVIGATION)\b`);
+   внутри раздела запись — строка с отступом, где термин похож
+   на клавишу (`C-x`, `Ctrl+X`, `^X`, `<Esc>`, `Alt-x`, одиночный символ,
+   `F1`), а описание отделено двумя пробелами или следует строкой ниже
+   с большим отступом; группа — ближайший подзаголовок.
+2. `--help`: `command = ["{command}", "--help"]` с тем же разбором
+   по заголовкам и строкам-клавишам; программа запускается без терминала
+   (D6), поэтому полноэкранные программы завершаются с ошибкой, не
+   заняв экран; зависший процесс завершается при смене контекста.
+3. Известные файлы конфигурации клавиш: шаблоны
+   `~/.config/{command}/*key*.{toml,conf,ini}`,
+   `~/.config/{command}/config.toml` (таблицы `keys`, `keybindings`,
+   `keymap`), строки `bind <клавиша> <действие>` и
+   `<клавиша> = <действие>`.
+
+Флаг `sections` и признаки «похож на клавишу» — общие возможности вида
+`regex`, а не знание о программах. Результат кешируется на диске
+`$XDG_CACHE_HOME/herdr-keys-help/generic/<команда>.json` с ключом
+«путь исполняемого файла, его `mtime` и размер, `mtime` man-страницы»:
+при тех же входах извлечение не повторяется.
+
+Конфигурация представления действует для `<команда>.generic` так же,
+как для остальных контекстов (`[context."htop.generic"]`,
+`[context."*.generic"]`).
+
+### D8. Файл неизвестных программ и порядок разбора
+
+`$XDG_STATE_HOME/herdr-keys-help/unknown-programs.toml`:
+
+```toml
+[program.htop]
+count = 3
+last = "2026-11-08"
+```
+
+Пишет просмотрщик, когда для команды не нашлось ни манифеста, ни таблицы
+универсального извлекателя, — один раз на появление процесса (новый pid
+команды на переднем плане цели); одна таблица на команду, повторов нет.
+Обновление — чтение, изменение, запись во временный файл и `rename`
+под `flock` файла-замка рядом: файл один на пользователя по решению
+пользователя, размножить его нельзя, а писать могут несколько
+просмотрщиков (по одному на tab); ожидание замка — на время одной
+записи (`flock` блокирующий, без срока); комментарий с этим объяснением —
+над кодом замка (правило изоляции `~/.claude/CLAUDE.md`). Команда,
+получившая манифест или таблицу, из файла удаляется тем же механизмом
+при следующем появлении.
+
+Разбор идёт по событию: хук Claude Code `SessionStart` проекта dotfiles
+(`.claude/settings.json` → `.claude/hooks/keys-help-unknown.sh`) печатает
+список из файла (команда, счётчик, дата, по убыванию счётчика) или
+ничего, если файла нет или он пуст. Главная сессия по этому списку
+ставит задачу на манифесты; порядок разбора — в `docs/keys-help.md`:
+манифест программы (раздел «Добавление программы»), пополнение
+`view.toml`, удаление строки из файла.
+
+### D9. yazi: слой и выход — ОТКРЫТЫЙ ВОПРОС
+
+Решение 4 предполагает `init.lua` yazi (DDS `ya pub` или файл) о запуске,
+слое и выходе. `~/.config/yazi/init.lua` существует и не под chezmoi,
+а записка запрещает менять конфиги yazi, кроме добавления `init.lua`,
+если его нет. Встроенные сообщения DDS (`ya sub`) слоя не сообщают.
+
+Без ответа пользователя устройство работает так: запуск и выход yazi
+видны по записи `exec` оболочки и `PRECMD` (запуск не из оболочки —
+по `process` в `pane.process_info` на событиях herdr), контекст —
+`yazi.manager`; смена слоя не отслеживается. Варианты — в отчёте
+координатору; поставщик yazi (`provider = "yazi"`) заложен в манифест,
+чтобы выбранный вариант не менял ядро. Задача 5.3 ждёт ответа.
+
+### D10. Модуль ble.sh
+
+`dot_config/blesh/keys-help.bash`, подключается строкой в `dot_blerc`
+(`ble-import -d ~/.config/blesh/keys-help.bash` или `source`), действует
+только при `HERDR_PANE_ID` и `XDG_RUNTIME_DIR`:
+
+- `ble/function#advice after` на `ble/decode/keymap/push`,
+  `ble/decode/keymap/pop` и `ble/keymap:vi/update-mode-indicator`
+  (последний — тот же вызов, по которому `contrib/prompt-vim-mode`
+  обновляет индикатор): функция `keys_help/notify` берёт
+  `_ble_decode_keymap` и пишет запись `active`, только если keymap
+  изменился с прошлой записи (сравнение в переменной, без внешних
+  процессов).
+- Дамп таблицы: при первой записи каждого keymap в этой оболочке —
+  `ble-bind -m <keymap> -P > $XDG_RUNTIME_DIR/herdr-keys-help/ble/$$/<keymap>.bind`;
+  функция `keys-help-refresh` сбрасывает дампы после ручного `ble-bind`.
+- `blehook PREEXEC`: запись `exec` с `command` — командной строкой;
+  `blehook PRECMD`: снова `active` с текущим keymap.
+- `ble/function#advice around` на `ble/widget/.EDIT_COMMAND` и
+  `ble/widget/.SHELL_COMMAND`: до вызова — запись `widget` с `command`
+  (так fzf, atuin и tv, запущенные клавишами M-f, M-r, M-t, распознаются
+  по `shell_commands` манифестов), после — `active`.
+- `blehook EXIT`: удаление своей записи и каталога дампов.
+
+Запись делает встроенный `printf` в файл, внешних процессов на смену
+режима нет.
+
+### D11. Модуль Neovim
+
+`dot_config/nvim/lua/keys_help.lua`, `require("keys_help").setup()`
+из `lua/config/autocmds.lua`, действует только при `vim.env.HERDR_PANE_ID`:
+
+- `VimEnter` и `ModeChanged`: запись `active` с `mode` (первая буква
+  `mode()` → `normal`, `insert`, `visual`, `select`, `cmdline`,
+  `replace`, `terminal`, `operator`), `server = vim.v.servername`;
+  записывается только при смене имени режима.
+- `VimLeavePre`: удаление записи.
+- `dump(mode)`: JSON-массив записей `nvim_get_keymap(mode)` и
+  `nvim_buf_get_keymap(0, mode)` с `desc`; `origin` — по файлу
+  `callback` (`debug.getinfo`) или `sid`: каталог конфига → `user`,
+  `lazy/LazyVim` → `lazyvim`, `lazy/<плагин>` → имя плагина, иначе
+  `nvim`; группа — группа which-key префикса, если which-key загружен,
+  иначе `origin`. Клавиши в записи `<C-x>` нормализуются манифестом.
+
+### D12. Конфигурация представления
+
+Файл `~/.config/herdr/keys-help/view.toml` — символическая ссылка
+(chezmoi `symlink_view.toml.tmpl`) на `{{ .chezmoi.sourceDir }}/herdr-keys-help/view.toml`;
+каталог `herdr-keys-help/` источника исключён в `.chezmoiignore`. Так
+правки из просмотрщика сразу попадают в репозиторий, без `re-add`.
+Запись — через `toml_edit` (комментарии и порядок сохраняются),
+во временный файл в каталоге настоящего файла и `rename` поверх
+настоящего пути (ссылка не заменяется).
+
+Поля — ровно решение 6:
+
+| Поле | Тип | Наследование |
+|---|---|---|
+| `order` | список групп | заменяется более частным уровнем |
+| `hide` | список клавиш | объединяется |
+| `hide_groups` | список групп | объединяется |
+| `pin` | список клавиш | заменяется |
+| `only_modifiers` | bool | заменяется |
+| `show_origin` | bool или список происхождений | заменяется |
+| `[entry."<контекст>"."<клавиша>"]` `desc`, `group` | | частное поверх общего |
+
+Уровни: `[defaults]` → `[context."<программа>.*"]` и `[context."<программа>"]`
+→ `[context."<программа>.<режим>"]`; среди шаблонов более частный
+(больше символов до `*`) применяется позже. Шаблон `x.*` подходит
+и к `x`, и к `x.<режим>`; `*.generic` — ко всем контекстам
+универсального извлекателя. Ключи `[entry]` принимают те же шаблоны.
+
+Смысл полей при показе: записи из `hide` и групп из `hide_groups`
+не показываются; `pin` — первыми, в заданном порядке, отдельным блоком;
+затем группы по `order`, остальные группы — по алфавиту; внутри группы —
+по клавише. `only_modifiers = true` оставляет записи, первая клавиша
+которых содержит `C-` или `M-`. `show_origin = true` — показывать
+происхождение у каждой записи; список — подпись только у записей
+перечисленных происхождений (остальные записи показываются без подписи);
+`false` — без подписей. На состав записей `show_origin` не влияет.
+`[entry]` переопределяет `desc` и `group` найденной записи или добавляет
+запись с происхождением `user`, если клавиши в таблице нет.
+
+Изменение файла (inotify каталога настоящего файла, `IN_CLOSE_WRITE`,
+`IN_MOVED_TO`) перечитывается и перерисовывает таблицу; ошибка разбора
+показывается строкой в панели, действует прежняя конфигурация.
+
+### D13. Просмотрщик: вид и клавиши
+
+Шапка — контекст и цель (`ble.vi_nmap · w1:p1`), ниже — группы
+колонками по ширине панели: `клавиша  описание [происхождение]`.
+Панель создаётся без фокуса; клавиши действуют, когда пользователь
+перевёл в неё фокус:
+
+| Клавиша | Действие |
+|---|---|
+| `j`/`k`, стрелки | выбор записи |
+| `d` | скрыть запись: дописать клавишу в `hide` текущего контекста |
+| `D` | скрыть группу: дописать группу в `hide_groups` текущего контекста |
+| `u` | отменить последнее скрытие этой сессии просмотрщика |
+| `q` | закрыть панель (как повторное нажатие Ctrl+Alt+Shift+/) |
+
+Фокус на просмотрщике цель не меняет (D3), поэтому скрытие относится
+к контексту панели, с которой пришёл пользователь.
+
+### D14. Рамки herdr и протокол kitty
+
+`dot_config/herdr/config.toml`, `[ui]`: `pane_outer_borders = false`,
+`pane_gaps = false`, `pane_borders` не трогается (решение 7);
+`[[keys.command]]` с `key = "ctrl+alt+shift+slash"`,
+`type = "plugin_action"`, `command = "quiet-lab.keys-help.toggle"`.
+`enable_kitty_keyboard = true` в `dot_config/wezterm/wezterm.lua`
+и таблицу регрессий решения 2 ведёт отдельный исполнитель; задачи 7.x
+ссылаются на его результат. Если клавиша не доходит до herdr — доработка
+форка по решению 2.
+
+## Risks / Trade-offs
+
+- [Литерал `--ratio 0.333` в решении 1 при семантике herdr дал бы
+  верхней панели треть] → устройство следует смыслу решения (нижняя
+  панель — треть); несоответствие вынесено координатору.
+- [`--help` неизвестной программы может не завершиться] → запуск без
+  терминала, процесс живёт не дольше контекста, сроков нет; результат
+  кешируется, повторного запуска при тех же входах нет.
+- [Разбор man по эвристике даёт ложные записи] → происхождение `generic`
+  видно в таблице, записи скрываются `hide`; программа с плохим
+  результатом получает манифест.
+- [ble.sh меняет внутренние имена функций] → модуль проверяет наличие
+  функций при подключении и пишет предупреждение в `ble/util/print`
+  вместо записи контекста; тест модуля на живом ble.sh.
+- [Записи упавших процессов] → pidfd сообщает выход, запись удаляется.
+- [Файл неизвестных программ видит только запуски при открытом
+  просмотрщике] → так решено (пишет просмотрщик); описано в документации.
+- [`view.toml` — ссылка в источник chezmoi] → при отсутствии источника
+  (другая машина без `chezmoi init`) ссылка висит, просмотрщик работает
+  с умолчаниями и показывает строку об ошибке записи.
+
+## Migration Plan
+
+Новая возможность, переноса нет. Откат: `herdr plugin unlink
+quiet-lab.keys-help`, удалить `[[keys.command]]` клавиши и строку
+подключения модуля в `dot_blerc`, `chezmoi apply`.
+
+## Open Questions
+
+- D9: способ узнать слой yazi при запрете менять существующий `init.lua`.
+- Литерал `--ratio 0.333` (решение 1) против семантики herdr: принят смысл
+  «нижняя панель — треть»; координатор подтверждает или поправляет запись.
+- Толкование `show_origin` списком (D12): «подпись у записей этих
+  происхождений, состав записей не меняется» — выбрано по имени поля:
+  фильтр по примеру решения 6 (`ble.vi_imap`: `readline`, `ble`) скрыл бы
+  пользовательские привязки fzf, atuin и tv; иное толкование — правка D12.
