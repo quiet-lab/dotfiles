@@ -19,6 +19,11 @@ local function footer_kind(line)
 	end
 end
 
+-- Горизонтальная линия рамки: начинается с «───», может нести подпись.
+local function rule(line)
+	return line:match("^%s*───") ~= nil
+end
+
 -- Строка без ведущих пробелов и признак выделения `❯` перед ней.
 local function split_sel(line)
 	local indent, rest = line:match("^(%s*)(.*)$")
@@ -140,7 +145,9 @@ function M.parse(text)
 		table.insert(lines, (l:gsub("%s+$", "")))
 	end
 	local f = #lines
-	while f > 0 and lines[f] == "" do
+	-- Пустые строки и линия рамки под диалогом (Claude Code рисует её
+	-- с именем сессии: «──── имя ─») подвалом не считаются.
+	while f > 0 and (lines[f] == "" or rule(lines[f])) do
 		f = f - 1
 	end
 	if f == 0 then
@@ -173,6 +180,18 @@ function M.parse(text)
 		return nil
 	end
 	local d = { rows = rows, multi = false, review = false, free_text = "" }
+	-- Строка вкладок карточки из нескольких вопросов: «←  ☒ Q1  ☐ Q2  ✔ Submit  →».
+	for i = f, 1, -1 do
+		local l = lines[i]
+		if l:match("^%s*←.*→$") then
+			local _, done = l:gsub("☒", "")
+			local _, open = l:gsub("☐", "")
+			if done + open > 0 then
+				d.tabs = { done = done, total = done + open }
+			end
+			break
+		end
+	end
 	local chat
 	for k, r in ipairs(rows) do
 		if r.selected then
@@ -248,6 +267,12 @@ function M.selected_regex(row)
 	if row.num and not row.plain then
 		return "(?m)^\\s*❯\\s*" .. row.num .. "\\.\\s"
 	end
+end
+
+-- Образец строки вкладок карточки, в которой отвечено больше done вопросов:
+-- совпадение значит, что Claude Code перешёл к следующему вопросу или к обзору.
+function M.card_regex(done)
+	return "^\\s*←(?:[^☒]*☒){" .. (done + 1) .. "}"
 end
 
 local function arrows(from, to)

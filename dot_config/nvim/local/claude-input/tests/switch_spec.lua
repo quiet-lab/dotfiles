@@ -85,12 +85,31 @@ end
 
 -- Перерисовка экрана: подписчики pane.output_matched получают событие
 -- (образец в тесте не сверяется: каждый ждёт ровно эту перерисовку).
+-- Образец строки вкладок карточки (card_regex) срабатывает, только когда
+-- в строке вкладок экрана отвечено не меньше вопросов, чем он ждёт.
+local function card_fires(regex, scr)
+	local need = regex:match("^%^\\s%*←.-{(%d+)}$")
+	if not need then
+		return nil
+	end
+	for l in (scr .. "\n"):gmatch("(.-)\n") do
+		if l:match("^%s*←.*→%s*$") then
+			local _, n = l:gsub("☒", "")
+			return n >= tonumber(need)
+		end
+	end
+	return false
+end
+
 local function render(scr)
 	fake.screen = scr
 	local ms = fake.matchers
 	fake.matchers = {}
 	for _, m in ipairs(ms) do
-		if not m.client:is_closing() then
+		local card = card_fires(m.regex, scr)
+		if card == false then
+			table.insert(fake.matchers, m)
+		elseif not m.client:is_closing() then
 			m.client:write(vim.json.encode({ event = "pane.output_matched", data = { pane_id = "w1:p1" } }) .. "\n")
 		end
 	end
@@ -251,14 +270,49 @@ dialog_set({ "xy" })
 check("новый экран, пункт 1: ничего", #fake.sent == n_sent)
 dialog_set({})
 
--- 7. :w в одиночном выборе — Enter.
+-- 7. :w на вопросе карточки из нескольких вопросов — Enter; буфер диалога
+-- остаётся открытым до конца карточки.
 vim.cmd("write")
 wait(idle_chain)
-check(":w одиночный: Enter клавишей", last_sent() == "<enter>", last_sent())
+check(":w карточки: Enter клавишей", last_sent() == "<enter>", last_sent())
 check(":w: буфер не изменён", not vim.bo[st.dbuf].modified)
+check(
+	":w карточки: диалог остаётся, буфер пуст",
+	st.mode == "dialog" and cur_name():match("claude://dialog$") ~= nil and dialog_lines() == "",
+	cur_name()
+)
+
+-- 8. Переход к следующему вопросу (строка вкладок) приходит событием
+-- pane.output_matched при неизменном статусе blocked.
+render(screen("ask-q2-multi"))
+wait(function()
+	return st.guard == nil and idle_chain()
+end)
+check(
+	"следующий вопрос: тот же пустой диалог",
+	st.mode == "dialog" and cur_name():match("claude://dialog$") ~= nil and dialog_lines() == ""
+)
+dialog_set({ "2" })
+check("множественный: клавиша 2", last_sent() == "2", last_sent())
+vim.cmd("write")
+wait(idle_chain)
+check(
+	":w множественный: к Submit и Enter",
+	fake.sent[#fake.sent - 1] == D:rep(4) and last_sent() == "<enter>",
+	{ fake.sent[#fake.sent - 1], last_sent() }
+)
+check(":w множественный: диалог остаётся", st.mode == "dialog")
+render(screen("ask-review"))
+wait(function()
+	return st.guard == nil and idle_chain()
+end)
+check("обзор: диалог остаётся", st.mode == "dialog" and st.card_close == nil)
+vim.cmd("write")
+wait(idle_chain)
+check(":w обзор: Enter", last_sent() == "<enter>", last_sent())
 -- Ввод возвращается сразу, пока сервер не сменил экран.
 check(
-	":w: сразу буфер ввода",
+	":w обзор: сразу буфер ввода",
 	cur_name():match("claude://input$") ~= nil and st.mode == "input",
 	cur_name()
 )
@@ -282,29 +336,6 @@ wait(function()
 	return st.mode == "dialog"
 end)
 check("после working тот же диалог — новый", cur_name():match("claude://dialog$") ~= nil)
-
--- 8. Множественный выбор (следующий вопрос — другой экран): диалог открывается заново.
-push_status("blocked", screen("ask-q2-multi"))
-wait(function()
-	return st.mode == "dialog"
-end)
-check(
-	"следующий вопрос: пустой диалог",
-	cur_name():match("claude://dialog$") ~= nil and dialog_lines() == ""
-)
-dialog_set({ "2" })
-check("множественный: клавиша 2", last_sent() == "2", last_sent())
-vim.cmd("write")
-wait(idle_chain)
-check(
-	":w множественный: к Submit и Enter",
-	fake.sent[#fake.sent - 1] == D:rep(4) and last_sent() == "<enter>",
-	{ fake.sent[#fake.sent - 1], last_sent() }
-)
-check(
-	":w множественный: сразу буфер ввода",
-	st.mode == "input" and cur_name():match("claude://input$") ~= nil
-)
 
 -- 9. Запрос разрешения: цифра 2 — стрелка, подтверждение только по :w.
 push_status("working", IDLE)
@@ -374,7 +405,7 @@ check(":w на прежнем экране отложен", #fake.sent == n_sent
 local function open_matchers()
 	local n = 0
 	for _, m in ipairs(fake.matchers) do
-		if not m.client:is_closing() then
+		if not m.client:is_closing() and card_fires(m.regex, "") == nil then
 			n = n + 1
 		end
 	end
@@ -389,7 +420,10 @@ wait(function()
 	return last_sent() == "<enter>" and idle_chain()
 end)
 check(":w после перерисовки: к Submit", fake.sent[#fake.sent - 1] == D, fake.sent[#fake.sent - 1])
-check(":w после перерисовки: буфер ввода", st.mode == "input")
+check(
+	":w после перерисовки: вопрос карточки — диалог остаётся",
+	st.mode == "dialog"
+)
 push_status("working", IDLE)
 wait(idle_chain)
 push_status("blocked", multi)
@@ -484,32 +518,25 @@ check(
 	last_sent()
 )
 
--- 14. Shift+Enter и Shift+Пробел в буфере диалога — то же, что :w; в буфере ввода — ничего.
+-- 14. Shift+Enter и Shift+Пробел — то же, что :w, в буфере диалога и в буфере ввода.
 for _, key in ipairs({ "<S-CR>", "<S-Space>" }) do
 	push_status("working", IDLE)
 	wait(function()
 		return st.mode == "input"
 	end)
-	local before = #fake.sent
 	local ibuf = vim.api.nvim_get_current_buf()
-	vim.api.nvim_buf_set_lines(ibuf, 0, -1, false, { "" })
-	vim.api.nvim_feedkeys(vim.keycode("i" .. key .. "<Esc>"), "xt", false)
+	vim.api.nvim_buf_set_lines(ibuf, 0, -1, false, { "запрос" })
+	vim.api.nvim_feedkeys(vim.keycode("A" .. key .. "<Esc>"), "xt", false)
 	wait(function()
 		return not st.in_flight and idle_chain()
 	end)
 	local text = table.concat(vim.api.nvim_buf_get_lines(ibuf, 0, -1, false), "\n")
+	check(key .. " в буфере ввода: буфер очищен", text == "", text)
 	check(
-		key .. " в буфере ввода: вставлен символ",
-		text == (key == "<S-CR>" and "\n" or " "),
-		text
+		key .. " в буфере ввода: запрос и Enter",
+		fake.sent[#fake.sent - 1] == P .. "запрос" and last_sent() == "<enter>",
+		{ fake.sent[#fake.sent - 1], last_sent() }
 	)
-	for i = before + 1, #fake.sent do
-		check(
-			key .. " в буфере ввода: Enter подтверждения не отправлен",
-			fake.sent[i] ~= "<enter>",
-			fake.sent[i]
-		)
-	end
 	vim.api.nvim_buf_set_lines(ibuf, 0, -1, false, { "" })
 	push_status("blocked", screen("trust"))
 	wait(function()

@@ -49,6 +49,10 @@ local state = {
 	-- Образец выделения, которого ждёт защита, и закрытие подписки на него.
 	expect = nil,
 	expect_close = nil,
+	-- Подписка на переход карточки из нескольких вопросов к следующему вопросу
+	-- и число отвеченных вопросов, после которого она срабатывает.
+	card_close = nil,
+	card_done = nil,
 	-- Последний известный статус панели Claude Code (из событий подписки и pane.get).
 	status = nil,
 }
@@ -576,6 +580,67 @@ local function wait_expect(job)
 	state.expect_close = close
 end
 
+-- Ожидание перехода карточки к следующему вопросу (pane.output_matched по строке
+-- вкладок): буфер диалога остаётся открытым, пока карточка не завершена, а после
+-- перехода цепочка заново читает экран. Ответ мог прийти и из панели Claude Code.
+local function card_stop()
+	if state.card_close then
+		local c = state.card_close
+		state.card_close = nil
+		state.card_done = nil
+		c()
+	end
+end
+
+local function card_watch(done)
+	local pane = pane_id()
+	if not pane or (state.card_close and state.card_done == done) then
+		return
+	end
+	card_stop()
+	local close
+	local function release()
+		if state.card_close ~= close then
+			return
+		end
+		state.card_close = nil
+		state.card_done = nil
+		close()
+		local dbuf = state.dbuf
+		local lines = dbuf and vim.api.nvim_buf_is_valid(dbuf) and vim.api.nvim_buf_get_lines(dbuf, 0, -1, false)
+			or { "" }
+		if #lines > 1 or lines[1] ~= "" then
+			-- Набранное до перехода относится к следующему вопросу.
+			state.d_edit = true
+		else
+			state.d_refresh = true
+		end
+		d_step()
+	end
+	close = request("events.subscribe", {
+		subscriptions = {
+			{
+				type = "pane.output_matched",
+				pane_id = pane,
+				source = "detection",
+				match = { type = "regex", value = dialog.card_regex(done) },
+			},
+		},
+	}, function(_, err)
+		if err and state.card_close == close then
+			state.card_close = nil
+			state.card_done = nil
+			close()
+		end
+	end, function(ev)
+		if ev == nil or ev.event == "pane.output_matched" then
+			release()
+		end
+	end)
+	state.card_close = close
+	state.card_done = done
+end
+
 local function stop_expect()
 	if state.expect_close then
 		local c = state.expect_close
@@ -612,6 +677,7 @@ local function show_input()
 	state.mode = "input"
 	state.guard = nil
 	stop_expect()
+	card_stop()
 	state.field_text = ""
 	if state.buf and vim.api.nvim_buf_is_valid(state.buf) and state.dbuf then
 		swap_window(state.dbuf, state.buf)
@@ -646,6 +712,9 @@ local function d_decide(job, status, text, send, done)
 		end
 		state.answered = nil
 		show_dialog()
+		if d.tabs and not d.review then
+			card_watch(d.tabs.done)
+		end
 		return done()
 	end
 	local dbuf = state.dbuf
@@ -658,6 +727,9 @@ local function d_decide(job, status, text, send, done)
 		state.guard = nil
 		stop_expect()
 	end
+	if d.tabs and not d.review then
+		card_watch(d.tabs.done)
+	end
 	if stale and (job == "edit" or (job == "write" and state.expect)) then
 		-- Прежний экран: задание повторяется по событию выделения или при
 		-- следующей правке; буфер не трогается.
@@ -669,6 +741,12 @@ local function d_decide(job, status, text, send, done)
 		set_lines_clean(dbuf, {})
 		state.field_text = ""
 		state.seen_empty = true
+		if d.tabs and not d.review then
+			-- Вопрос карточки: следующий вопрос и обзор отвечаются в том же буфере,
+			-- окно к вводу не возвращается; до перехода экран прежний.
+			state.guard = sig
+			return send(keys)
+		end
 		-- Ввод возвращается сразу, не дожидаясь смены экрана панели.
 		show_input()
 		state.answered = sig
@@ -893,6 +971,12 @@ local function open()
 			M.submit()
 		end,
 	})
+	-- Shift+Enter и Shift+Пробел отправляют запрос, как `:w`.
+	for _, key in ipairs({ "<S-CR>", "<S-Space>" }) do
+		vim.keymap.set({ "i", "n" }, key, function()
+			M.submit()
+		end, { buffer = buf, desc = "claude-input: отправить запрос" })
+	end
 	-- Содержимое уже повторено в строке ввода Claude Code, поэтому `:q` не требует записи.
 	vim.api.nvim_create_autocmd("QuitPre", {
 		group = group,

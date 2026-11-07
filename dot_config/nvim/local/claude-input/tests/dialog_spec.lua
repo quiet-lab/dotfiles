@@ -96,6 +96,18 @@ check("review: два пункта, обзор", d and nums(d) == "1,2" and d.re
 check("review: 2 — стрелка", d and dialog.digit_keys(d, 2) == D)
 check("review: :w — Enter", d and dialog.submit_keys(d) == "\r")
 
+-- Сессия с именем: под подвалом и под обзором линия рамки «──── имя ─».
+d = dialog.parse(screen("ask-q2-named"))
+check("named: диалог", d ~= nil)
+check("named: пункты 1–4", d and nums(d) == "1,2,3,4", d and nums(d))
+check("named: выделен 1, свободный ввод 3", d and d.sel == 1 and d.free == 3)
+check("named: 2 — стрелка вниз", d and dialog.digit_keys(d, 2) == D)
+d = dialog.parse(screen("ask-q2-named-free"))
+check("named-free: выделено поле с текстом", d and dialog.on_free(d) and d.free_text == "1", d and d.free_text)
+d = dialog.parse(screen("ask-review-named"))
+check("review-named: диалог обзора", d ~= nil and d.review and nums(d) == "1,2", d and nums(d))
+check("review-named: :w — Enter", d and dialog.submit_keys(d) == "\r")
+
 -- Разрешение Bash и Write.
 d = dialog.parse(screen("perm-bash"))
 check("perm-bash: пункты 1,2", d and nums(d) == "1,2" and d.sel == 1, d and nums(d))
