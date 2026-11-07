@@ -53,6 +53,10 @@ local state = {
 	-- и число отвеченных вопросов, после которого она срабатывает.
 	card_close = nil,
 	card_done = nil,
+	-- Подпись последнего разобранного экрана диалога (для отмены по Ctrl+C).
+	last_sig = nil,
+	-- Подписка на появление строки ввода Claude Code, пока открыт буфер диалога.
+	prompt_close = nil,
 	-- Последний известный статус панели Claude Code (из событий подписки и pane.get).
 	status = nil,
 }
@@ -483,11 +487,50 @@ end
 
 local d_step
 
+-- Подсказка в буфере диалога: шаг карточки, пункты экрана и клавиши —
+-- виртуальными строками, текст буфера не меняется.
+local HINT_NS = vim.api.nvim_create_namespace("claude_input_hint")
+M.HINT_KEYS =
+	"цифра — выбрать · Shift+Enter — подтвердить · Ctrl+C — отменить диалог"
+
+local function hint_lines(d)
+	local out = {}
+	local head
+	if d.review then
+		head = "Обзор ответов"
+	elseif d.tabs then
+		head = string.format("Вопрос %d из %d", math.min(d.tabs.done + 1, d.tabs.total), d.tabs.total)
+	else
+		head = "Диалог"
+	end
+	table.insert(out, { { head, "Title" } })
+	for _, r in ipairs(d.rows) do
+		local text = (r.selected and "❯ " or "  ") .. (r.num and (r.num .. ". ") or "") .. r.label
+		table.insert(out, { { text, r.selected and "CursorLine" or "Comment" } })
+	end
+	table.insert(out, { { M.HINT_KEYS, "NonText" } })
+	return out
+end
+M._hint_lines = hint_lines
+
+local function show_hint(d)
+	local buf = state.dbuf
+	if not buf or not vim.api.nvim_buf_is_valid(buf) then
+		return
+	end
+	vim.api.nvim_buf_clear_namespace(buf, HINT_NS, 0, -1)
+	if d then
+		vim.api.nvim_buf_set_extmark(buf, HINT_NS, 0, 0, { virt_lines = hint_lines(d) })
+	end
+end
+
 local function ensure_dialog_buf()
 	if state.dbuf and vim.api.nvim_buf_is_valid(state.dbuf) then
 		return state.dbuf
 	end
-	local buf = vim.api.nvim_create_buf(true, false)
+	-- Буфер диалога не входит в список буферов: в строке буферов его нет,
+	-- окно на него переводит только модуль.
+	local buf = vim.api.nvim_create_buf(false, false)
 	state.dbuf = buf
 	vim.api.nvim_buf_set_name(buf, DIALOG_NAME)
 	vim.bo[buf].buftype = "acwrite"
@@ -527,6 +570,29 @@ local function ensure_dialog_buf()
 		buffer = buf,
 		callback = confirm,
 	})
+	-- Отмена диалога: Esc в Claude Code, окно сразу возвращается к вводу.
+	local function cancel()
+		local pane = pane_id()
+		if not pane then
+			return
+		end
+		state.d_edit = false
+		state.d_write = false
+		state.answered = state.last_sig
+		M._show_input()
+		request("pane.send_keys", { pane_id = pane, keys = { "esc" } }, function(_, err)
+			if err then
+				state.answered = nil
+				report_error(err)
+			end
+		end)
+	end
+	vim.keymap.set(
+		{ "i", "n" },
+		"<C-c>",
+		cancel,
+		{ buffer = buf, desc = "claude-input: отменить диалог" }
+	)
 	for _, key in ipairs({ "<S-CR>", "<S-Space>" }) do
 		vim.keymap.set(
 			{ "i", "n" },
@@ -641,6 +707,54 @@ local function card_watch(done)
 	state.card_done = done
 end
 
+-- Ожидание строки ввода Claude Code, пока открыт буфер диалога: herdr после
+-- правки поля свободного ввода может держать статус idle до конца диалога,
+-- поэтому закрытие карточки видно только по экрану.
+local function prompt_stop()
+	if state.prompt_close then
+		local c = state.prompt_close
+		state.prompt_close = nil
+		c()
+	end
+end
+
+local function prompt_watch()
+	local pane = pane_id()
+	if not pane or state.prompt_close then
+		return
+	end
+	local close
+	local function release()
+		if state.prompt_close ~= close then
+			return
+		end
+		state.prompt_close = nil
+		close()
+		state.d_refresh = true
+		d_step()
+	end
+	close = request("events.subscribe", {
+		subscriptions = {
+			{
+				type = "pane.output_matched",
+				pane_id = pane,
+				source = "detection",
+				match = { type = "regex", value = dialog.PROMPT_REGEX },
+			},
+		},
+	}, function(_, err)
+		if err and state.prompt_close == close then
+			state.prompt_close = nil
+			close()
+		end
+	end, function(ev)
+		if ev == nil or ev.event == "pane.output_matched" then
+			release()
+		end
+	end)
+	state.prompt_close = close
+end
+
 local function stop_expect()
 	if state.expect_close then
 		local c = state.expect_close
@@ -678,21 +792,42 @@ local function show_input()
 	state.guard = nil
 	stop_expect()
 	card_stop()
+	prompt_stop()
 	state.field_text = ""
-	if state.buf and vim.api.nvim_buf_is_valid(state.buf) and state.dbuf then
-		swap_window(state.dbuf, state.buf)
+	local db = state.dbuf
+	if state.buf and vim.api.nvim_buf_is_valid(state.buf) and db then
+		swap_window(db, state.buf)
 	end
-	set_lines_clean(state.dbuf, {})
+	-- Буфер диалога живёт только на время диалога: после него удаляется,
+	-- следующий диалог создаёт его заново.
+	state.dbuf = nil
+	if db and vim.api.nvim_buf_is_valid(db) then
+		pcall(vim.api.nvim_buf_delete, db, { force = true })
+	end
 end
+
+M._show_input = show_input
 
 -- Решение по свежему экрану: job — "write", "edit" или "refresh".
 -- done() завершает цепочку; send(keys) отправляет клавиши и затем завершает её.
 local function d_decide(job, status, text, send, done)
 	local d = text and dialog.parse(text)
-	if d and state.mode == "dialog" and status ~= "blocked" and not dialog.on_free(d) then
+	if
+		d
+		and state.mode == "dialog"
+		and status ~= "blocked"
+		and not dialog.on_free(d)
+		and not d.tabs
+		and not d.review
+	then
 		-- Не blocked бывает только при выделенном поле свободного ввода (Д3);
-		-- иначе экран — прежний кадр закрытого диалога.
+		-- иначе экран — прежний кадр закрытого диалога. Карточку с вопросами
+		-- herdr после правки поля может держать в idle до её конца: её экран
+		-- остаётся диалогом.
 		d = nil
+	end
+	if d then
+		state.last_sig = dialog.signature(d)
 	end
 	if not d or (state.mode ~= "dialog" and status ~= "blocked") then
 		if not d or status ~= "blocked" then
@@ -712,6 +847,8 @@ local function d_decide(job, status, text, send, done)
 		end
 		state.answered = nil
 		show_dialog()
+		show_hint(d)
+		prompt_watch()
 		if d.tabs and not d.review then
 			card_watch(d.tabs.done)
 		end
@@ -730,6 +867,10 @@ local function d_decide(job, status, text, send, done)
 	if d.tabs and not d.review then
 		card_watch(d.tabs.done)
 	end
+	if not stale then
+		show_hint(d)
+	end
+	prompt_watch()
 	if stale and (job == "edit" or (job == "write" and state.expect)) then
 		-- Прежний экран: задание повторяется по событию выделения или при
 		-- следующей правке; буфер не трогается.

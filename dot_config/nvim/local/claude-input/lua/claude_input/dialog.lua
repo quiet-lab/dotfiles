@@ -275,6 +275,11 @@ function M.card_regex(done)
 	return "^\\s*←(?:[^☒]*☒){" .. (done + 1) .. "}"
 end
 
+-- Образец подвала строки ввода Claude Code (не диалога): режим vim с пометкой
+-- режима разрешений после него или пометка режима без vim. Совпадение значит,
+-- что диалог закрыт, даже если статус панели этого не показал.
+M.PROMPT_REGEX = "^\\s*(-- (INSERT|NORMAL|VISUAL) --\\s+[^·\\s]|⏵⏵|⏸|\\? for shortcuts)"
+
 local function arrows(from, to)
 	if to > from then
 		return M.DOWN:rep(to - from)

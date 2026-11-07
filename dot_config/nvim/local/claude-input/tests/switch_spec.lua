@@ -5,6 +5,7 @@
 -- Ожидания — до события; зависание ловит предел прогона целиком.
 local root = vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":p:h:h")
 vim.opt.rtp:prepend(root)
+local dialog_mod = require("claude_input.dialog")
 local uv = vim.uv
 io.stdout:setvbuf("no")
 
@@ -101,12 +102,23 @@ local function card_fires(regex, scr)
 	return false
 end
 
+-- Образец строки ввода (PROMPT_REGEX) срабатывает на экране строки ввода.
+local function prompt_fires(regex, scr)
+	if regex ~= dialog_mod.PROMPT_REGEX then
+		return nil
+	end
+	return scr:find("-- INSERT -- ⏸", 1, true) ~= nil or scr:find("⏵⏵", 1, true) ~= nil
+end
+
 local function render(scr)
 	fake.screen = scr
 	local ms = fake.matchers
 	fake.matchers = {}
 	for _, m in ipairs(ms) do
 		local card = card_fires(m.regex, scr)
+		if card == nil then
+			card = prompt_fires(m.regex, scr)
+		end
 		if card == false then
 			table.insert(fake.matchers, m)
 		elseif not m.client:is_closing() then
@@ -327,7 +339,7 @@ check(
 	"тот же экран: диалог не открывается",
 	st.mode == "input" and cur_name():match("claude://input$") ~= nil
 )
-check("тот же экран: буфер диалога скрыт", vim.fn.bufwinid(st.dbuf) == -1)
+check("тот же экран: буфер диалога удалён", st.dbuf == nil)
 -- Выход из blocked сбрасывает память: такой же диалог дальше новый.
 push_status("working", fake.screen)
 wait(idle_chain)
@@ -405,7 +417,7 @@ check(":w на прежнем экране отложен", #fake.sent == n_sent
 local function open_matchers()
 	local n = 0
 	for _, m in ipairs(fake.matchers) do
-		if not m.client:is_closing() and card_fires(m.regex, "") == nil then
+		if not m.client:is_closing() and card_fires(m.regex, "") == nil and prompt_fires(m.regex, "") == nil then
 			n = n + 1
 		end
 	end
@@ -455,14 +467,18 @@ check(
 	{ fake.sent[#fake.sent - 1], last_sent() }
 )
 
--- 14. Статус idle, а кадр ещё диалога без выделенного поля — возврат к буферу ввода.
+-- 14. Статус idle при кадре карточки: herdr держит idle после правки поля,
+-- буфер диалога остаётся; строка ввода на экране закрывает и удаляет его.
 push_status("idle", multi)
+wait(idle_chain)
+check("idle с кадром карточки: диалог остаётся", st.mode == "dialog", st.mode)
+render(IDLE)
 wait(function()
 	return st.mode == "input"
 end)
 check(
-	"idle с прежним кадром: буфер ввода",
-	cur_name():match("claude://input$") ~= nil,
+	"строка ввода: буфер ввода, буфер диалога удалён",
+	cur_name():match("claude://input$") ~= nil and st.dbuf == nil,
 	cur_name()
 )
 
@@ -483,6 +499,11 @@ check(
 	"перенос: соседнее окно не затронуто",
 	not wrap_on(other_win) and not vim.wo[other_win].wrap
 )
+-- Буфер диалога существует только во время диалога.
+push_status("blocked", screen("trust"))
+wait(function()
+	return st.mode == "dialog" and idle_chain()
+end)
 vim.api.nvim_win_set_buf(other_win, st.dbuf)
 check("перенос: окно буфера диалога", wrap_on(other_win))
 vim.api.nvim_win_set_buf(other_win, other)
@@ -490,6 +511,11 @@ check(
 	"перенос: после ухода диалога окно как было",
 	not wrap_on(other_win) and not vim.wo[other_win].wrap
 )
+push_status("working", IDLE)
+wait(function()
+	return st.mode == "input" and idle_chain()
+end)
+check("перенос: буфер диалога удалён после диалога", st.dbuf == nil)
 -- Уход буфера из нетекущего окна возвращает опции этого окна.
 local w_in = vim.fn.win_findbuf(input)[1]
 vim.api.nvim_set_current_win(other_win)
@@ -593,6 +619,36 @@ for _, t in ipairs(fake.sent) do
 		check("Esc только в префиксе", false, t)
 	end
 end
+
+-- 16. Подсказка, обзор в idle и отмена по Ctrl+C.
+push_status("working", IDLE)
+wait(function()
+	return st.mode == "input" and idle_chain()
+end)
+push_status("blocked", screen("ask-review"))
+wait(function()
+	return st.mode == "dialog" and idle_chain()
+end)
+local marks = vim.api.nvim_buf_get_extmarks(st.dbuf, -1, 0, -1, { details = true })
+local hint = marks[1] and marks[1][4].virt_lines
+check(
+	"подсказка: обзор, пункты и клавиши",
+	hint and hint[1][1][1] == "Обзор ответов" and #hint == 4,
+	hint
+)
+-- herdr держит idle после правки поля: цифра на обзоре переводит выделение.
+st.status = "idle"
+dialog_set({ "2" })
+check("обзор в idle: стрелка к Cancel", last_sent() == D and st.mode == "dialog", last_sent())
+render((screen("ask-review"):gsub("❯ 1%.", "  1."):gsub("  2%. Cancel", "❯ 2. Cancel")))
+wait(idle_chain)
+vim.api.nvim_feedkeys(vim.keycode("i<C-c>"), "xt", false)
+wait(idle_chain)
+check("Ctrl+C: Esc в Claude Code", last_sent() == "<esc>", last_sent())
+check(
+	"Ctrl+C: буфер ввода, буфер диалога удалён",
+	st.mode == "input" and cur_name():match("claude://input$") ~= nil and st.dbuf == nil
+)
 
 io.stdout:write(failed == 0 and "ALL OK\n" or ("FAILED " .. failed .. "\n"))
 vim.cmd(failed == 0 and "qa!" or "cq!")
