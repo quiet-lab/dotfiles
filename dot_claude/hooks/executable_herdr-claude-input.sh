@@ -2,16 +2,19 @@
 # Строка ввода Claude Code в neovim: хук `open` (SessionStart) делит панель
 # Claude herdr по горизонтали, нижняя панель получает ровно 13 строк вывода
 # и запускает в ней `nvim +ClaudeInput`; хук `close` (SessionEnd) закрывает
-# эту панель. Соответствие «панель Claude -> панель буфера» хранит файл
+# эту панель; хук `reopen` (команда /input-reopen) закрывает панель буфера
+# и открывает её заново. Соответствие «панель Claude -> панель буфера» хранит файл
 # ${XDG_STATE_HOME:-~/.local/state}/claude-input/<панель Claude, ':' -> '_'>
-# с идентификатором панели буфера. Аргумент — open или close.
+# с идентификатором панели буфера. Аргумент — open, close или reopen.
 # Хук молчит и выходит с кодом 0 при любой ошибке, вне herdr и у
 # субагентов, при живой панели буфера того же workspace и когда
 # панель Claude ниже 20 строк (13 строк вывода, 2 строки рамки, 5 строк Claude).
 # Исключение — отсутствие `herdr pane activate`: хук пишет сообщение в stderr
 # через дескриптор 3 (остальной stderr отброшен) и выходит с кодом 1, чтобы
 # Claude Code показал его (stderr SessionStart виден только при ненулевом коде;
-# код 1 — ошибка без блокировки, сессия продолжается).
+# код 1 — ошибка без блокировки, сессия продолжается). Режим reopen вызывается
+# пользователем, поэтому о невозможности открыть панель сообщает так же
+# (дескриптор 3, код 1), а об успехе печатает идентификатор новой панели.
 exec 3>&2 2>/dev/null
 mode=${1:-}
 input=$(cat)
@@ -43,6 +46,14 @@ state_dir=${XDG_STATE_HOME:-$HOME/.local/state}/claude-input
 map_file=$state_dir/${HERDR_PANE_ID//:/_}
 rows_wanted=13
 
+# Фокус на панель ввода без переключения клиента пользователя на чужой
+# workspace: делим с --no-focus, активируем после запуска nvim командой
+# `herdr pane activate`. Без неё панель не открывается: ошибка в stderr.
+if ! herdr pane activate --help > /dev/null 2>&1; then
+    echo "herdr-claude-input: у herdr нет команды pane activate, панель ввода не открыта" >&3
+    exit 1
+fi
+
 case "$mode" in
     close)
         [ -f "$map_file" ] || exit 0
@@ -52,8 +63,34 @@ case "$mode" in
         exit 0
         ;;
     open) ;;
+    reopen)
+        # Панель буфера — из файла соответствия, при его отсутствии — из токена
+        # input_pane панели Claude. Зависший nvim закрывает сама панель herdr.
+        buffer=
+        [ ! -f "$map_file" ] || buffer=$(cat "$map_file")
+        [ -n "$buffer" ] || buffer=$(herdr pane get "$HERDR_PANE_ID" |
+            jq -r '.result.pane.tokens.input_pane // empty')
+        # Закрывается только живая панель того же workspace: идентификатор
+        # из устаревшего файла мог достаться чужой панели.
+        if [ -n "$buffer" ]; then
+            info=$(herdr pane get "$buffer")
+            ws=$(jq -r '.result.pane.workspace_id // empty' <<< "$info")
+            [ -z "$ws" ] || [ "$ws" != "${HERDR_WORKSPACE_ID:-$ws}" ] ||
+                herdr pane close "$buffer" > /dev/null
+        fi
+        rm -f "$map_file"
+        ;;
     *) exit 0 ;;
 esac
+
+# Для reopen невозможность открыть панель — ошибка с сообщением, не тишина.
+fail_open() {
+    [ "$mode" != reopen ] || {
+        echo "herdr-claude-input: $1" >&3
+        exit 1
+    }
+    exit 0
+}
 
 # Панель буфера уже есть и жива в том же workspace — повторно не создаётся.
 if [ -f "$map_file" ]; then
@@ -79,21 +116,13 @@ pane_height() {
 }
 
 h=$(pane_height "$HERDR_PANE_ID")
-[ -n "$h" ] && [ "$h" -ge 20 ] || exit 0
+[ -n "$h" ] && [ "$h" -ge 20 ] || fail_open "панель Claude ниже 20 строк, панель ввода не открыта"
 ratio=$(awk -v h="$h" 'BEGIN { printf "%.4f", (h - 15) / h }')
-
-# Фокус на панель ввода без переключения клиента пользователя на чужой
-# workspace: делим с --no-focus, активируем после запуска nvim командой
-# `herdr pane activate`. Без неё панель не открывается: ошибка в stderr.
-if ! herdr pane activate --help > /dev/null 2>&1; then
-    echo "herdr-claude-input: у herdr нет команды pane activate, панель ввода не открыта" >&3
-    exit 1
-fi
 
 new_info=$(herdr pane split "$HERDR_PANE_ID" --direction down --no-focus \
     --ratio "$ratio" --env CLAUDE_INPUT_PANE="$HERDR_PANE_ID")
 new=$(jq -r '.result.pane.pane_id // empty' <<< "$new_info")
-[ -n "$new" ] || exit 0
+[ -n "$new" ] || fail_open "herdr не создал панель ввода"
 mkdir -p "$state_dir"
 printf '%s\n' "$new" > "$map_file"
 
@@ -118,4 +147,5 @@ fi
 
 herdr pane run "$new" 'exec nvim +ClaudeInput' > /dev/null
 herdr pane activate "$new" > /dev/null
+[ "$mode" != reopen ] || echo "панель ввода открыта заново: $new"
 exit 0
