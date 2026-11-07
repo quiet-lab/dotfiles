@@ -62,7 +62,16 @@ server:listen(16, function()
 		elseif req.method == "events.subscribe" then
 			local sub = req.params.subscriptions[1]
 			if sub.type == "pane.output_matched" then
-				table.insert(fake.matchers, { client = client, regex = sub.match.value })
+				reply({ type = "subscribed" })
+				-- Как herdr: образец, уже совпадающий с экраном, срабатывает сразу.
+				if fake.fires and fake.fires(sub.match.value, fake.screen) then
+					client:write(
+						vim.json.encode({ event = "pane.output_matched", data = { pane_id = "w1:p1" } }) .. "\n"
+					)
+				else
+					table.insert(fake.matchers, { client = client, regex = sub.match.value })
+				end
+				return
 			else
 				table.insert(fake.subs, client)
 			end
@@ -108,6 +117,14 @@ local function prompt_fires(regex, scr)
 		return nil
 	end
 	return scr:find("-- INSERT -- ⏸", 1, true) ~= nil or scr:find("⏵⏵", 1, true) ~= nil
+end
+
+fake.fires = function(regex, scr)
+	local card = card_fires(regex, scr)
+	if card == nil then
+		card = prompt_fires(regex, scr)
+	end
+	return card == true
 end
 
 local function render(scr)
@@ -318,7 +335,7 @@ render(screen("ask-review"))
 wait(function()
 	return st.guard == nil and idle_chain()
 end)
-check("обзор: диалог остаётся", st.mode == "dialog" and st.card_close == nil)
+check("обзор: диалог остаётся", st.mode == "dialog" and ci._watches.card == nil)
 vim.cmd("write")
 wait(idle_chain)
 check(":w обзор: Enter", last_sent() == "<enter>", last_sent())

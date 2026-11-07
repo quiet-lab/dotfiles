@@ -246,7 +246,9 @@ end
 -- Подпись диалога: пункты, отметки, выделение. Меняется после стрелок, Enter
 -- и правки поля; совпадение с подписью до отправки — экран ещё прежний.
 function M.signature(d)
-	local parts = {}
+	-- Шаг карточки входит в подпись: соседние вопросы с одинаковыми пунктами
+	-- («Yes»/«No») различаются числом отвеченных.
+	local parts = { d.tabs and ("T" .. d.tabs.done .. "/" .. d.tabs.total) or "" }
 	for _, r in ipairs(d.rows) do
 		table.insert(parts, (r.selected and ">" or " ") .. (r.num or "S") .. " " .. r.label)
 	end
