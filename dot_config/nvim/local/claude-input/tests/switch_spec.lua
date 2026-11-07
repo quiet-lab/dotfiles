@@ -651,26 +651,51 @@ local hwin = ci._hint_win()
 local hbuf = ci._hint_buf()
 local hl = hbuf and vim.api.nvim_buf_get_lines(hbuf, 0, -1, false)
 local hcfg0 = hwin and vim.api.nvim_win_get_config(hwin)
-local htitle = hcfg0 and hcfg0.title and hcfg0.title[1][1]
+local htitle = hwin and vim.wo[hwin].winbar
 check(
 	"подсказка: заголовок, пункты и клавиши в строках «клавиша → описание»",
-	hl and htitle:find("Обзор ответов", 1, true) and #hl == 5 and hl[1]:find("1 → ❯ Submit answers", 1, true)
+	hl
+		and htitle:find("Обзор ответов", 1, true)
+		and #hl == 5
+		and hl[1]:find("1 → ❯ Submit answers", 1, true)
 		and hl[#hl]:find("C-c → отменить диалог", 1, true),
 	{ htitle, hl }
 )
-check("подсказка: в буфере диалога нет extmark'ов", #vim.api.nvim_buf_get_extmarks(st.dbuf, hns, 0, -1, {}) == 0)
+check(
+	"подсказка: в буфере диалога нет extmark'ов",
+	#vim.api.nvim_buf_get_extmarks(st.dbuf, hns, 0, -1, {}) == 0
+)
 local hc = hwin and vim.api.nvim_win_get_config(hwin)
 local dwin = vim.fn.win_findbuf(st.dbuf)[1]
+local function hint_geometry_ok()
+	local dw, hw = vim.api.nvim_win_get_width(dwin), vim.api.nvim_win_get_width(hwin)
+	local total = dw + hw + 1
+	return hw == math.max(20, math.floor(total / 5)) and total == vim.o.columns
+end
+local dpos, hpos = vim.api.nvim_win_get_position(dwin), vim.api.nvim_win_get_position(hwin)
 check(
-	"подсказка: окно не берёт фокус, правый нижний угол окна диалога",
+	"подсказка: окно разделения справа от окна диалога, не плавающее",
 	hc
-		and hc.focusable == false
-		and hc.anchor == "SE"
-		and hc.relative == "win"
-		and hc.win == dwin
-		and hc.row == vim.api.nvim_win_get_height(dwin)
-		and hc.col == vim.api.nvim_win_get_width(dwin),
-	hc
+		and hc.relative == ""
+		and hpos[2] > dpos[2]
+		and hpos[1] == dpos[1]
+		and hpos[2] == dpos[2] + vim.api.nvim_win_get_width(dwin) + 1,
+	{ hc, dpos, hpos }
+)
+-- Окно neovim без интерфейса не перекладывает окна при смене `columns`,
+-- поэтому широкая панель проверяется самой функцией ширины, а реальное окно —
+-- на нынешней панели (80 столбцов: пятая часть меньше 20, подсказке 20).
+check(
+	"подсказка: узкая панель — 20 столбцов",
+	vim.api.nvim_win_get_width(hwin) == 20 and hint_geometry_ok()
+)
+check(
+	"подсказка: ширина — пятая часть, не меньше 20",
+	ci._hint_width(60) == 20
+		and ci._hint_width(100) == 20
+		and ci._hint_width(101) == 20
+		and ci._hint_width(160) == 32
+		and ci._hint_width(200) == 40
 )
 check("подсказка: фокус в окне диалога", vim.api.nvim_get_current_win() == dwin)
 -- herdr держит idle после правки поля: цифра на обзоре переводит выделение.
@@ -686,7 +711,10 @@ check(
 	"Ctrl+C: буфер ввода, буфер диалога удалён",
 	st.mode == "input" and cur_name():match("claude://input$") ~= nil and st.dbuf == nil
 )
-check("Ctrl+C: окно подсказки закрыто", ci._hint_win() == nil and not vim.api.nvim_win_is_valid(hwin))
+check(
+	"Ctrl+C: окно подсказки закрыто",
+	ci._hint_win() == nil and not vim.api.nvim_win_is_valid(hwin)
+)
 
 io.stdout:write(failed == 0 and "ALL OK\n" or ("FAILED " .. failed .. "\n"))
 vim.cmd(failed == 0 and "qa!" or "cq!")

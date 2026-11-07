@@ -485,7 +485,7 @@ end
 
 local d_step
 
--- Подсказка диалога в виде окна which-key (пресет helix: внизу, справа):
+-- Подсказка диалога — окно разделения справа от диалога:
 -- строки «клавиша → описание», заголовок — шаг карточки. Сам which-key
 -- не вызывается: его окно живёт только пока ждёт клавишу.
 local HINT_NS = vim.api.nvim_create_namespace("claude_input_hint")
@@ -512,7 +512,7 @@ local function hint_lines(d)
 end
 M._hint_lines = hint_lines
 
-local hint = { win = nil, buf = nil, d = nil }
+local hint = { win = nil, buf = nil, d = nil, dwin = nil }
 
 -- Группа which-key, если она есть, иначе запасная.
 local function hl_group(wk, fallback)
@@ -527,12 +527,22 @@ local function hint_close()
 	if hint.buf and vim.api.nvim_buf_is_valid(hint.buf) then
 		pcall(vim.api.nvim_buf_delete, hint.buf, { force = true })
 	end
-	hint.win, hint.buf = nil, nil
+	hint.win, hint.buf, hint.dwin = nil, nil, nil
 end
 
--- Плавающее окно в правом нижнем углу окна диалога: в панели в 13 строк
--- виртуальные строки отнимали бы место у текста ответа. Окно не берёт
--- фокус и ввод; размер ограничен окном диалога.
+-- Ширина окна подсказки: пятая часть ширины панели (1:4 к окну диалога),
+-- не меньше HINT_MIN_WIDTH; в узкой панели подсказке 20 столбцов, остаток
+-- достаётся диалогу.
+local HINT_MIN_WIDTH = 20
+local function hint_width(total)
+	return math.max(HINT_MIN_WIDTH, math.floor(total / 5))
+end
+M._hint_width = hint_width
+
+-- Окно разделения справа от окна диалога: в панели в 13 строк виртуальные
+-- строки отнимали бы место у текста ответа. Окно не берёт фокус и ввод;
+-- заголовок — в его winbar. Ширина считается от суммы ширин обоих окон
+-- (с вертикальным разделителем), поэтому пересчёт не накапливает сдвиг.
 local function hint_render()
 	local d = hint.d
 	local dbuf = state.dbuf
@@ -541,9 +551,18 @@ local function hint_render()
 		return
 	end
 	local head, rows = hint_lines(d)
-	-- Не помещается по высоте: клавиши внизу остаются, из пунктов
-	-- выбирается окно вокруг выделенного.
-	local maxh = math.max(1, vim.api.nvim_win_get_height(dwin) - 2)
+	local open = hint.win and vim.api.nvim_win_is_valid(hint.win)
+	if open and hint.dwin ~= dwin then
+		pcall(vim.api.nvim_win_close, hint.win, true)
+		open = false
+	end
+	local dw = vim.api.nvim_win_get_width(dwin)
+	local total = open and dw + vim.api.nvim_win_get_width(hint.win) + 1 or dw
+	local width = hint_width(total)
+	local dh = vim.api.nvim_win_get_height(dwin)
+	-- Не помещается по высоте (строка winbar занята заголовком): клавиши
+	-- внизу остаются, из пунктов выбирается окно вокруг выделенного.
+	local maxh = math.max(1, dh - 1)
 	if #rows > maxh then
 		local n_items = #d.rows
 		local footer = {}
@@ -563,16 +582,10 @@ local function hint_render()
 	for _, r in ipairs(rows) do
 		kw = math.max(kw, vim.fn.strdisplaywidth(r[1]))
 	end
-	local lines, width = {}, vim.fn.strdisplaywidth(head) + 2
+	local lines = {}
 	for _, r in ipairs(rows) do
-		local line = string.rep(" ", kw - vim.fn.strdisplaywidth(r[1])) .. r[1] .. HINT_SEP .. r[2]
-		table.insert(lines, line)
-		width = math.max(width, vim.fn.strdisplaywidth(line))
+		table.insert(lines, string.rep(" ", kw - vim.fn.strdisplaywidth(r[1])) .. r[1] .. HINT_SEP .. r[2])
 	end
-	-- Рамка занимает по две строки и столбца окна диалога.
-	local dw, dh = vim.api.nvim_win_get_width(dwin), vim.api.nvim_win_get_height(dwin)
-	width = math.max(1, math.min(width, dw - 2))
-	local height = math.max(1, math.min(#lines, dh - 2))
 	if not (hint.buf and vim.api.nvim_buf_is_valid(hint.buf)) then
 		hint.buf = vim.api.nvim_create_buf(false, true)
 		vim.bo[hint.buf].bufhidden = "wipe"
@@ -591,32 +604,19 @@ local function hint_render()
 		mark(kend, kend + #HINT_SEP, g_sep)
 		mark(kend + #HINT_SEP, #lines[i], r[3] and "CursorLine" or g_desc)
 	end
-	local cfg = {
-		relative = "win",
-		win = dwin,
-		anchor = "SE",
-		row = dh,
-		col = dw,
-		width = width,
-		height = height,
-		border = "rounded",
-		title = { { " " .. head .. " ", hl_group("WhichKeyTitle", "Title") } },
-		title_pos = "left",
-	}
-	if hint.win and vim.api.nvim_win_is_valid(hint.win) then
-		vim.api.nvim_win_set_config(hint.win, cfg)
-	else
-		cfg.focusable = false
-		cfg.style = "minimal"
-		cfg.zindex = 100
-		cfg.noautocmd = true
-		hint.win = vim.api.nvim_open_win(hint.buf, false, cfg)
-		vim.wo[hint.win].wrap = false
-		vim.wo[hint.win].winhighlight = "FloatBorder:"
-			.. hl_group("WhichKeyBorder", "FloatBorder")
-			.. ",NormalFloat:"
-			.. hl_group("WhichKeyNormal", "NormalFloat")
+	if not open then
+		hint.win = vim.api.nvim_open_win(hint.buf, false, { split = "right", win = dwin, width = width })
+		hint.dwin = dwin
+		local wo = vim.wo[hint.win]
+		wo.wrap = false
+		wo.number, wo.relativenumber, wo.list = false, false, false
+		wo.signcolumn, wo.foldcolumn, wo.colorcolumn, wo.statuscolumn = "no", "0", "", ""
+		wo.cursorline, wo.spell, wo.winfixwidth = false, false, true
+		wo.winhighlight = "Normal:" .. hl_group("WhichKeyNormal", "NormalFloat")
+	elseif vim.api.nvim_win_get_width(hint.win) ~= width then
+		vim.api.nvim_win_set_width(hint.win, width)
 	end
+	vim.wo[hint.win].winbar = "%#" .. hl_group("WhichKeyTitle", "Title") .. "# " .. head:gsub("%%", "%%%%") .. " "
 end
 
 local function show_hint(d)
