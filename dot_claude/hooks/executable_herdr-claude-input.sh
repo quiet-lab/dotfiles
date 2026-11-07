@@ -5,12 +5,13 @@
 # эту панель. Соответствие «панель Claude -> панель буфера» хранит файл
 # ${XDG_STATE_HOME:-~/.local/state}/claude-input/<панель Claude, ':' -> '_'>
 # с идентификатором панели буфера. Аргумент — open или close.
-# Хук молчит и выходит с кодом 0 при любой ошибке (кроме сообщения об
-# отсутствии `herdr pane activate` в stderr), вне herdr и у
+# Хук молчит и выходит с кодом 0 при любой ошибке, вне herdr и у
 # субагентов, при живой панели буфера того же workspace и когда
 # панель Claude ниже 20 строк (13 строк вывода, 2 строки рамки, 5 строк Claude).
-# Ошибка отсутствия `pane activate` — единственное сообщение хука: оно идёт
-# в stderr через дескриптор 3, остальной stderr отброшен.
+# Исключение — отсутствие `herdr pane activate`: хук пишет сообщение в stderr
+# через дескриптор 3 (остальной stderr отброшен) и выходит с кодом 1, чтобы
+# Claude Code показал его (stderr SessionStart виден только при ненулевом коде;
+# код 1 — ошибка без блокировки, сессия продолжается).
 exec 3>&2 2>/dev/null
 mode=${1:-}
 input=$(cat)
@@ -86,7 +87,7 @@ ratio=$(awk -v h="$h" 'BEGIN { printf "%.4f", (h - 15) / h }')
 # `herdr pane activate`. Без неё панель не открывается: ошибка в stderr.
 if ! herdr pane activate --help > /dev/null 2>&1; then
     echo "herdr-claude-input: у herdr нет команды pane activate, панель ввода не открыта" >&3
-    exit 0
+    exit 1
 fi
 
 new_info=$(herdr pane split "$HERDR_PANE_ID" --direction down --no-focus \
