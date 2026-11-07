@@ -53,9 +53,9 @@ Enter MUST завершать ввод и отдавать пароль обёр
 - **WHEN** кэш sudo сброшен (`sudo -k`) и выполнена `env -u SUDO_ASKPASS sudo -A -p 'Проверка окна askpass' true`
 - **THEN** появляется окно Quickshell askpass с этим пояснением, после ввода пароля команда завершается с кодом 0, а `sudo -n true` сразу после неё тоже завершается с кодом 0
 
-#### Scenario: Копия sudo.conf устанавливается вручную
-- **WHEN** выполнена `chezmoi apply`
-- **THEN** `/etc/sudo.conf` не меняется: каталог `system/` исключён в `.chezmoiignore`, и chezmoi его не применяет; файл устанавливается вручную с правами root по описанию в `system/sudo/README.md`
+#### Scenario: Установка копии sudo.conf
+- **WHEN** копия `system/sudo/sudo.conf` установлена в `/etc/sudo.conf` вручную с правами root по описанию в `system/sudo/` (chezmoi каталог `system/` не применяет)
+- **THEN** `/etc/sudo.conf` содержит строку `Path askpass /home/mne/.local/bin/handmade-scripts/sudo-askpass`, и `sudo -A` находит окно askpass без переменной `SUDO_ASKPASS`
 
 ## REMOVED Requirements
 

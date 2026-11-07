@@ -18,8 +18,8 @@
 - **THEN** `workspaced check` завершается успешно
 
 #### Scenario: Одна цепочка у двух приложений одного workspace
-- **WHEN** `firefox-front` и `firefox-back` имеют `chain = "SUPER+A b"` и оба входят в `dev-front`
-- **THEN** `workspaced check` завершается с ошибкой, называющей `dev-front` и оба приложения
+- **WHEN** `firefox-front` и `firefox-back` имеют `chain = "SUPER+A b"` и оба входят в `dev-front` с одним режимом клавиши
+- **THEN** `workspaced check` завершается успешно, `workspaced keys --list` показывает одну привязку `SUPER+A b` с источниками обоих приложений: клавиша ведёт общий цикл по их окнам; если у одной из записей задан другой `mode`, проверка завершается ошибкой «workspace dev-front: приложения … имеют общую цепочку "SUPER+A b", но разные режимы клавиши; у записей с общей цепочкой режим должен быть один»
 
 #### Scenario: Переопределение клавиши в workspace
 - **WHEN** у `chrome-ai` задано `chain = "SUPER+SHIFT+V"`, а в разделе `surf` — `chrome-ai = { cell = "right", chain = "SUPER+V" }`
