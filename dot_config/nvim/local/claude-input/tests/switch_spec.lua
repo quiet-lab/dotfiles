@@ -646,13 +646,33 @@ push_status("blocked", screen("ask-review"))
 wait(function()
 	return st.mode == "dialog" and idle_chain()
 end)
-local marks = vim.api.nvim_buf_get_extmarks(st.dbuf, -1, 0, -1, { details = true })
-local hint = marks[1] and marks[1][4].virt_lines
+local hns = vim.api.nvim_create_namespace("claude_input_hint")
+local hwin = ci._hint_win()
+local hbuf = ci._hint_buf()
+local hl = hbuf and vim.api.nvim_buf_get_lines(hbuf, 0, -1, false)
+local hcfg0 = hwin and vim.api.nvim_win_get_config(hwin)
+local htitle = hcfg0 and hcfg0.title and hcfg0.title[1][1]
 check(
-	"подсказка: обзор, пункты и клавиши",
-	hint and hint[1][1][1] == "Обзор ответов" and #hint == 4,
-	hint
+	"подсказка: заголовок, пункты и клавиши в строках «клавиша → описание»",
+	hl and htitle:find("Обзор ответов", 1, true) and #hl == 5 and hl[1]:find("1 → ❯ Submit answers", 1, true)
+		and hl[#hl]:find("C-c → отменить диалог", 1, true),
+	{ htitle, hl }
 )
+check("подсказка: в буфере диалога нет extmark'ов", #vim.api.nvim_buf_get_extmarks(st.dbuf, hns, 0, -1, {}) == 0)
+local hc = hwin and vim.api.nvim_win_get_config(hwin)
+local dwin = vim.fn.win_findbuf(st.dbuf)[1]
+check(
+	"подсказка: окно не берёт фокус, правый нижний угол окна диалога",
+	hc
+		and hc.focusable == false
+		and hc.anchor == "SE"
+		and hc.relative == "win"
+		and hc.win == dwin
+		and hc.row == vim.api.nvim_win_get_height(dwin)
+		and hc.col == vim.api.nvim_win_get_width(dwin),
+	hc
+)
+check("подсказка: фокус в окне диалога", vim.api.nvim_get_current_win() == dwin)
 -- herdr держит idle после правки поля: цифра на обзоре переводит выделение.
 st.status = "idle"
 dialog_set({ "2" })
@@ -666,6 +686,7 @@ check(
 	"Ctrl+C: буфер ввода, буфер диалога удалён",
 	st.mode == "input" and cur_name():match("claude://input$") ~= nil and st.dbuf == nil
 )
+check("Ctrl+C: окно подсказки закрыто", ci._hint_win() == nil and not vim.api.nvim_win_is_valid(hwin))
 
 io.stdout:write(failed == 0 and "ALL OK\n" or ("FAILED " .. failed .. "\n"))
 vim.cmd(failed == 0 and "qa!" or "cq!")

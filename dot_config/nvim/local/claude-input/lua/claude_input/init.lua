@@ -485,14 +485,14 @@ end
 
 local d_step
 
--- Подсказка в буфере диалога: шаг карточки, пункты экрана и клавиши —
--- виртуальными строками, текст буфера не меняется.
+-- Подсказка диалога в виде окна which-key (пресет helix: внизу, справа):
+-- строки «клавиша → описание», заголовок — шаг карточки. Сам which-key
+-- не вызывается: его окно живёт только пока ждёт клавишу.
 local HINT_NS = vim.api.nvim_create_namespace("claude_input_hint")
-M.HINT_KEYS =
-	"цифра — выбрать · Shift+Enter — подтвердить · Ctrl+C — отменить диалог"
+local HINT_SEP = " → "
 
+-- Заголовок и строки {клавиша, описание, выделен}.
 local function hint_lines(d)
-	local out = {}
 	local head
 	if d.review then
 		head = "Обзор ответов"
@@ -501,25 +501,121 @@ local function hint_lines(d)
 	else
 		head = "Диалог"
 	end
-	table.insert(out, { { head, "Title" } })
+	local rows = {}
 	for _, r in ipairs(d.rows) do
-		local text = (r.selected and "❯ " or "  ") .. (r.num and (r.num .. ". ") or "") .. r.label
-		table.insert(out, { { text, r.selected and "CursorLine" or "Comment" } })
+		table.insert(rows, { r.num and tostring(r.num) or "", (r.selected and "❯ " or "  ") .. r.label, r.selected })
 	end
-	table.insert(out, { { M.HINT_KEYS, "NonText" } })
-	return out
+	table.insert(rows, { "S-CR", "подтвердить" })
+	table.insert(rows, { "S-Space", "подтвердить" })
+	table.insert(rows, { "C-c", "отменить диалог" })
+	return head, rows
 end
 M._hint_lines = hint_lines
 
-local function show_hint(d)
-	local buf = state.dbuf
-	if not buf or not vim.api.nvim_buf_is_valid(buf) then
+local hint = { win = nil, buf = nil, d = nil }
+
+-- Группа which-key, если она есть, иначе запасная.
+local function hl_group(wk, fallback)
+	return vim.fn.hlexists(wk) == 1 and wk or fallback
+end
+
+local function hint_close()
+	hint.d = nil
+	if hint.win and vim.api.nvim_win_is_valid(hint.win) then
+		pcall(vim.api.nvim_win_close, hint.win, true)
+	end
+	if hint.buf and vim.api.nvim_buf_is_valid(hint.buf) then
+		pcall(vim.api.nvim_buf_delete, hint.buf, { force = true })
+	end
+	hint.win, hint.buf = nil, nil
+end
+
+-- Плавающее окно в правом нижнем углу окна диалога: в панели в 13 строк
+-- виртуальные строки отнимали бы место у текста ответа. Окно не берёт
+-- фокус и ввод; размер ограничен окном диалога.
+local function hint_render()
+	local d = hint.d
+	local dbuf = state.dbuf
+	local dwin = dbuf and vim.api.nvim_buf_is_valid(dbuf) and vim.fn.win_findbuf(dbuf)[1]
+	if not d or not dwin then
 		return
 	end
-	vim.api.nvim_buf_clear_namespace(buf, HINT_NS, 0, -1)
-	if d then
-		vim.api.nvim_buf_set_extmark(buf, HINT_NS, 0, 0, { virt_lines = hint_lines(d) })
+	local head, rows = hint_lines(d)
+	local kw = 1
+	for _, r in ipairs(rows) do
+		kw = math.max(kw, vim.fn.strdisplaywidth(r[1]))
 	end
+	local lines, width = {}, vim.fn.strdisplaywidth(head)
+	for _, r in ipairs(rows) do
+		local line = string.rep(" ", kw - vim.fn.strdisplaywidth(r[1])) .. r[1] .. HINT_SEP .. r[2]
+		table.insert(lines, line)
+		width = math.max(width, vim.fn.strdisplaywidth(line))
+	end
+	-- Рамка занимает по две строки и столбца окна диалога.
+	local dw, dh = vim.api.nvim_win_get_width(dwin), vim.api.nvim_win_get_height(dwin)
+	width = math.max(1, math.min(width, dw - 2))
+	local height = math.max(1, math.min(#lines, dh - 2))
+	if not (hint.buf and vim.api.nvim_buf_is_valid(hint.buf)) then
+		hint.buf = vim.api.nvim_create_buf(false, true)
+		vim.bo[hint.buf].bufhidden = "wipe"
+	end
+	vim.api.nvim_buf_set_lines(hint.buf, 0, -1, false, lines)
+	vim.api.nvim_buf_clear_namespace(hint.buf, HINT_NS, 0, -1)
+	local g_key = hl_group("WhichKey", "Special")
+	local g_sep = hl_group("WhichKeySeparator", "Comment")
+	local g_desc = hl_group("WhichKeyDesc", "Normal")
+	for i, r in ipairs(rows) do
+		local kend = kw + #r[1] - vim.fn.strdisplaywidth(r[1])
+		local function mark(c0, c1, g)
+			vim.api.nvim_buf_set_extmark(hint.buf, HINT_NS, i - 1, c0, { end_col = c1, hl_group = g })
+		end
+		mark(0, kend, g_key)
+		mark(kend, kend + #HINT_SEP, g_sep)
+		mark(kend + #HINT_SEP, #lines[i], r[3] and "CursorLine" or g_desc)
+	end
+	local cfg = {
+		relative = "win",
+		win = dwin,
+		anchor = "SE",
+		row = dh,
+		col = dw,
+		width = width,
+		height = height,
+		border = "rounded",
+		title = { { " " .. head .. " ", hl_group("WhichKeyTitle", "Title") } },
+		title_pos = "left",
+	}
+	if hint.win and vim.api.nvim_win_is_valid(hint.win) then
+		vim.api.nvim_win_set_config(hint.win, cfg)
+	else
+		cfg.focusable = false
+		cfg.style = "minimal"
+		cfg.zindex = 100
+		cfg.noautocmd = true
+		hint.win = vim.api.nvim_open_win(hint.buf, false, cfg)
+		vim.wo[hint.win].wrap = false
+		vim.wo[hint.win].winhighlight = "FloatBorder:"
+			.. hl_group("WhichKeyBorder", "FloatBorder")
+			.. ",NormalFloat:"
+			.. hl_group("WhichKeyNormal", "NormalFloat")
+	end
+end
+
+local function show_hint(d)
+	hint.d = d
+	if d then
+		hint_render()
+	else
+		hint_close()
+	end
+end
+
+M._show_hint = show_hint
+M._hint_win = function()
+	return hint.win
+end
+M._hint_buf = function()
+	return hint.buf
 end
 
 local function ensure_dialog_buf()
@@ -543,6 +639,15 @@ local function ensure_dialog_buf()
 	vim.bo[buf].swapfile = false
 	vim.bo[buf].bufhidden = "hide"
 	wrap_on_show()
+	vim.api.nvim_create_autocmd({ "WinResized", "VimResized" }, {
+		group = vim.api.nvim_create_augroup("claude_input_hint", { clear = true }),
+		callback = hint_render,
+	})
+	vim.api.nvim_create_autocmd({ "BufWipeout", "BufDelete" }, {
+		group = "claude_input_hint",
+		buffer = buf,
+		callback = hint_close,
+	})
 	-- Пустой буфер отмечается на каждом изменении: несколько клавиш одного куска
 	-- (Ctrl+U и цифра) дают одно событие TextChangedI уже без пустого состояния.
 	vim.api.nvim_buf_attach(buf, false, {
@@ -761,6 +866,7 @@ local function show_input()
 	-- Буфер диалога живёт только на время диалога: после него удаляется,
 	-- следующий диалог создаёт его заново.
 	state.dbuf = nil
+	hint_close()
 	if db and vim.api.nvim_buf_is_valid(db) then
 		pcall(vim.api.nvim_buf_delete, db, { force = true })
 	end
