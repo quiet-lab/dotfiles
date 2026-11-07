@@ -22,6 +22,16 @@ set -o vi
 . "$HOME/.cargo/env"
 eval "$(mise activate bash)"
 eval "$(tv init bash)"
+# tv init вешает bind -x на C-r и C-t, ble.sh берёт их при ble-attach поверх
+# ~/.blerc: возвращаем клавишам штатные виджеты ble.sh
+# (клавиши tv в ~/.blerc: M-t и C-M-t)
+[[ ! ${BLE_VERSION-} ]] || {
+  ble-bind -m vi_imap -f 'C-t' transpose-chars
+  ble-bind -m vi_imap -f 'C-r' history-isearch-backward
+}
+# Функции atuin без собственных привязок C-r и стрелки вверх: клавиши в ~/.blerc
+eval "$(atuin init bash --disable-ctrl-r --disable-up-arrow)"
+eval "$(zoxide init bash)"
 
 function y() {
   local tmp cwd

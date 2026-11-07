@@ -1,0 +1,27 @@
+# Конфиг ble.sh: привязки fzf, atuin и television (vi-режим, штатные клавиши
+# ble.sh не трогаются).
+
+# fzf: виджеты из contrib ble.sh; штатные C-t, C-r, M-c снимаются, клавиши свои
+_ble_contrib_fzf_base=/usr/share/fzf
+ble-import contrib/integration/fzf-completion
+ble-import contrib/integration/fzf-key-bindings
+ble-bind -m vi_imap -f 'C-t' transpose-chars
+ble-bind -m vi_nmap -f 'C-t' ''
+ble-bind -m vi_imap -f 'C-r' history-isearch-backward
+ble-bind -m vi_nmap -f 'C-r' vi_nmap/redo
+ble-bind -m vi_imap -f 'M-c' ''
+ble-bind -m vi_nmap -f 'M-c' ''
+ble-bind -m vi_imap -x 'M-h' fzf-history-widget
+ble-bind -m vi_nmap -s 'M-h' 'i\M-h'
+ble-bind -m vi_imap -x 'M-f' fzf-file-widget
+ble-bind -m vi_imap -c 'M-d' 'ble/util/eval-stdout "__fzf_cd__"'
+
+# atuin: функции даёт atuin init в .bashrc, клавиши свои
+ble-bind -m vi_imap -x 'M-r' __atuin_history
+ble-bind -m vi_nmap -x 'M-r' __atuin_history
+ble-bind -m vi_imap -x 'M-up' '__atuin_history --shell-up-key-binding'
+ble-bind -m vi_nmap -x 'M-up' '__atuin_history --shell-up-key-binding'
+
+# television: функции даёт tv init в .bashrc, клавиши свои
+ble-bind -m vi_imap -x 'M-t' tv_shell_history
+ble-bind -m vi_imap -x 'C-M-t' tv_smart_autocomplete
