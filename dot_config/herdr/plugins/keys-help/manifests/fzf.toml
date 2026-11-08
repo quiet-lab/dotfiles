@@ -13,40 +13,16 @@ origins = ["fzf", "user"]
 process = ["fzf"]
 shell_commands = ["fzf", "fzf *", "fzf-*", "__fzf_*"]
 
-[modes]
-default = "fzf"
+# Режима нет: контекст — просто `fzf` (спецификация, «Контекст и запись таблицы»).
 
-# Клавиши одного действия идут в строке man через пробел (`ctrl-b left`), значение группы
-# `key` источник не делит, поэтому на каждую позицию клавиши (1-я … 4-я) — свой источник.
+# Клавиши одного действия идут в строке man через пробел (`ctrl-b left`): захват `key`
+# берёт их все, `split` делит на отдельные записи, поэтому число клавиш не ограничено.
 [[source]]
 modes = ["*"]
 kind = "regex"
 command = ["man", "-P", "cat", "fzf"]
-regex = '''^ {9}(?P<action>[a-z][a-z0-9/+-]*(?:\([^)]*\))?) {2,}(?P<key>[^\s(]\S*)(?: +[^\s(]\S*)*(?: +\((?P<desc>.*)\))?$'''
-desc_field = "desc"
-origin = "fzf"
-
-[[source]]
-modes = ["*"]
-kind = "regex"
-command = ["man", "-P", "cat", "fzf"]
-regex = '''^ {9}(?P<action>[a-z][a-z0-9/+-]*(?:\([^)]*\))?) {2,}(?:[^\s(]\S* +){1}(?P<key>[^\s(]\S*)(?: +[^\s(]\S*)*(?: +\((?P<desc>.*)\))?$'''
-desc_field = "desc"
-origin = "fzf"
-
-[[source]]
-modes = ["*"]
-kind = "regex"
-command = ["man", "-P", "cat", "fzf"]
-regex = '''^ {9}(?P<action>[a-z][a-z0-9/+-]*(?:\([^)]*\))?) {2,}(?:[^\s(]\S* +){2}(?P<key>[^\s(]\S*)(?: +[^\s(]\S*)*(?: +\((?P<desc>.*)\))?$'''
-desc_field = "desc"
-origin = "fzf"
-
-[[source]]
-modes = ["*"]
-kind = "regex"
-command = ["man", "-P", "cat", "fzf"]
-regex = '''^ {9}(?P<action>[a-z][a-z0-9/+-]*(?:\([^)]*\))?) {2,}(?:[^\s(]\S* +){3}(?P<key>[^\s(]\S*)(?: +[^\s(]\S*)*(?: +\((?P<desc>.*)\))?$'''
+regex = '''^ {9}(?P<action>[a-z][a-z0-9/+-]*(?:\([^)]*\))?) {2,}(?P<key>[^\s(]\S*(?: +[^\s(]\S*)*)(?: +\((?P<desc>.*)\))?$'''
+split = ' +'
 desc_field = "desc"
 origin = "fzf"
 

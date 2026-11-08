@@ -1,0 +1,62 @@
+ble-bind -m 'menu_complete' -f TAB 'menu/forward cyclic'
+ble-bind -m 'menu_complete' -f RET menu_complete/accept
+ble-bind -m 'menu_complete' -f 0 menu/append-arg
+ble-bind -m 'menu_complete' -f 1 menu/append-arg
+ble-bind -m 'menu_complete' -f 2 menu/append-arg
+ble-bind -m 'menu_complete' -f 3 menu/append-arg
+ble-bind -m 'menu_complete' -f 4 menu/append-arg
+ble-bind -m 'menu_complete' -f 5 menu/append-arg
+ble-bind -m 'menu_complete' -f 6 menu/append-arg
+ble-bind -m 'menu_complete' -f 7 menu/append-arg
+ble-bind -m 'menu_complete' -f 8 menu/append-arg
+ble-bind -m 'menu_complete' -f 9 menu/append-arg
+ble-bind -m 'menu_complete' -f __default__ menu_complete/exit-default
+ble-bind -m 'menu_complete' -f __line_limit__ nop
+ble-bind -m 'menu_complete' -f home menu/beginning-of-page
+ble-bind -m 'menu_complete' -f prior menu/backward-page
+ble-bind -m 'menu_complete' -f end menu/end-of-page
+ble-bind -m 'menu_complete' -f next menu/forward-page
+ble-bind -m 'menu_complete' -f up menu/backward-line
+ble-bind -m 'menu_complete' -f down menu/forward-line
+ble-bind -m 'menu_complete' -f right menu/forward-column
+ble-bind -m 'menu_complete' -f left menu/backward-column
+ble-bind -m 'menu_complete' -f S-TAB 'menu/backward cyclic'
+ble-bind -m 'menu_complete' -f C-0 menu/append-arg
+ble-bind -m 'menu_complete' -f C-1 menu/append-arg
+ble-bind -m 'menu_complete' -f C-2 menu/append-arg
+ble-bind -m 'menu_complete' -f C-3 menu/append-arg
+ble-bind -m 'menu_complete' -f C-4 menu/append-arg
+ble-bind -m 'menu_complete' -f C-5 menu/append-arg
+ble-bind -m 'menu_complete' -f C-6 menu/append-arg
+ble-bind -m 'menu_complete' -f C-7 menu/append-arg
+ble-bind -m 'menu_complete' -f C-8 menu/append-arg
+ble-bind -m 'menu_complete' -f C-9 menu/append-arg
+ble-bind -m 'menu_complete' -f C-b menu/backward-column
+ble-bind -m 'menu_complete' -f C-f menu/forward-column
+ble-bind -m 'menu_complete' -f C-g menu_complete/cancel
+ble-bind -m 'menu_complete' -f C-i 'menu/forward cyclic'
+ble-bind -m 'menu_complete' -f C-m menu_complete/accept
+ble-bind -m 'menu_complete' -f C-n menu/forward-line
+ble-bind -m 'menu_complete' -f C-p menu/backward-line
+ble-bind -m 'menu_complete' -f 'C-x SP' menu_complete/toggle-hidden
+ble-bind -m 'menu_complete' -f 'C-x a' 'menu_complete/switch-style align-nowrap'
+ble-bind -m 'menu_complete' -f 'C-x c' 'menu_complete/switch-style dense-nowrap'
+ble-bind -m 'menu_complete' -f 'C-x d' 'menu_complete/switch-style desc'
+ble-bind -m 'menu_complete' -f 'C-x l' 'menu_complete/switch-style linewise'
+ble-bind -m 'menu_complete' -f 'C-x right' 'menu_complete/switch-style +'
+ble-bind -m 'menu_complete' -f 'C-x left' 'menu_complete/switch-style -'
+ble-bind -m 'menu_complete' -f 'C-x C-g' menu_complete/cancel
+ble-bind -m 'menu_complete' -f 'C-x C-n' 'menu_complete/switch-style +'
+ble-bind -m 'menu_complete' -f 'C-x C-p' 'menu_complete/switch-style -'
+ble-bind -m 'menu_complete' -f C-S-i 'menu/backward cyclic'
+ble-bind -m 'menu_complete' -f M-0 menu/append-arg
+ble-bind -m 'menu_complete' -f M-1 menu/append-arg
+ble-bind -m 'menu_complete' -f M-2 menu/append-arg
+ble-bind -m 'menu_complete' -f M-3 menu/append-arg
+ble-bind -m 'menu_complete' -f M-4 menu/append-arg
+ble-bind -m 'menu_complete' -f M-5 menu/append-arg
+ble-bind -m 'menu_complete' -f M-6 menu/append-arg
+ble-bind -m 'menu_complete' -f M-7 menu/append-arg
+ble-bind -m 'menu_complete' -f M-8 menu/append-arg
+ble-bind -m 'menu_complete' -f M-9 menu/append-arg
+ble-bind -m 'menu_complete' -f C-M-g menu_complete/cancel

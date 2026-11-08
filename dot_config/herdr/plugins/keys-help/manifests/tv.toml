@@ -12,8 +12,7 @@ origins = ["tv"]
 process = ["tv"]
 shell_commands = ["tv", "tv *", "tv_*"]
 
-[modes]
-default = "tv"
+# Режима нет: контекст — просто `tv` (спецификация, «Контекст и запись таблицы»).
 
 [[source]]
 modes = ["*"]

@@ -1,0 +1,18 @@
+ble-bind -m 'auto_complete' -f __defchar__ auto_complete/self-insert
+ble-bind -m 'auto_complete' -f __default__ auto_complete/cancel-default
+ble-bind -m 'auto_complete' -f __line_limit__ nop
+ble-bind -m 'auto_complete' -f ac_enter auto_complete/notify-enter
+ble-bind -m 'auto_complete' -f end 'auto_complete/@end insert'
+ble-bind -m 'auto_complete' -f right 'auto_complete/@end insert'
+ble-bind -m 'auto_complete' -f S-RET auto_complete/insert
+ble-bind -m 'auto_complete' -f C-RET auto_complete/accept-line
+ble-bind -m 'auto_complete' -f C-e 'auto_complete/@end insert'
+ble-bind -m 'auto_complete' -f C-f 'auto_complete/@end insert'
+ble-bind -m 'auto_complete' -f C-g auto_complete/cancel
+ble-bind -m 'auto_complete' -f C-j auto_complete/accept-line
+ble-bind -m 'auto_complete' -f 'C-x C-g' auto_complete/cancel
+ble-bind -m 'auto_complete' -f C-right 'auto_complete/@end insert-cword'
+ble-bind -m 'auto_complete' -f C-S-m auto_complete/insert
+ble-bind -m 'auto_complete' -f M-f 'auto_complete/@end insert-cword'
+ble-bind -m 'auto_complete' -f M-right 'auto_complete/@end insert-word'
+ble-bind -m 'auto_complete' -f C-M-g auto_complete/cancel

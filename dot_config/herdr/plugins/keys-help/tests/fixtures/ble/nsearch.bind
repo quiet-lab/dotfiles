@@ -1,0 +1,17 @@
+ble-bind -m 'nsearch' -f RET nsearch/exit
+ble-bind -m 'nsearch' -f __default__ nsearch/exit-default
+ble-bind -m 'nsearch' -f __line_limit__ nop
+ble-bind -m 'nsearch' -f prior nsearch/backward
+ble-bind -m 'nsearch' -f next nsearch/forward
+ble-bind -m 'nsearch' -f up nsearch/backward
+ble-bind -m 'nsearch' -f down nsearch/forward
+ble-bind -m 'nsearch' -f C-RET nsearch/accept-line
+ble-bind -m 'nsearch' -f C-g nsearch/cancel
+ble-bind -m 'nsearch' -f C-j nsearch/accept-line
+ble-bind -m 'nsearch' -f C-m nsearch/exit
+ble-bind -m 'nsearch' -f C-n nsearch/forward
+ble-bind -m 'nsearch' -f C-p nsearch/backward
+ble-bind -m 'nsearch' -f C-r nsearch/backward
+ble-bind -m 'nsearch' -f C-s nsearch/forward
+ble-bind -m 'nsearch' -f 'C-x C-g' nsearch/cancel
+ble-bind -m 'nsearch' -f C-M-g nsearch/cancel

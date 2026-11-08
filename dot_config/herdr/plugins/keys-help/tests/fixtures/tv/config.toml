@@ -1,0 +1,10 @@
+[ui]
+theme = "default"
+
+[keybindings]
+esc = "quit"
+ctrl-c = "quit"
+down = "select_next_entry"
+ctrl-n = "select_next_entry"
+ctrl-o = "toggle_preview"
+enter = "confirm_selection"

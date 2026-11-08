@@ -1,0 +1,12 @@
+   AVAILABLE ACTIONS:
+     A key or an event can be bound to one or more of the following actions.
+
+       ACTION:                      DEFAULT BINDINGS (NOTES):
+         abort                        ctrl-c  ctrl-g  ctrl-q  esc
+         accept                       enter   double-click
+         accept-non-empty             (same as accept except that  it  prevents
+     fzf from exiting without selection)
+         backward-char                ctrl-b  left
+         backward-delete-char         ctrl-h ctrl-bspace bspace
+         unix-line-discard            ctrl-u  alt-u  alt-i  alt-o  alt-p  alt-q  alt-r
+         toggle-preview               (toggle preview window)

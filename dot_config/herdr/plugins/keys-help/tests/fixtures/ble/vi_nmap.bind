@@ -1,0 +1,179 @@
+ble-bind -m 'vi_nmap' -f BS 'vi-command/backward-char wrap'
+ble-bind -m 'vi_nmap' -f RET 'accept-single-line-or vi-command/forward-first-non-space'
+ble-bind -m 'vi_nmap' -f ESC vi-command/bell
+ble-bind -m 'vi_nmap' -f SP 'vi-command/forward-char wrap'
+ble-bind -m 'vi_nmap' -f '!' 'vi-command/operator filter'
+ble-bind -m 'vi_nmap' -f '"' vi-command/register
+ble-bind -m 'vi_nmap' -f '#' vi-rlfunc/insert-comment
+ble-bind -m 'vi_nmap' -f '$' vi-command/forward-eol
+ble-bind -m 'vi_nmap' -f % 'vi-command/search-matchpair-or vi-command/percentage-line'
+ble-bind -m 'vi_nmap' -f '&' 'vi_nmap/@edit tilde-expand'
+ble-bind -m 'vi_nmap' -f \' 'vi-command/goto-mark line'
+ble-bind -m 'vi_nmap' -f '*' vi-command/search-word-forward
+ble-bind -m 'vi_nmap' -f + vi-command/forward-first-non-space
+ble-bind -m 'vi_nmap' -f ',' vi-command/search-char-reverse-repeat
+ble-bind -m 'vi_nmap' -f - vi-command/backward-first-non-space
+ble-bind -m 'vi_nmap' -f . vi_nmap/repeat
+ble-bind -m 'vi_nmap' -f / vi-command/search-forward
+ble-bind -m 'vi_nmap' -f 0 vi-command/append-arg
+ble-bind -m 'vi_nmap' -f 1 vi-command/append-arg
+ble-bind -m 'vi_nmap' -f 2 vi-command/append-arg
+ble-bind -m 'vi_nmap' -f 3 vi-command/append-arg
+ble-bind -m 'vi_nmap' -f 4 vi-command/append-arg
+ble-bind -m 'vi_nmap' -f 5 vi-command/append-arg
+ble-bind -m 'vi_nmap' -f 6 vi-command/append-arg
+ble-bind -m 'vi_nmap' -f 7 vi-command/append-arg
+ble-bind -m 'vi_nmap' -f 8 vi-command/append-arg
+ble-bind -m 'vi_nmap' -f 9 vi-command/append-arg
+ble-bind -m 'vi_nmap' -f ':' vi-command/commandline
+ble-bind -m 'vi_nmap' -f ';' vi-command/search-char-repeat
+ble-bind -m 'vi_nmap' -f '<' 'vi-command/operator indent-left'
+ble-bind -m 'vi_nmap' -f '>' 'vi-command/operator indent-right'
+ble-bind -m 'vi_nmap' -f '?' vi-command/search-backward
+ble-bind -m 'vi_nmap' -f @ vi_nmap/play-register
+ble-bind -m 'vi_nmap' -f A vi_nmap/append-mode-at-end-of-line
+ble-bind -m 'vi_nmap' -f B vi-command/backward-uword
+ble-bind -m 'vi_nmap' -f C vi_nmap/kill-forward-line-and-insert
+ble-bind -m 'vi_nmap' -f D vi_nmap/kill-forward-line
+ble-bind -m 'vi_nmap' -f E vi-command/forward-uword-end
+ble-bind -m 'vi_nmap' -f F vi-command/search-backward-char
+ble-bind -m 'vi_nmap' -f G vi-command/history-end
+ble-bind -m 'vi_nmap' -f H vi-command/nth-line
+ble-bind -m 'vi_nmap' -f I vi_nmap/insert-mode-at-first-non-space
+ble-bind -m 'vi_nmap' -f J vi_nmap/connect-line-with-space
+ble-bind -m 'vi_nmap' -f K vi_nmap/command-help
+ble-bind -m 'vi_nmap' -f L vi-command/nth-last-line
+ble-bind -m 'vi_nmap' -f N vi-command/search-reverse-repeat
+ble-bind -m 'vi_nmap' -f O vi_nmap/insert-mode-at-backward-line
+ble-bind -m 'vi_nmap' -f P vi_nmap/paste-before
+ble-bind -m 'vi_nmap' -f R vi_nmap/replace-mode
+ble-bind -m 'vi_nmap' -f S vi_nmap/kill-current-line-and-insert
+ble-bind -m 'vi_nmap' -f T vi-command/search-backward-char-prev
+ble-bind -m 'vi_nmap' -f U vi_nmap/revert
+ble-bind -m 'vi_nmap' -f V vi_nmap/linewise-visual-mode
+ble-bind -m 'vi_nmap' -f W vi-command/forward-uword
+ble-bind -m 'vi_nmap' -f X vi_nmap/kill-backward-char
+ble-bind -m 'vi_nmap' -f Y vi_nmap/copy-current-line
+ble-bind -m 'vi_nmap' -f 'Z Q' 'vi-command:q'
+ble-bind -m 'vi_nmap' -f 'Z Z' 'vi-command:q'
+ble-bind -m 'vi_nmap' -f '^' vi-command/first-non-space
+ble-bind -m 'vi_nmap' -f _ vi-command/first-non-space-forward
+ble-bind -m 'vi_nmap' -f '`' vi-command/goto-mark
+ble-bind -m 'vi_nmap' -f a vi_nmap/append-mode
+ble-bind -m 'vi_nmap' -f b vi-command/backward-vword
+ble-bind -m 'vi_nmap' -f c 'vi-command/operator c'
+ble-bind -m 'vi_nmap' -f d 'vi-command/operator d'
+ble-bind -m 'vi_nmap' -f e vi-command/forward-vword-end
+ble-bind -m 'vi_nmap' -f f vi-command/search-forward-char
+ble-bind -m 'vi_nmap' -f 'g $' vi-command/graphical-forward-eol
+ble-bind -m 'vi_nmap' -f 'g 0' vi-command/beginning-of-graphical-line
+ble-bind -m 'vi_nmap' -f 'g ?' 'vi-command/operator rot13'
+ble-bind -m 'vi_nmap' -f 'g @' 'vi-command/operator map'
+ble-bind -m 'vi_nmap' -f 'g E' vi-command/backward-uword-end
+ble-bind -m 'vi_nmap' -f 'g H' vi_nmap/linewise-select-mode
+ble-bind -m 'vi_nmap' -f 'g I' vi_nmap/insert-mode-at-beginning-of-line
+ble-bind -m 'vi_nmap' -f 'g J' vi_nmap/connect-line
+ble-bind -m 'vi_nmap' -f 'g R' vi_nmap/virtual-replace-mode
+ble-bind -m 'vi_nmap' -f 'g U' 'vi-command/operator U'
+ble-bind -m 'vi_nmap' -f 'g ^' vi-command/graphical-first-non-space
+ble-bind -m 'vi_nmap' -f 'g _' vi-command/last-non-space
+ble-bind -m 'vi_nmap' -f 'g e' vi-command/backward-vword-end
+ble-bind -m 'vi_nmap' -f 'g g' vi-command/history-beginning
+ble-bind -m 'vi_nmap' -f 'g h' vi_nmap/charwise-select-mode
+ble-bind -m 'vi_nmap' -f 'g i' vi_nmap/insert-mode-at-previous-point
+ble-bind -m 'vi_nmap' -f 'g j' vi-command/graphical-forward-line
+ble-bind -m 'vi_nmap' -f 'g k' vi-command/graphical-backward-line
+ble-bind -m 'vi_nmap' -f 'g m' vi-command/middle-of-graphical-line
+ble-bind -m 'vi_nmap' -f 'g o' vi-command/nth-byte
+ble-bind -m 'vi_nmap' -f 'g q' 'vi-command/operator fold'
+ble-bind -m 'vi_nmap' -f 'g r' vi_nmap/virtual-replace-char
+ble-bind -m 'vi_nmap' -f 'g u' 'vi-command/operator u'
+ble-bind -m 'vi_nmap' -f 'g v' vi-command/previous-visual-area
+ble-bind -m 'vi_nmap' -f 'g w' 'vi-command/operator fold-preserve-point'
+ble-bind -m 'vi_nmap' -f 'g ~' 'vi-command/operator toggle_case'
+ble-bind -m 'vi_nmap' -f 'g home' vi-command/beginning-of-graphical-line
+ble-bind -m 'vi_nmap' -f 'g end' vi-command/graphical-forward-eol
+ble-bind -m 'vi_nmap' -f 'g up' vi-command/graphical-backward-line
+ble-bind -m 'vi_nmap' -f 'g down' vi-command/graphical-forward-line
+ble-bind -m 'vi_nmap' -f 'g C-h' vi_nmap/blockwise-select-mode
+ble-bind -m 'vi_nmap' -f h vi-command/backward-char
+ble-bind -m 'vi_nmap' -f i vi_nmap/insert-mode
+ble-bind -m 'vi_nmap' -f j vi-command/forward-line
+ble-bind -m 'vi_nmap' -f k vi-command/backward-line
+ble-bind -m 'vi_nmap' -f l vi-command/forward-char
+ble-bind -m 'vi_nmap' -f m vi-command/set-mark
+ble-bind -m 'vi_nmap' -f n vi-command/search-repeat
+ble-bind -m 'vi_nmap' -f o vi_nmap/insert-mode-at-forward-line
+ble-bind -m 'vi_nmap' -f p vi_nmap/paste-after
+ble-bind -m 'vi_nmap' -f q vi_nmap/record-register
+ble-bind -m 'vi_nmap' -f r vi_nmap/replace-char
+ble-bind -m 'vi_nmap' -f s vi_nmap/kill-forward-char-and-insert
+ble-bind -m 'vi_nmap' -f t vi-command/search-forward-char-prev
+ble-bind -m 'vi_nmap' -f u vi_nmap/undo
+ble-bind -m 'vi_nmap' -f v vi_nmap/charwise-visual-mode
+ble-bind -m 'vi_nmap' -f w vi-command/forward-vword
+ble-bind -m 'vi_nmap' -f x vi_nmap/kill-forward-char
+ble-bind -m 'vi_nmap' -f y 'vi-command/operator y'
+ble-bind -m 'vi_nmap' -f 'z RET' vi_nmap/scroll-to-top-non-space-and-redraw
+ble-bind -m 'vi_nmap' -f 'z +' vi_nmap/scroll-or-pagedown-and-redraw
+ble-bind -m 'vi_nmap' -f 'z -' vi_nmap/scroll-to-bottom-non-space-and-redraw
+ble-bind -m 'vi_nmap' -f 'z .' vi_nmap/scroll-to-center-non-space-and-redraw
+ble-bind -m 'vi_nmap' -f 'z b' vi_nmap/scroll-to-bottom-and-redraw
+ble-bind -m 'vi_nmap' -f 'z t' vi_nmap/scroll-to-top-and-redraw
+ble-bind -m 'vi_nmap' -f 'z z' vi_nmap/scroll-to-center-and-redraw
+ble-bind -m 'vi_nmap' -f 'z C-m' vi_nmap/scroll-to-top-non-space-and-redraw
+ble-bind -m 'vi_nmap' -f '|' vi-command/nth-column
+ble-bind -m 'vi_nmap' -f '~' vi_nmap/forward-char-toggle-case
+ble-bind -m 'vi_nmap' -f DEL 'vi-command/backward-char wrap'
+ble-bind -m 'vi_nmap' -f __default__ vi-command/decompose-meta
+ble-bind -m 'vi_nmap' -f __line_limit__ vi_nmap/__line_limit__
+ble-bind -m 'vi_nmap' -f ac_enter auto-complete-enter
+ble-bind -m 'vi_nmap' -f insert vi_nmap/insert-mode
+ble-bind -m 'vi_nmap' -f home vi-command/beginning-of-line
+ble-bind -m 'vi_nmap' -f prior vi_nmap/pageup
+ble-bind -m 'vi_nmap' -f delete vi_nmap/kill-forward-char
+ble-bind -m 'vi_nmap' -f end vi-command/forward-eol
+ble-bind -m 'vi_nmap' -f next vi_nmap/pagedown
+ble-bind -m 'vi_nmap' -f f1 vi_nmap/command-help
+ble-bind -m 'vi_nmap' -f paste_begin vi-command/bracketed-paste
+ble-bind -m 'vi_nmap' -f up vi-command/backward-line
+ble-bind -m 'vi_nmap' -f down vi-command/forward-line
+ble-bind -m 'vi_nmap' -f right vi-command/forward-char
+ble-bind -m 'vi_nmap' -f left vi-command/backward-char
+ble-bind -m 'vi_nmap' -f S-right vi-command/forward-vword
+ble-bind -m 'vi_nmap' -f S-left vi-command/backward-vword
+ble-bind -m 'vi_nmap' -f C-RET accept-line
+ble-bind -m 'vi_nmap' -f 'C-?' 'vi-command/backward-char wrap'
+ble-bind -m 'vi_nmap' -f 'C-[' vi-command/bell
+ble-bind -m 'vi_nmap' -f 'C-\ C-n' nop
+ble-bind -m 'vi_nmap' -f C-a vi_nmap/increment
+ble-bind -m 'vi_nmap' -f C-b vi_nmap/pageup
+ble-bind -m 'vi_nmap' -f C-c vi-command/cancel
+ble-bind -m 'vi_nmap' -f C-d vi-command/exit-on-empty-line
+ble-bind -m 'vi_nmap' -f C-e vi_nmap/forward-scroll
+ble-bind -m 'vi_nmap' -f C-f vi_nmap/pagedown
+ble-bind -m 'vi_nmap' -f C-g vi-command/show-line-info
+ble-bind -m 'vi_nmap' -f C-h 'vi-command/backward-char wrap'
+ble-bind -m 'vi_nmap' -f C-j accept-line
+ble-bind -m 'vi_nmap' -f C-l clear-screen
+ble-bind -m 'vi_nmap' -f C-m 'accept-single-line-or vi-command/forward-first-non-space'
+ble-bind -m 'vi_nmap' -f C-n vi-command/forward-line
+ble-bind -m 'vi_nmap' -f C-p vi-command/backward-line
+ble-bind -m 'vi_nmap' -f C-q vi_nmap/blockwise-visual-mode
+ble-bind -m 'vi_nmap' -f C-r vi_nmap/redo
+ble-bind -m 'vi_nmap' -f C-u vi_nmap/backward-line-scroll
+ble-bind -m 'vi_nmap' -f C-v vi_nmap/blockwise-visual-mode
+ble-bind -m 'vi_nmap' -f C-x vi_nmap/decrement
+ble-bind -m 'vi_nmap' -s 'C-x C-_ A 0 C-g' 
+ble-bind -m 'vi_nmap' -f C-y vi_nmap/backward-scroll
+ble-bind -m 'vi_nmap' -c C-z fg
+ble-bind -m 'vi_nmap' -f C-home vi-command/first-nol
+ble-bind -m 'vi_nmap' -f C-delete vi-rlfunc/kill-word
+ble-bind -m 'vi_nmap' -f C-end vi-command/last-eol
+ble-bind -m 'vi_nmap' -f C-right vi-command/forward-vword
+ble-bind -m 'vi_nmap' -f C-left vi-command/backward-vword
+ble-bind -m 'vi_nmap' -s M-h 'i\eh'
+ble-bind -m 'vi_nmap' -x M-r __atuin_history
+ble-bind -m 'vi_nmap' -x M-up '__atuin_history --shell-up-key-binding'
+ble-bind -m 'vi_nmap' -f M-right vi-command/forward-vword
+ble-bind -m 'vi_nmap' -f M-left vi-command/backward-vword
