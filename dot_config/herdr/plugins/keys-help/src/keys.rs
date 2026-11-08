@@ -80,6 +80,10 @@ fn normalize_token(tok: &str) -> Vec<String> {
     if tok.chars().count() == 1 {
         return vec![single_char(tok.chars().next().unwrap_or(' '))];
     }
+    // Имя через дефис (`double-click`, `page-down`) — одна клавиша.
+    if tok.contains('-') && tok.chars().all(|c| c.is_alphanumeric() || c == '-') {
+        return vec![tok.to_string()];
+    }
     // Ключ из нескольких символов без признаков аккорда — последовательность.
     tok.chars().map(single_char).collect()
 }

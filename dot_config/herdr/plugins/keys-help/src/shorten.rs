@@ -103,19 +103,6 @@ fn strip_leading_words(mut s: String) -> String {
     }
 }
 
-fn lower_first(s: &str) -> String {
-    let mut it = s.chars();
-    let Some(first) = it.next() else {
-        return String::new();
-    };
-    // Аббревиатуры (URL, PDF) не трогаются.
-    let second_upper = s.chars().nth(1).is_some_and(|c| c.is_uppercase());
-    if second_upper {
-        return s.to_string();
-    }
-    first.to_lowercase().chain(it).collect()
-}
-
 /// Обрезка до `max` символов по границе слова с `…`.
 pub fn truncate_words(s: &str, max: usize) -> String {
     if s.chars().count() <= max {
@@ -142,7 +129,6 @@ pub fn shorten(full: &str) -> String {
     let s = first_sentence(&s).to_string();
     let s = drop_parens(&s);
     let s = strip_leading_words(s);
-    let s = lower_first(&s);
     let s = s.trim_end_matches(['.', ';', ':']).trim().to_string();
     truncate_words(&s, MAX_DESC)
 }
@@ -165,7 +151,7 @@ mod tests {
         assert!(d.chars().count() <= MAX_DESC, "{d}");
         assert!(d.ends_with('…'));
         assert!(!d.contains("  "));
-        assert_eq!(d, "move the cursor to the…");
+        assert_eq!(d, "Move the cursor to the…");
     }
 
     #[test]
@@ -178,7 +164,7 @@ mod tests {
 
     #[test]
     fn markup() {
-        assert_eq!(shorten("\\fBQuit\\fR now"), "quit now");
+        assert_eq!(shorten("\\fBQuit\\fR now"), "Quit now");
         assert_eq!(strip_man_markup("Q\u{8}Qu\u{8}u"), "Qu");
     }
 }

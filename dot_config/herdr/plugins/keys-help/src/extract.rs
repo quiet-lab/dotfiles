@@ -246,10 +246,20 @@ fn term_keys(term: &str) -> Option<Vec<String>> {
             parts.push(t.to_string());
         }
     }
-    if parts.is_empty() || !parts.iter().all(|p| keys::looks_like_key(p)) {
+    if parts.is_empty() || !parts.iter().all(|p| keys::looks_like_key(p) || is_key_sequence(p)) {
         return None;
     }
     Some(parts)
+}
+
+/// Последовательность клавиш через пробел (`C-x C-k`): каждое слово похоже
+/// на клавишу и хотя бы одно из них длиннее символа (аккорд, имя клавиши),
+/// иначе за последовательность сошли бы обычные слова из одной буквы.
+fn is_key_sequence(s: &str) -> bool {
+    let words: Vec<&str> = s.split_whitespace().collect();
+    words.len() > 1
+        && words.iter().all(|w| keys::looks_like_key(w))
+        && words.iter().any(|w| w.chars().count() > 1)
 }
 
 /// Клавиши в начале строки без промежутка из двух пробелов: `h or H Help: …`.
@@ -264,8 +274,25 @@ fn leading_keys(content: &str) -> Option<(Vec<String>, String)> {
         if !keys::looks_like_key(w) {
             break;
         }
-        keys_list.push(w.to_string());
-        i += 1;
+        // Следующие слова-клавиши без запятой и «or» продолжают
+        // последовательность (`C-x C-k`), если в ней есть аккорд или имя.
+        let mut seq = vec![w];
+        let mut j = i + 1;
+        while !words[j - 1].ends_with(',') && j < words.len() {
+            let next = words[j].trim_end_matches(',');
+            if next == "or" || !keys::looks_like_key(next) {
+                break;
+            }
+            seq.push(next);
+            j += 1;
+        }
+        if seq.len() > 1 && is_key_sequence(&seq.join(" ")) {
+            keys_list.push(seq.join(" "));
+            i = j;
+        } else {
+            keys_list.push(w.to_string());
+            i += 1;
+        }
         if words.get(i) == Some(&"or") {
             i += 1;
             continue;
@@ -1025,7 +1052,7 @@ replace_if = "keymap"
         };
         assert_eq!(b.entries[0].key, "g g");
         assert_eq!(b.entries[0].desc_full, "Move cursor to the top");
-        assert_eq!(b.entries[0].desc, "move cursor to the top");
+        assert_eq!(b.entries[0].desc, "Move cursor to the top");
         assert_eq!(b.entries[1].key, "C-a");
         assert_eq!(b.entries[1].action, "a; b");
     }
@@ -1112,7 +1139,7 @@ raw_fields = ["rhs", "source"]
         };
         assert_eq!(b.entries[0].key, "SP f f");
         assert_eq!(b.entries[0].origin, "lazyvim");
-        assert_eq!(b.entries[0].desc, "find Files");
+        assert_eq!(b.entries[0].desc, "Find Files");
         assert_eq!(b.entries[0].raw, "/x.lua:3");
     }
 }

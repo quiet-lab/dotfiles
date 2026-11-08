@@ -355,21 +355,19 @@ fn generic_man_key_bindings_section() {
     assert!(slash.desc_full.contains("current logical line"));
 }
 
-/// Дефект ядра (extract.rs, `term_keys`/`leading_keys`): последовательность клавиш из двух
-/// слов в справке man (`C-x C-k`) теряется — запись получает клавишу `C-x` и описание.
+/// Последовательность клавиш из двух слов в справке man (`C-x C-k`) — одна клавиша,
+/// регистр описания сохраняется.
 #[test]
-#[ignore = "дефект ядра: последовательность клавиш в man (extract.rs term_keys)"]
 fn generic_man_key_sequence() {
     let man = "KEY BINDINGS\n       C-x C-k    Kill the buffer (asks first).\n\n       q          Quit now\n";
     let t = generic_table("kh-man", man, &tmpdir("gen-seq"));
     let e = find(&t, "C-x C-k").expect("C-x C-k");
-    assert_eq!(e.desc, "kill the buffer");
+    assert_eq!(e.desc, "Kill the buffer");
 }
 
-/// Дефект ядра (keys.rs, `normalize_token`): многосимвольное имя без аккорда
-/// (`double-click` из man fzf) разбивается на символы `d o u b l e - c l i c k`.
+/// Многосимвольное имя без аккорда (`double-click` из man fzf) остаётся одной клавишей,
+/// а не распадается на символы.
 #[test]
-#[ignore = "дефект ядра: имя события fzf double-click распадается на символы (keys.rs normalize_token)"]
 fn fzf_double_click_name_kept() {
     let h = tmpdir("fzf-dc");
     let t = table(&manifest_named("fzf"), &fzf_sub(&h, None), &fzf_outputs());
