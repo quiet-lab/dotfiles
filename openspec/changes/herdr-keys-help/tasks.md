@@ -67,7 +67,7 @@
 
 - [ ] 8.1 Открытие и закрытие: `herdr plugin action invoke quiet-lab.keys-help.toggle`, `herdr pane list` до и после, высота ≈ 1/3 и ≥ 5 строк, повторный вызов закрывает.
 - [x] 8.2 Контексты ble.sh: `herdr pane send-keys` Esc и `i` в оболочку панели, после каждого события — `herdr pane read <просмотрщик> --source visible` показывает `ble.vi_nmap`/`ble.vi_imap`.
-- [ ] 8.3 Запуск и выход yazi, atuin, fzf, tv, Neovim командами `pane run`/`send-keys`; после каждого — чтение панели просмотрщика. Пройдено: yazi (manager, input, выход), atuin, fzf, tv; не пройдено: Neovim insert/visual (запись nvim с pid серверного процесса не совпадает с pid переднего плана, запись игнорируется).
+- [x] 8.3 Запуск и выход yazi, atuin, fzf, tv, Neovim командами `pane run`/`send-keys`; после каждого — чтение панели просмотрщика. Пройдено: yazi (manager, input, выход), atuin, fzf, tv; Neovim — `nvim x.txt`, i, v, Esc дают шапки nvim.insert, nvim.visual, nvim.normal (режимы поданы `nvim --server … --remote-send`).
 - [x] 8.4 Следование за фокусом: `herdr pane focus` другой панели workspace — шапка показывает её `pane_id`.
 - [x] 8.5 Неизвестная программа: запуск `kh-unknown` — строка в файле неизвестных; хук `SessionStart` печатает её.
 - [x] 8.7 Навигация: `pane send-keys` `l`, `/`, образец, Enter, `n`, `K`, Esc, `q` в панель просмотрщика; после каждого — `pane read` просмотрщика (выбор, подсветка, окно подробностей), после `q` — фокус на цели по `pane list`.
