@@ -28,14 +28,16 @@ _keys_help_record=$_keys_help_pane_dir/ble-$$.json
 _keys_help_dump_dir=$_keys_help_base/ble/$$
 _keys_help_env_file=$_keys_help_base/env-vars
 _keys_help_env_mark=$_keys_help_dump_dir/env-vars.read
-_keys_help_marker=$_keys_help_pane_dir/viewer
+# Самая свежая отметка просмотрщика (viewer.<pid просмотрщика>; прежнее
+# имя viewer тоже принимается), найденная последней проверкой.
+_keys_help_mark=
 _keys_help_line_file=$_keys_help_pane_dir/ble-$$.line
 _keys_help_words_file=$_keys_help_pane_dir/ble-$$.words
 _keys_help_cands_file=$_keys_help_pane_dir/ble-$$.cands
 # Последние записанные курсор и строка, слова и кандидаты: запись
-# только при изменении. Пустое значение — «ещё не писали при этой
-# отметке»: пропажа отметки сбрасывает их, и после её появления файлы
-# пишутся заново.
+# только при изменении. Файл пишется заново и без изменения, если он
+# исчез, пуст или старше самой свежей отметки (просмотрщик вернулся
+# к панели или отметку поставил новый просмотрщик).
 _keys_help_line_last=
 _keys_help_words_last=
 _keys_help_cands_last=
@@ -160,13 +162,31 @@ function keys_help/write {
   _keys_help_last_base=$base
 }
 
-# Есть ли отметка просмотрщика; без неё — сброс запомненного, чтобы
-# после появления отметки файлы строки, слов и кандидатов писались
-# заново.
+# Наблюдает ли панель просмотрщик: есть ли хоть одна отметка
+# viewer.* (или viewer). Самая свежая — в _keys_help_mark. Встроенный
+# glob, без внешних процессов; failglob пользователя на время снимается.
 function keys_help/marked {
-  [[ -e $_keys_help_marker ]] && return 0
-  _keys_help_line_last= _keys_help_words_last= _keys_help_cands_last=
-  return 1
+  local f newest= fg=
+  [[ :$BASHOPTS: == *:failglob:* ]] && { fg=1; builtin shopt -u failglob; }
+  for f in "$_keys_help_pane_dir"/viewer "$_keys_help_pane_dir"/viewer.*; do
+    [[ -e $f ]] || continue
+    [[ $newest && ! $f -nt $newest ]] || newest=$f
+  done
+  [[ $fg ]] && builtin shopt -s failglob
+  _keys_help_mark=$newest
+  [[ $newest ]]
+}
+
+# Файл $1 надо писать заново: исчез, пуст или старше отметки.
+function keys_help/stale {
+  [[ ! -s $1 || $_keys_help_mark -nt $1 ]]
+}
+
+# Без наблюдения изменилось то, что лежит в файле $1: файл (если он
+# остался от прежнего наблюдения) обнуляется один раз, чтобы просмотрщик
+# не показал устаревшее. Обнуление — встроенным перенаправлением.
+function keys_help/invalidate {
+  [[ -s $1 ]] && : 2>/dev/null > "$1"
 }
 
 # Значение для поля TSV: табуляции и переводы строк — пробелами.
@@ -177,7 +197,6 @@ function keys_help/tsv-field {
 # Строка ввода после отрисовки: «курсор\nтекст» при изменении.
 function keys_help/on-render {
   [[ $BASHPID == "$$" ]] || return 0
-  keys_help/marked || return 0
   # Автоподсказка вставлена в текст между курсором и меткой
   # (_ble_edit_mark_active = auto_complete): в строку она не входит.
   local text=$_ble_edit_str
@@ -185,8 +204,20 @@ function keys_help/on-render {
     text=${text::_ble_edit_ind}${text:_ble_edit_mark}
   fi
   local cur=$_ble_edit_ind:$text
-  [[ $cur == "$_keys_help_line_last" ]] && return 0
-  [[ $_keys_help_words_last ]] || keys_help/write-words
+  if ! keys_help/marked; then
+    if [[ $cur != "$_keys_help_line_last" ]]; then
+      keys_help/invalidate "$_keys_help_line_file"
+      keys_help/invalidate "$_keys_help_cands_file"
+      _keys_help_line_last= _keys_help_cands_last=
+    fi
+    return 0
+  fi
+  # Слова: пустой файл допустим, если слов нет (запомнено как «\n»).
+  if [[ ! -e $_keys_help_words_file || $_keys_help_mark -nt $_keys_help_words_file ]] ||
+     [[ ! -s $_keys_help_words_file && $_keys_help_words_last != $'\n' ]]; then
+    keys_help/write-words force
+  fi
+  [[ $cur == "$_keys_help_line_last" ]] && ! keys_help/stale "$_keys_help_line_file" && return 0
   printf '%s\n%s' "$_ble_edit_ind" "$text" 2>/dev/null > "$_keys_help_line_file" || return 0
   _keys_help_line_last=$cur
 }
@@ -211,9 +242,10 @@ function keys_help/collect-sabbrev {
 
 # Слова оболочки: аббревиатуры, псевдонимы (BASH_ALIASES), функции
 # (compgen -A function без имён с / и с ведущим _). Файл пишется только
-# при изменении содержимого.
+# при изменении содержимого или с аргументом force.
 function keys_help/write-words {
   keys_help/ensure-dirs || return 0
+  [[ ${1-} == force ]] && _keys_help_words_last=
   keys_help/collect-sabbrev
   local out=$_keys_help_sabbrev_lines name ret
   for name in "${!BASH_ALIASES[@]}"; do
@@ -244,7 +276,7 @@ function keys_help/on-cands {
   keys_help/ensure-dirs || return 0
   local out
   printf -v out '%s\n' "${COMPV-}" "${cand_word[@]}"
-  [[ $out == "$_keys_help_cands_last" ]] && return 0
+  [[ $out == "$_keys_help_cands_last" ]] && ! keys_help/stale "$_keys_help_cands_file" && return 0
   printf '%s' "$out" 2>/dev/null > "$_keys_help_cands_file" || return 0
   _keys_help_cands_last=$out
 }
@@ -268,7 +300,13 @@ function keys_help/precmd {
   keys_help/read-env-names
   keys_help/update-env-json
   keys_help/write active
-  keys_help/marked && keys_help/write-words
+  if keys_help/marked; then
+    keys_help/write-words
+  elif [[ $_keys_help_words_last ]]; then
+    # Команда без наблюдения могла завести слова: прежний файл неверен.
+    keys_help/invalidate "$_keys_help_words_file"
+    _keys_help_words_last=
+  fi
 }
 
 function keys_help/preexec {

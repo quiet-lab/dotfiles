@@ -402,7 +402,8 @@ def test_input_line(tmp):
     line = os.path.join(h.pane_dir, f"ble-{pid}.line")
     words = os.path.join(h.pane_dir, f"ble-{pid}.words")
     cands = os.path.join(h.pane_dir, f"ble-{pid}.cands")
-    marker = os.path.join(h.pane_dir, "viewer")
+    # Отметка персональная для просмотрщика: viewer.<pid просмотрщика>.
+    marker = os.path.join(h.pane_dir, "viewer.4242")
     h.wait_record("первая запись active", state="active", mode="vi_imap")
 
     # Без отметки: отрисовка идёт, файлов строки и слов нет. Эхо в
@@ -435,18 +436,60 @@ def test_input_line(tmp):
     h.send_key(b" \xd1\x8e")  # пробел и «ю»
     h.wait(".line: символы, не байты", lambda: read_file(line) == "7\nls -l ю")
 
-    # Без отметки запись не делается: файл не меняется.
+    # Без отметки новая строка не пишется: прежний файл обнуляется один
+    # раз, чтобы просмотрщик не показал устаревшее.
     os.unlink(marker)
-    before = read_file(line)
     h.send_key(b"zzz")
     h.wait("эхо «zzz» без отметки", lambda: b"zzz" in h.plain())
-    check(read_file(line) == before, "без отметки .line не меняется")
+    h.wait(".line обнулён без отметки", lambda: read_file(line) == "")
+    m0 = os.stat(line).st_mtime_ns
+    h.send_key(b"y")
+    h.wait("эхо «y» без отметки", lambda: b"zzzy" in h.plain())
+    check(read_file(line) == "" and os.stat(line).st_mtime_ns == m0,
+          "без отметки .line больше не пишется")
 
     # Новая аббревиатура: .words обновляется по PRECMD.
     open(marker, "w").close()
     h.send_key(b"\x15ble-sabbrev gco='git checkout'\r")
     h.wait(".words: новая аббревиатура gco",
            lambda: "sabbrev\tgco\tgit checkout" in (read_file(words) or "").splitlines())
+
+    # Просмотрщик ушёл к другой панели (отметка и файлы удалены) и вернулся
+    # с новой отметкой: файлы пишутся заново, хотя строка не менялась.
+    h.send_key(b"abc")
+    h.wait(".line «abc»", lambda: read_file(line) == "3\nabc")
+    os.unlink(marker)
+    for f in (line, words, cands):
+        if os.path.exists(f):
+            os.unlink(f)
+    marker = os.path.join(h.pane_dir, "viewer.4343")
+    open(marker, "w").close()
+    h.send_key(b"\x05")  # C-e: курсор уже в конце, строка прежняя
+    h.wait(".line снова есть после возврата", lambda: read_file(line) == "3\nabc")
+    h.wait(".words снова есть после возврата", lambda: "alias\tkhal\tls -la" in (read_file(words) or ""))
+
+    # Просмотрщик снял только отметку и вернулся без ввода: файлы верны.
+    os.unlink(marker)
+    marker = os.path.join(h.pane_dir, "viewer.4444")
+    open(marker, "w").close()
+    check(read_file(line) == "3\nabc" and "alias\tkhal" in read_file(words),
+          "возврат без ввода: .line и .words на месте")
+
+    # Новая отметка при целых файлах: запись заново без изменения строки.
+    m0 = os.stat(line).st_mtime_ns
+    os.utime(marker, ns=(m0 + 1_000_000, m0 + 1_000_000))
+    h.send_key(b"\x05")
+    h.wait(".line переписан после новой отметки", lambda: os.stat(line).st_mtime_ns > m0)
+
+    # Команда без наблюдения: .words обнуляется, после возврата — заново.
+    os.unlink(marker)
+    h.send_key(b"\x15true\r")
+    h.wait(".words обнулён после команды без отметки", lambda: read_file(words) == "")
+    marker = os.path.join(h.pane_dir, "viewer.4545")
+    open(marker, "w").close()
+    h.send_key(b"\x05")
+    h.wait(".words снова есть", lambda: "alias\tkhal\tls -la" in (read_file(words) or ""))
+    h.wait(".line пустой строки", lambda: read_file(line) == "0\n")
 
     # Кандидаты дополнения по TAB: COMPV первой строкой, затем кандидаты.
     h.send_key(b"kh_fa\t")
