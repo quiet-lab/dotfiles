@@ -60,12 +60,12 @@
 ## 7. Конфиг herdr и wezterm
 
 - [x] 7.1 `dot_config/herdr/config.toml`: `[[keys.command]]` клавиши `ctrl+alt+shift+slash` → `quiet-lab.keys-help.toggle`; `[ui]` `pane_outer_borders = false`, `pane_gaps = false` (D14). Проверка: `herdr server reload-config` без диагностик. (Sonnet)
-- [ ] 7.2 `enable_kitty_keyboard = true` в `dot_config/wezterm/wezterm.lua` и таблица регрессий решения 2 — результат параллельного исполнителя; здесь отметить ссылкой на его отчёт. (Opus, отдельный исполнитель)
-- [ ] 7.3 Если клавиша не доходит до herdr после 7.2 — доработка форка herdr по решению 2 (`docs/duty/README.md` форка). (Opus)
+- [x] 7.2 `enable_kitty_keyboard = true` в `dot_config/wezterm/wezterm.lua` и таблица регрессий решения 2 — результат параллельного исполнителя; здесь отметить ссылкой на его отчёт. (Opus, отдельный исполнитель)
+- [x] 7.3 Если клавиша не доходит до herdr после 7.2 — доработка форка herdr по решению 2 (`docs/duty/README.md` форка). (Opus)
 
 ## 8. Проверка вживую командами (агент)
 
-- [ ] 8.1 Открытие и закрытие: `herdr plugin action invoke quiet-lab.keys-help.toggle`, `herdr pane list` до и после, высота ≈ 1/3 и ≥ 5 строк, повторный вызов закрывает.
+- [x] 8.1 Открытие и закрытие: `herdr plugin action invoke quiet-lab.keys-help.toggle`, `herdr pane list` до и после, высота ≈ 1/3 и ≥ 5 строк, повторный вызов закрывает.
 - [x] 8.2 Контексты ble.sh: `herdr pane send-keys` Esc и `i` в оболочку панели, после каждого события — `herdr pane read <просмотрщик> --source visible` показывает `ble.vi_nmap`/`ble.vi_imap`.
 - [x] 8.3 Запуск и выход yazi, atuin, fzf, tv, Neovim командами `pane run`/`send-keys`; после каждого — чтение панели просмотрщика. Пройдено: yazi (manager, input, выход), atuin, fzf, tv; Neovim — `nvim x.txt`, i, v, Esc дают шапки nvim.insert, nvim.visual, nvim.normal (режимы поданы `nvim --server … --remote-send`).
 - [x] 8.4 Следование за фокусом: `herdr pane focus` другой панели workspace — шапка показывает её `pane_id`.
@@ -105,4 +105,4 @@
 
 ## 11. Завершение (координатор)
 
-- [ ] 11.1 Ревью по порядку `~/.claude/CLAUDE.md`, «Субагенты»; `openspec validate herdr-keys-help --strict`; `openspec archive herdr-keys-help -y` после живой проверки.
+- [ ] 11.1 Ревью по порядку `~/.claude/CLAUDE.md`, «Субагенты»; `openspec validate herdr-keys-help --strict`; `openspec archive herdr-keys-help -y` после живой проверки. Ревью и validate выполнены; архивация ждёт проверки 9.3 и таблицы регрессий пользователем.
