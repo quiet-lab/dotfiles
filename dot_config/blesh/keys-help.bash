@@ -46,6 +46,7 @@ _keys_help_sabbrev_version=
 # Последняя записанная пара «состояние режим команда»: запись только
 # при её изменении.
 _keys_help_last=
+_keys_help_last_base=
 # Идёт запись (защита от повторного входа из дампа).
 _keys_help_busy=
 # Каталоги созданы в этой оболочке.
@@ -131,23 +132,32 @@ function keys_help/write {
   local _keys_help_busy=1
   local state=$1 command=${2-}
   local keymap=${_ble_decode_keymap-}
+  # Keymap под вершиной стека: в auto_complete и подобных клавиши,
+  # которых нет в самом keymap, через __default__ уходят ему.
+  local base= n=${#_ble_decode_keymap_stack[@]}
+  ((n)) && base=${_ble_decode_keymap_stack[n-1]}
   local key="$state $keymap $command"
-  [[ $key == "$_keys_help_last" ]] && return 0
+  [[ $key == "$_keys_help_last" && $base == "$_keys_help_last_base" ]] && return 0
   keys_help/ensure-dirs || return 0
 
-  local ret mode=null table=null cmd=null
+  local ret mode=null table=null cmd=null base_table=null
   if [[ $keymap ]]; then
     keys_help/dump "$keymap"
     keys_help/json-string "$keymap"; mode=$ret
     keys_help/json-string "$_keys_help_dump_dir/$keymap.bind"; table=$ret
   fi
+  if [[ $base ]]; then
+    keys_help/dump "$base"
+    keys_help/json-string "$_keys_help_dump_dir/$base.bind"; base_table=$ret
+  fi
   if [[ $state != active ]]; then
     keys_help/json-string "$command"; cmd=$ret
   fi
-  printf '{"v":1,"program":"ble","mode":%s,"pid":%d,"state":"%s","command":%s,"table":%s,"server":null,"env":%s}\n' \
-    "$mode" "$$" "$state" "$cmd" "$table" "$_keys_help_env_json" \
+  printf '{"v":1,"program":"ble","mode":%s,"pid":%d,"state":"%s","command":%s,"table":%s,"base_table":%s,"server":null,"env":%s}\n' \
+    "$mode" "$$" "$state" "$cmd" "$table" "$base_table" "$_keys_help_env_json" \
     2>/dev/null > "$_keys_help_record" || { _keys_help_ready=; return 0; }
   _keys_help_last=$key
+  _keys_help_last_base=$base
 }
 
 # Есть ли отметка просмотрщика; без неё — сброс запомненного, чтобы
@@ -168,10 +178,16 @@ function keys_help/tsv-field {
 function keys_help/on-render {
   [[ $BASHPID == "$$" ]] || return 0
   keys_help/marked || return 0
-  local cur=$_ble_edit_ind:$_ble_edit_str
+  # Автоподсказка вставлена в текст между курсором и меткой
+  # (_ble_edit_mark_active = auto_complete): в строку она не входит.
+  local text=$_ble_edit_str
+  if [[ ${_ble_edit_mark_active-} == auto_complete ]] && ((_ble_edit_mark > _ble_edit_ind)); then
+    text=${text::_ble_edit_ind}${text:_ble_edit_mark}
+  fi
+  local cur=$_ble_edit_ind:$text
   [[ $cur == "$_keys_help_line_last" ]] && return 0
   [[ $_keys_help_words_last ]] || keys_help/write-words
-  printf '%s\n%s' "$_ble_edit_ind" "$_ble_edit_str" 2>/dev/null > "$_keys_help_line_file" || return 0
+  printf '%s\n%s' "$_ble_edit_ind" "$text" 2>/dev/null > "$_keys_help_line_file" || return 0
   _keys_help_line_last=$cur
 }
 
@@ -244,6 +260,7 @@ function keys_help/notify {
 function keys-help-refresh {
   _keys_help_dumped=()
   _keys_help_last=
+  _keys_help_last_base=
   keys_help/write active
 }
 

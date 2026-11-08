@@ -36,6 +36,20 @@ unquote = ["key", "action"]
 skip = { key = '^(C-x C-_ |ac_enter$|__\w+__$)', action = '^(bell|nop|self-insert|batch-insert|bracketed-paste|(\S+/)?append-arg|(\S+/)?__\w+__|\S+/bell|\S+/self-insert|\S+/bracketed-paste|__atuin_widget_run \d+|\\C-x\\C-_.*)$' }
 on_conflict = "override"
 
+# Нижележащий keymap (поле base_table записи — дамп keymap под вершиной стека):
+# в auto_complete клавиши, которых нет в самом keymap, через __default__ уходят ему,
+# поэтому его клавиши тоже показываются. Разбор тот же; при совпадении клавиши
+# главнее запись самого auto_complete (on_conflict = "keep").
+[[source]]
+modes = ["auto_complete"]
+kind = "regex"
+file = "{record.base_table}"
+# Разбор и пропуски — как у основного источника выше.
+regex = '''^ble-bind -m \S+ -(?P<type>[fxcs]) (?P<key>(?:'[^']*'|\\.|[^\s'\\])+) (?P<action>.+)$'''
+unquote = ["key", "action"]
+skip = { key = '^(C-x C-_ |ac_enter$|__\w+__$)', action = '^(bell|nop|self-insert|batch-insert|bracketed-paste|(\S+/)?append-arg|(\S+/)?__\w+__|\S+/bell|\S+/self-insert|\S+/bracketed-paste|__atuin_widget_run \d+|\\C-x\\C-_.*)$' }
+on_conflict = "keep"
+
 
 [[describe]]
 action = '^fzf-file-widget$'

@@ -328,6 +328,19 @@ def test_in_herdr(tmp):
     writes = h.trace_lines()
     check(all(a != b for a, b in zip(writes, writes[1:])), "запись только при изменении")
 
+    # Автоподсказка: keymap auto_complete поверх vi_imap, base_table —
+    # дамп нижележащего vi_imap; в vi_imap base_table нет.
+    rec = h.record()
+    check(rec["base_table"] is None, "vi_imap: base_table — null (стек пуст)")
+    h.send_key(b"ec")
+    rec = h.wait_record("ec → auto_complete", state="active", mode="auto_complete")
+    check(rec["base_table"] == os.path.join(h.dump_dir, "vi_imap.bind") and os.path.isfile(rec["base_table"]),
+          "auto_complete: base_table — дамп vi_imap")
+    check(os.path.isfile(rec["table"]) and "ble-bind -m 'auto_complete'" in open(rec["table"]).read(),
+          "auto_complete: table — дамп auto_complete")
+    h.send_key(b"\x15")  # C-u: строка пуста, подсказка снята
+    h.wait_record("C-u → vi_imap", state="active", mode="vi_imap")
+
     # exec: команда из строки, затем PRECMD.
     h.send_key(b"head -n1\r")
     rec = h.wait_record("PREEXEC → exec", state="exec")
@@ -410,6 +423,13 @@ def test_input_line(tmp):
     check(not any(r.split("\t")[1].startswith("_") or "/" in r.split("\t")[1]
                   for r in w.splitlines() if r.startswith("function\t")),
           ".words: функций с / и с ведущим _ нет")
+
+    # Автоподсказка (keymap auto_complete) в строку не входит.
+    h.send_key(b"\x15ec")
+    h.wait_record("ec → auto_complete", state="active", mode="auto_complete")
+    h.wait(".line: «ec» без текста подсказки", lambda: read_file(line) == "2\nec")
+    h.send_key(b"\x15ls -l")
+    h.wait(".line: снова «ls -l»", lambda: read_file(line) == "5\nls -l")
 
     # Многострочный текст: позиция в символах, текст как есть.
     h.send_key(b" \xd1\x8e")  # пробел и «ю»
