@@ -20,10 +20,36 @@ pub struct Job {
     child: std::process::Child,
 }
 
+/// Порядковый номер файла вывода в процессе: номер задания `n` у разных
+/// вызывающих совпадает (`run_blocking` передаёт 0), а одновременные
+/// команды одного процесса не должны писать в один файл.
+static OUT_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
 fn out_path(n: u64) -> PathBuf {
+    let seq = OUT_SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     crate::paths::runtime_dir()
         .join("tmp")
-        .join(format!("{}-{n}.out", std::process::id()))
+        .join(format!("{}-{n}-{seq}.out", std::process::id()))
+}
+
+/// Команда источника без запуска: окружение и потоки (D6, D7).
+fn command(argv: &[String], probe: bool) -> Command {
+    let mut cmd = Command::new(&argv[0]);
+    cmd.args(&argv[1..])
+        .stdin(Stdio::null())
+        .stderr(Stdio::null())
+        .env("TERM", "dumb")
+        .env("MANPAGER", "cat")
+        .env("PAGER", "cat")
+        .env("MANWIDTH", "200")
+        .env("NO_COLOR", "1")
+        .env_remove("HERDR_PANE_ID");
+    if probe {
+        for k in PROBE_ENV_REMOVE {
+            cmd.env_remove(k);
+        }
+    }
+    cmd
 }
 
 /// Переменные окружения, по которым программа находит графическую сессию,
@@ -82,22 +108,8 @@ pub fn spawn(argv: &[String], n: u64) -> Option<Job> {
     let out = out_path(n);
     std::fs::create_dir_all(out.parent()?).ok()?;
     let file = std::fs::File::create(&out).ok()?;
-    let mut cmd = Command::new(&argv[0]);
-    cmd.args(&argv[1..])
-        .stdin(Stdio::null())
-        .stdout(Stdio::from(file))
-        .stderr(Stdio::null())
-        .env("TERM", "dumb")
-        .env("MANPAGER", "cat")
-        .env("PAGER", "cat")
-        .env("MANWIDTH", "200")
-        .env("NO_COLOR", "1")
-        .env_remove("HERDR_PANE_ID");
-    if probe {
-        for k in PROBE_ENV_REMOVE {
-            cmd.env_remove(k);
-        }
-    }
+    let mut cmd = command(argv, probe);
+    cmd.stdout(Stdio::from(file));
     // SAFETY: setsid в дочернем процессе до exec — безопасный системный вызов.
     unsafe {
         cmd.pre_exec(|| {
@@ -168,6 +180,17 @@ mod tests {
     }
 
     #[test]
+    fn concurrent_runs_do_not_share_output() {
+        // Одновременные run_blocking одного процесса (номер задания 0).
+        let hs: Vec<_> = (0..8)
+            .map(|i| std::thread::spawn(move || run_blocking(&v(&["sh", "-c", &format!("echo out{i}")]))))
+            .collect();
+        for (i, h) in hs.into_iter().enumerate() {
+            assert_eq!(h.join().expect("thread").as_deref(), Some(format!("out{i}\n").as_str()));
+        }
+    }
+
+    #[test]
     fn help_probe_only_elf() {
         assert!(is_help_probe(&v(&["ls", "--help"])));
         assert!(!is_help_probe(&v(&["man", "-P", "cat", "ls"])));
@@ -195,11 +218,26 @@ mod tests {
 
     #[test]
     fn help_probe_env_without_session() {
-        // sh — ELF; `--help` здесь только $0 сценария, а печатается окружение пробы.
-        std::env::set_var("WAYLAND_DISPLAY", "wayland-test");
+        // Окружение процесса теста не меняется: снятие переменных сессии
+        // проверяется по описанию команды.
+        let removed = |argv: &[String]| -> Vec<String> {
+            command(argv, is_help_probe(argv))
+                .get_envs()
+                .filter(|(_, v)| v.is_none())
+                .map(|(k, _)| k.to_string_lossy().to_string())
+                .collect()
+        };
+        let probe = removed(&v(&["ls", "--help"]));
+        for k in PROBE_ENV_REMOVE {
+            assert!(probe.iter().any(|x| x == k), "{k} не снята: {probe:?}");
+        }
+        let plain = removed(&v(&["man", "-P", "cat", "ls"]));
+        assert_eq!(plain, vec!["HERDR_PANE_ID"]);
+        // Запуск пробы: sh — ELF, `--help` здесь только $0 сценария.
         let out = run_blocking(&v(&["sh", "-c", "env", "--help"])).unwrap_or_default();
-        std::env::remove_var("WAYLAND_DISPLAY");
         assert!(out.contains("TERM=dumb"), "{out}");
-        assert!(!out.contains("WAYLAND_DISPLAY="), "{out}");
+        for k in PROBE_ENV_REMOVE {
+            assert!(!out.lines().any(|l| l.starts_with(&format!("{k}="))), "{k} в окружении пробы");
+        }
     }
 }
