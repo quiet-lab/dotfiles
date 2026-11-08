@@ -15,6 +15,11 @@ provider = "ble"
 [modes]
 default = "vi_imap"
 
+# Порядок показа по происхождению (D15): сначала клавиши atuin, television и fzf,
+# доступные из оболочки, затем остальное.
+[view]
+origin_order = ["atuin", "tv", "fzf", "user"]
+
 [[source]]
 modes = ["*"]
 kind = "regex"
@@ -1336,3 +1341,36 @@ origin = "readline"
 
 [[origin]]
 origin = "ble"
+
+# Применимость команд редактирования при позиции курсора в строке ввода (D17):
+# применимые поднимаются в раздел «по позиции курсора», остальные приглушаются.
+
+[[applies]]
+modes = ["vi_imap", "emacs"]
+action = '^(backward-char|backward-cword|backward-sword|beginning-of-line|non-space-beginning-of-line|transpose-chars|transpose-ewords)$'
+when = "col > 0"
+
+[[applies]]
+modes = ["vi_imap", "emacs"]
+action = '^(delete-region-or delete-backward-char|vi_imap/delete-region-or vi_imap/delete-backward-indent-or delete-backward-char|delete-backward-cword|kill-backward-cword|kill-backward-line|kill-region-or kill-backward-uword|vi_imap/kill-backward-word|copy-backward-sword|copy-region-or copy-backward-uword)$'
+when = "col > 0"
+
+[[applies]]
+modes = ["vi_imap", "emacs"]
+action = '^(forward-char|forward-cword|forward-sword|end-of-line)$'
+when = "col < line_len"
+
+[[applies]]
+modes = ["vi_imap", "emacs"]
+action = '^(delete-region-or delete-forward-char|delete-region-or delete-forward-char-or-exit|delete-forward-cword|kill-forward-cword|kill-forward-line|copy-forward-sword|zap-to-char|delete-horizontal-space|upcase-eword|downcase-eword|capitalize-eword)$'
+when = "col < line_len"
+
+[[applies]]
+modes = ["vi_imap", "emacs"]
+action = '^(beginning-of-text|history-prev)$'
+when = "row > 0"
+
+[[applies]]
+modes = ["vi_imap", "emacs"]
+action = '^end-of-text$'
+when = "point < len"
