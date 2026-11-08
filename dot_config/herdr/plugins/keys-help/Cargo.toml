@@ -1,0 +1,26 @@
+[package]
+name = "keys-help"
+version = "0.1.0"
+edition = "2021"
+description = "Плагин herdr: подсказка горячих клавиш по контексту панели"
+publish = false
+
+[lib]
+name = "keys_help"
+path = "src/lib.rs"
+
+[[bin]]
+name = "keys-help"
+path = "src/main.rs"
+
+[dependencies]
+libc = "0.2"
+regex = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = { version = "0.8", features = ["preserve_order"] }
+toml_edit = "0.22"
+unicode-width = "0.2"
+
+[profile.release]
+opt-level = 2

@@ -1,0 +1,19 @@
+# Конфигурация представления подсказки клавиш herdr keys-help (docs/keys-help.md,
+# D12 изменения herdr-keys-help). ~/.config/herdr/keys-help/view.toml — ссылка
+# на этот файл источника chezmoi, поэтому клавиши просмотрщика d, D и u правят
+# его прямо в репозитории.
+#
+# Уровни: [defaults] → [context."<программа>.*"] и [context."<программа>"] →
+# [context."<программа>.<режим>"]; hide и hide_groups объединяются, остальные
+# поля заменяются более частным уровнем. Пример:
+#
+# [defaults]
+# order = ["history", "completion", "edit", "motion"]
+#
+# [context."ble.vi_nmap"]
+# hide = ["h", "j", "k", "l"]
+# pin = ["C-r", "M-r", "M-h"]
+#
+# [entry."ble.vi_imap"."C-x C-k"]
+# desc = "проверка"
+# group = "edit"

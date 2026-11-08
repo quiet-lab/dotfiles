@@ -1,0 +1,19 @@
+# Тестовый манифест: программа kh-fake распознаётся по имени процесса, таблица
+# статическая. Проверяет, что программа добавляется одним манифестом без правки ядра.
+program = "kh-fake"
+priority = 100
+origins = ["kh-fake"]
+
+[detect]
+process = ["kh-fake"]
+
+[modes]
+default = "main"
+
+[[source]]
+kind = "static"
+entries = [
+  { key = "q", action = "quit", desc = "выйти", group = "general" },
+  { key = "ctrl-r", action = "reload", desc = "перечитать", group = "general" },
+  { key = "<C-x><C-s>", action = "save", desc_full = "Save the current document to disk." },
+]

@@ -4,21 +4,21 @@
 
 ## 1. Каркас плагина и сборка (Opus)
 
-- [ ] 1.1 `dot_config/herdr/plugins/keys-help/`: `herdr-plugin.toml` (D1), `Cargo.toml`, `Cargo.lock`, `src/main.rs` с подкомандами `toggle`, `viewer`, `table`, `unknown list`. Проверка: `cargo build --release --locked`, `cargo clippy` без замечаний.
-- [ ] 1.2 Сценарий `run_onchange_after_build-herdr-keys-help.sh.tmpl` (хеш исходников, сборка, `herdr plugin link`), `.chezmoiignore` для каталога `herdr-keys-help/` источника (D12). Проверка: `chezmoi apply`, `herdr plugin list` показывает плагин без `warnings`; повторный `apply` сборку не запускает.
+- [x] 1.1 `dot_config/herdr/plugins/keys-help/`: `herdr-plugin.toml` (D1), `Cargo.toml`, `Cargo.lock`, `src/main.rs` с подкомандами `toggle`, `viewer`, `table`, `unknown list`. Проверка: `cargo build --release --locked`, `cargo clippy` без замечаний.
+- [x] 1.2 Сценарий `run_onchange_after_build-herdr-keys-help.sh.tmpl` (хеш исходников, сборка, `herdr plugin link`), `.chezmoiignore` для каталога `herdr-keys-help/` источника (D12). Проверка: `chezmoi apply`, `herdr plugin list` показывает плагин без `warnings`; повторный `apply` сборку не запускает.
 
 ## 2. Ядро (Opus)
 
-- [ ] 2.1 `herdr.rs`: клиент сокета (запросы, подписка `events.subscribe`, `events_lost` → новая подписка и чтение состояния) (D3).
-- [ ] 2.2 `channel.rs`: inotify каталога записей, разбор записей, порядок по `mtime`/событиям, pidfd живости и удаление записей умерших процессов, файл `env-vars` (D2).
-- [ ] 2.3 `toggle`: поиск просмотрщика по токену, `plugin pane open`/`close` (D4).
-- [ ] 2.4 `viewer`: цикл `poll` (подписка, inotify, signalfd, pidfd, ввод), токен, начальная доля `layout.set_split_ratio`, минимум 5 строк по `SIGWINCH`/`layout.updated` через `pane.resize`, следование за фокусом, `pane.moved`, выход (D3, D4).
-- [ ] 2.5 `manifest.rs` и `extract/`: формат манифеста, виды источников `regex` (с `sections`, `unquote`, глобальным поиском), `toml`, `json`, `static`, подстановки, нормализация клавиш, `describe`/`group`/`origin`, запуск команд без терминала с ожиданием по pidfd и завершением при смене контекста, кеш в памяти (D6).
-- [ ] 2.6 `context.rs`: разрешение контекста по записям, процессам, заголовку, экрану, подписки `pane.output_matched` из манифестов (D5).
-- [ ] 2.7 `view.rs`: слияние конфигурации, шаблоны, фильтрация, порядок, `[entry]`, перечитывание по inotify; запись `d`/`D`/`u` через `toml_edit` с `rename` по настоящему пути (D12).
-- [ ] 2.8 `ui.rs`: шапка, ячейки «клавиша → действие» в 3/4/5 колонок по ширине (ячейка ≥ 28 символов), заголовки групп, подписи происхождения, прокрутка; навигация `h j k l g G`, поиск `/` с подсветкой, `n`/`N`, Esc, `q` — фокус цели через `pane.focus`, окно подробностей `K` (`desc_full`, `action`, `source`, контекст, `raw`), скрытие `d`/`D`/`u` (D13).
-- [ ] 2.10 Поля записи `desc`/`desc_full`/`action`/`source`/`raw` во всех видах источников, правило сокращения D7а в ядре (D6, D7а).
-- [ ] 2.9 Универсальный извлекатель как механизм `generic.toml` (`fallback`, кеш на диске по входам) и `unknown.rs` (файл неизвестных, `flock` с комментарием о ресурсе) (D7, D8).
+- [x] 2.1 `herdr.rs`: клиент сокета (запросы, подписка `events.subscribe`, `events_lost` → новая подписка и чтение состояния) (D3).
+- [x] 2.2 `channel.rs`: inotify каталога записей, разбор записей, порядок по `mtime`/событиям, pidfd живости и удаление записей умерших процессов, файл `env-vars` (D2).
+- [x] 2.3 `toggle`: поиск просмотрщика по токену, `plugin pane open`/`close` (D4).
+- [x] 2.4 `viewer`: цикл `poll` (подписка, inotify, signalfd, pidfd, ввод), токен, начальная доля `layout.set_split_ratio`, минимум 5 строк по `SIGWINCH`/`layout.updated` через `pane.resize`, следование за фокусом, `pane.moved`, выход (D3, D4).
+- [x] 2.5 `manifest.rs` и `extract/`: формат манифеста, виды источников `regex` (с `sections`, `unquote`, глобальным поиском), `toml`, `json`, `static`, подстановки, нормализация клавиш, `describe`/`group`/`origin`, запуск команд без терминала с ожиданием по pidfd и завершением при смене контекста, кеш в памяти (D6).
+- [x] 2.6 `context.rs`: разрешение контекста по записям, процессам, заголовку, экрану, подписки `pane.output_matched` из манифестов (D5).
+- [x] 2.7 `view.rs`: слияние конфигурации, шаблоны, фильтрация, порядок, `[entry]`, перечитывание по inotify; запись `d`/`D`/`u` через `toml_edit` с `rename` по настоящему пути (D12).
+- [x] 2.8 `ui.rs`: шапка, ячейки «клавиша → действие» в 3/4/5 колонок по ширине (ячейка ≥ 28 символов), заголовки групп, подписи происхождения, прокрутка; навигация `h j k l g G`, поиск `/` с подсветкой, `n`/`N`, Esc, `q` — фокус цели через `pane.focus`, окно подробностей `K` (`desc_full`, `action`, `source`, контекст, `raw`), скрытие `d`/`D`/`u` (D13).
+- [x] 2.10 Поля записи `desc`/`desc_full`/`action`/`source`/`raw` во всех видах источников, правило сокращения D7а в ядре (D6, D7а).
+- [x] 2.9 Универсальный извлекатель как механизм `generic.toml` (`fallback`, кеш на диске по входам) и `unknown.rs` (файл неизвестных, `flock` с комментарием о ресурсе) (D7, D8).
 
 ## 3. Поставщики (Opus — ble.sh; Sonnet — Neovim)
 
@@ -59,7 +59,7 @@
 
 ## 7. Конфиг herdr и wezterm
 
-- [ ] 7.1 `dot_config/herdr/config.toml`: `[[keys.command]]` клавиши `ctrl+alt+shift+slash` → `quiet-lab.keys-help.toggle`; `[ui]` `pane_outer_borders = false`, `pane_gaps = false` (D14). Проверка: `herdr server reload-config` без диагностик. (Sonnet)
+- [x] 7.1 `dot_config/herdr/config.toml`: `[[keys.command]]` клавиши `ctrl+alt+shift+slash` → `quiet-lab.keys-help.toggle`; `[ui]` `pane_outer_borders = false`, `pane_gaps = false` (D14). Проверка: `herdr server reload-config` без диагностик. (Sonnet)
 - [ ] 7.2 `enable_kitty_keyboard = true` в `dot_config/wezterm/wezterm.lua` и таблица регрессий решения 2 — результат параллельного исполнителя; здесь отметить ссылкой на его отчёт. (Opus, отдельный исполнитель)
 - [ ] 7.3 Если клавиша не доходит до herdr после 7.2 — доработка форка herdr по решению 2 (`docs/duty/README.md` форка). (Opus)
 

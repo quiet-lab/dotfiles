@@ -1,2 +1,3 @@
 .opencode/node_modules/
 .duty/local.toml
+dot_config/herdr/plugins/keys-help/target/

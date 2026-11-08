@@ -5,3 +5,7 @@ todo.md
 system
 docs
 .config/nvim/local/claude-input/tests
+# Каталог сборки плагина herdr keys-help живёт только в $HOME; конфигурация
+# представления — ссылка в этот каталог источника (D12).
+.config/herdr/plugins/keys-help/target
+herdr-keys-help

@@ -153,3 +153,11 @@ key = "ctrl+alt+r"
 type = "shell"
 command = 'bash "$HOME/.claude/hooks/herdr-claude-input.sh" reopen'
 description = "reopen input pane"
+
+# Подсказка горячих клавиш программы на переднем плане панели (плагин keys-help,
+# docs/keys-help.md): открывает нижнюю панель, повторное нажатие закрывает.
+[[keys.command]]
+key = "ctrl+alt+shift+slash"
+type = "plugin_action"
+command = "quiet-lab.keys-help.toggle"
+description = "keys help"
