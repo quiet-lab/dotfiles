@@ -1,0 +1,56 @@
+ble-bind -m 'vi_smap' -f BS 'vi_smap/@nomarked vi-command/backward-char wrap'
+ble-bind -m 'vi_smap' -f RET 'vi_smap/@nomarked vi-command/forward-first-non-space'
+ble-bind -m 'vi_smap' -f ESC vi_xmap/exit
+ble-bind -m 'vi_smap' -f SP 'vi_smap/@nomarked vi-command/forward-char wrap'
+ble-bind -m 'vi_smap' -f DEL 'vi_smap/@nomarked vi-command/backward-char wrap'
+ble-bind -m 'vi_smap' -f __defchar__ vi_smap/self-insert
+ble-bind -m 'vi_smap' -f __default__ vi-command/decompose-meta
+ble-bind -m 'vi_smap' -f home 'vi_smap/@nomarked vi-command/beginning-of-line'
+ble-bind -m 'vi_smap' -f delete 'vi-command/operator d'
+ble-bind -m 'vi_smap' -f end 'vi_smap/@nomarked vi-command/forward-eol'
+ble-bind -m 'vi_smap' -f f1 vi_xmap/command-help
+ble-bind -m 'vi_smap' -f paste_begin vi-command/bracketed-paste
+ble-bind -m 'vi_smap' -f up 'vi_smap/@nomarked vi-command/backward-line'
+ble-bind -m 'vi_smap' -f down 'vi_smap/@nomarked vi-command/forward-line'
+ble-bind -m 'vi_smap' -f right 'vi_smap/@nomarked vi-command/forward-char'
+ble-bind -m 'vi_smap' -f left 'vi_smap/@nomarked vi-command/backward-char'
+ble-bind -m 'vi_smap' -f S-BS 'vi-command/backward-char wrap'
+ble-bind -m 'vi_smap' -f S-RET vi-command/forward-first-non-space
+ble-bind -m 'vi_smap' -f S-SP 'vi-command/forward-char wrap'
+ble-bind -m 'vi_smap' -f S-DEL 'vi-command/backward-char wrap'
+ble-bind -m 'vi_smap' -f S-home vi-command/beginning-of-line
+ble-bind -m 'vi_smap' -f S-end vi-command/forward-eol
+ble-bind -m 'vi_smap' -f S-up vi-command/backward-line
+ble-bind -m 'vi_smap' -f S-down vi-command/forward-line
+ble-bind -m 'vi_smap' -f S-right vi-command/forward-char
+ble-bind -m 'vi_smap' -f S-left vi-command/backward-char
+ble-bind -m 'vi_smap' -f 'C-?' 'vi_smap/@nomarked vi-command/backward-char wrap'
+ble-bind -m 'vi_smap' -f 'C-[' vi_xmap/exit
+ble-bind -m 'vi_smap' -f 'C-\ C-g' vi_xmap/cancel
+ble-bind -m 'vi_smap' -f 'C-\ C-n' vi_xmap/cancel
+ble-bind -m 'vi_smap' -f C-a vi_xmap/increment
+ble-bind -m 'vi_smap' -f C-c vi_xmap/cancel
+ble-bind -m 'vi_smap' -f C-g vi_xmap/switch-to-visual
+ble-bind -m 'vi_smap' -f C-h 'vi_smap/@nomarked vi-command/backward-char wrap'
+ble-bind -m 'vi_smap' -f C-j 'vi_smap/@nomarked vi-command/forward-line'
+ble-bind -m 'vi_smap' -f C-m 'vi_smap/@nomarked vi-command/forward-first-non-space'
+ble-bind -m 'vi_smap' -f C-n 'vi_smap/@nomarked vi-command/forward-line'
+ble-bind -m 'vi_smap' -f C-p 'vi_smap/@nomarked vi-command/backward-line'
+ble-bind -m 'vi_smap' -f C-q vi_xmap/switch-to-visual-blockwise
+ble-bind -m 'vi_smap' -f C-v vi_xmap/switch-to-visual-blockwise
+ble-bind -m 'vi_smap' -f C-x vi_xmap/decrement
+ble-bind -m 'vi_smap' -c C-z fg
+ble-bind -m 'vi_smap' -f C-home 'vi_smap/@nomarked vi-command/first-nol'
+ble-bind -m 'vi_smap' -f C-end 'vi_smap/@nomarked vi-command/last-eol'
+ble-bind -m 'vi_smap' -f C-right 'vi_smap/@nomarked vi-command/forward-vword'
+ble-bind -m 'vi_smap' -f C-left 'vi_smap/@nomarked vi-command/backward-vword'
+ble-bind -m 'vi_smap' -f 'C-S-?' 'vi-command/backward-char wrap'
+ble-bind -m 'vi_smap' -f C-S-h 'vi-command/backward-char wrap'
+ble-bind -m 'vi_smap' -f C-S-j vi-command/forward-line
+ble-bind -m 'vi_smap' -f C-S-m vi-command/forward-first-non-space
+ble-bind -m 'vi_smap' -f C-S-n vi-command/forward-line
+ble-bind -m 'vi_smap' -f C-S-p vi-command/backward-line
+ble-bind -m 'vi_smap' -f C-S-home vi-command/first-nol
+ble-bind -m 'vi_smap' -f C-S-end vi-command/last-eol
+ble-bind -m 'vi_smap' -f C-S-right vi-command/forward-vword
+ble-bind -m 'vi_smap' -f C-S-left vi-command/backward-vword

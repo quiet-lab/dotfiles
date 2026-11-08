@@ -3,6 +3,12 @@ onboarding = false
 agent_panel_sort = "spaces"
 show_agent_labels_on_pane_borders = true
 
+# Рамки панелей — только разделители между панелями: без внешней рамки
+# по краю области терминала и без промежутков между панелями. Режим
+# pane_borders остаётся по умолчанию (auto: рамки только у разделённых панелей).
+pane_outer_borders = false
+pane_gaps = false
+
 status_indicators = "symbols"
 [experimental]
 kitty_graphics = true
@@ -147,3 +153,11 @@ key = "ctrl+alt+r"
 type = "shell"
 command = 'bash "$HOME/.claude/hooks/herdr-claude-input.sh" reopen'
 description = "reopen input pane"
+
+# Подсказка горячих клавиш программы на переднем плане панели (плагин keys-help,
+# docs/keys-help.md): открывает нижнюю панель, повторное нажатие закрывает.
+[[keys.command]]
+key = "ctrl+alt+shift+slash"
+type = "plugin_action"
+command = "quiet-lab.keys-help.toggle"
+description = "keys help"

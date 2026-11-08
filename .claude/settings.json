@@ -1,5 +1,17 @@
 {
   "enabledPlugins": {
     "duty@ocp": true
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/keys-help-unknown.sh"
+          }
+        ]
+      }
+    ]
   }
 }

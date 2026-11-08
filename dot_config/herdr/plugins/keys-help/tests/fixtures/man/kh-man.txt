@@ -1,0 +1,26 @@
+KH-MAN(1)                    User Commands                    KH-MAN(1)
+
+NAME
+       kh-man - demonstration program for keys-help
+
+SYNOPSIS
+       kh-man [FILE]
+
+DESCRIPTION
+       A file viewer. Keys are listed in the KEY BINDINGS section.
+
+KEY BINDINGS
+   Navigation
+       j, Down    Move down one line.
+
+       k          Move up one line.
+
+   General
+       q          This will quit the program immediately. Unsaved changes are lost.
+
+       Ctrl-L     Redraw the screen
+
+       /          Move the cursor to the beginning of the current logical line in the buffer
+
+SEE ALSO
+       foo(1)

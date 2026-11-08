@@ -1,0 +1,231 @@
+# Манифест Neovim (D6 и D11 изменения herdr-keys-help). Режим и адрес сервера
+# (`server`) сообщает модуль dot_config/nvim/lua/keys_help.lua (запись `nvim-<pid>.json`,
+# поле `mode` — normal, insert, visual, select, cmdline, replace, terminal, operator).
+# Таблица из живого процесса: функция `dump(<режим vim>)` модуля возвращает JSON-массив
+# глобальных и буферных привязок (`nvim_get_keymap`, `nvim_buf_get_keymap`) с полями lhs,
+# rhs, desc, origin, group, source; запрос идёт через `nvim --server <адрес> --remote-expr`.
+# `desc` привязки — полный текст (`desc_full`); короткое описание — он же, если короче 32
+# символов, иначе сокращение по правилу D7а (правила [[describe]] не нужны). Без `rhs`
+# (привязка с функцией) действием служит `desc`. В `raw` — `rhs` и файл определения
+# (`source`). Поверх привязок — базовые клавиши vim (data/vim-basic.toml, короткие
+# описания по-русски), записи из процесса сохраняются (`keep`). Режим replace
+# использует привязки режима insert.
+# Привязки с кириллицей в lhs не показываются (`skip`): это дубли модуля ru-layout
+# (dot_config/nvim/local/ru-layout) для русской раскладки с тем же rhs и описанием,
+# что у латинской привязки (`<C-M-h>` → `<C-M-р>`); собственная кириллическая
+# привязка пользователя скрывается вместе с ними.
+
+program = "nvim"
+priority = 100
+origins = ["user", "lazyvim", "nvim"]
+
+[detect]
+provider = "nvim"
+process = ["nvim"]
+shell_commands = ["nvim", "nvim *", "vi", "vim", "vim *"]
+
+[modes]
+default = "normal"
+
+[[source]]
+modes = ["normal"]
+kind = "json"
+command = ["nvim", "--server", "{record.server}", "--remote-expr", "luaeval('require(\"keys_help\").dump(\"n\")')"]
+key_field = "lhs"
+action_field = "rhs"
+desc_field = "desc"
+origin_field = "origin"
+group_field = "group"
+raw_fields = ["rhs", "source"]
+skip = { key = '^<Plug>|[А-ЯЁа-яё]' }
+
+[[source]]
+modes = ["insert"]
+kind = "json"
+command = ["nvim", "--server", "{record.server}", "--remote-expr", "luaeval('require(\"keys_help\").dump(\"i\")')"]
+key_field = "lhs"
+action_field = "rhs"
+desc_field = "desc"
+origin_field = "origin"
+group_field = "group"
+raw_fields = ["rhs", "source"]
+skip = { key = '^<Plug>|[А-ЯЁа-яё]' }
+
+[[source]]
+modes = ["replace"]
+kind = "json"
+command = ["nvim", "--server", "{record.server}", "--remote-expr", "luaeval('require(\"keys_help\").dump(\"i\")')"]
+key_field = "lhs"
+action_field = "rhs"
+desc_field = "desc"
+origin_field = "origin"
+group_field = "group"
+raw_fields = ["rhs", "source"]
+skip = { key = '^<Plug>|[А-ЯЁа-яё]' }
+
+[[source]]
+modes = ["visual"]
+kind = "json"
+command = ["nvim", "--server", "{record.server}", "--remote-expr", "luaeval('require(\"keys_help\").dump(\"x\")')"]
+key_field = "lhs"
+action_field = "rhs"
+desc_field = "desc"
+origin_field = "origin"
+group_field = "group"
+raw_fields = ["rhs", "source"]
+skip = { key = '^<Plug>|[А-ЯЁа-яё]' }
+
+[[source]]
+modes = ["select"]
+kind = "json"
+command = ["nvim", "--server", "{record.server}", "--remote-expr", "luaeval('require(\"keys_help\").dump(\"s\")')"]
+key_field = "lhs"
+action_field = "rhs"
+desc_field = "desc"
+origin_field = "origin"
+group_field = "group"
+raw_fields = ["rhs", "source"]
+skip = { key = '^<Plug>|[А-ЯЁа-яё]' }
+
+[[source]]
+modes = ["cmdline"]
+kind = "json"
+command = ["nvim", "--server", "{record.server}", "--remote-expr", "luaeval('require(\"keys_help\").dump(\"c\")')"]
+key_field = "lhs"
+action_field = "rhs"
+desc_field = "desc"
+origin_field = "origin"
+group_field = "group"
+raw_fields = ["rhs", "source"]
+skip = { key = '^<Plug>|[А-ЯЁа-яё]' }
+
+[[source]]
+modes = ["terminal"]
+kind = "json"
+command = ["nvim", "--server", "{record.server}", "--remote-expr", "luaeval('require(\"keys_help\").dump(\"t\")')"]
+key_field = "lhs"
+action_field = "rhs"
+desc_field = "desc"
+origin_field = "origin"
+group_field = "group"
+raw_fields = ["rhs", "source"]
+skip = { key = '^<Plug>|[А-ЯЁа-яё]' }
+
+[[source]]
+modes = ["operator"]
+kind = "json"
+command = ["nvim", "--server", "{record.server}", "--remote-expr", "luaeval('require(\"keys_help\").dump(\"o\")')"]
+key_field = "lhs"
+action_field = "rhs"
+desc_field = "desc"
+origin_field = "origin"
+group_field = "group"
+raw_fields = ["rhs", "source"]
+skip = { key = '^<Plug>|[А-ЯЁа-яё]' }
+
+[[source]]
+modes = ["normal"]
+kind = "toml"
+file = "data/vim-basic.toml"
+tables = ["normal"]
+arrays = ["keymap"]
+key_field = "on"
+action_field = "run"
+desc_field = "desc"
+group_field = "group"
+origin = "nvim"
+on_conflict = "keep"
+
+[[source]]
+modes = ["insert"]
+kind = "toml"
+file = "data/vim-basic.toml"
+tables = ["insert"]
+arrays = ["keymap"]
+key_field = "on"
+action_field = "run"
+desc_field = "desc"
+group_field = "group"
+origin = "nvim"
+on_conflict = "keep"
+
+[[source]]
+modes = ["replace"]
+kind = "toml"
+file = "data/vim-basic.toml"
+tables = ["replace"]
+arrays = ["keymap"]
+key_field = "on"
+action_field = "run"
+desc_field = "desc"
+group_field = "group"
+origin = "nvim"
+on_conflict = "keep"
+
+[[source]]
+modes = ["visual"]
+kind = "toml"
+file = "data/vim-basic.toml"
+tables = ["visual"]
+arrays = ["keymap"]
+key_field = "on"
+action_field = "run"
+desc_field = "desc"
+group_field = "group"
+origin = "nvim"
+on_conflict = "keep"
+
+[[source]]
+modes = ["select"]
+kind = "toml"
+file = "data/vim-basic.toml"
+tables = ["select"]
+arrays = ["keymap"]
+key_field = "on"
+action_field = "run"
+desc_field = "desc"
+group_field = "group"
+origin = "nvim"
+on_conflict = "keep"
+
+[[source]]
+modes = ["cmdline"]
+kind = "toml"
+file = "data/vim-basic.toml"
+tables = ["cmdline"]
+arrays = ["keymap"]
+key_field = "on"
+action_field = "run"
+desc_field = "desc"
+group_field = "group"
+origin = "nvim"
+on_conflict = "keep"
+
+[[source]]
+modes = ["terminal"]
+kind = "toml"
+file = "data/vim-basic.toml"
+tables = ["terminal"]
+arrays = ["keymap"]
+key_field = "on"
+action_field = "run"
+desc_field = "desc"
+group_field = "group"
+origin = "nvim"
+on_conflict = "keep"
+
+[[source]]
+modes = ["operator"]
+kind = "toml"
+file = "data/vim-basic.toml"
+tables = ["operator"]
+arrays = ["keymap"]
+key_field = "on"
+action_field = "run"
+desc_field = "desc"
+group_field = "group"
+origin = "nvim"
+on_conflict = "keep"
+
+
+# Группы и происхождение приходят из самих записей (`group_field`, `origin_field`).

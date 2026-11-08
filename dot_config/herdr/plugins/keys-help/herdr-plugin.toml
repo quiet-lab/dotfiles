@@ -1,0 +1,25 @@
+# Плагин herdr keys-help: подсказка горячих клавиш того, что на переднем плане
+# панели (изменение OpenSpec herdr-keys-help, docs/keys-help.md).
+id = "quiet-lab.keys-help"
+name = "Keys help"
+version = "0.1.0"
+min_herdr_version = "0.9.5"
+description = "Горячие клавиши программы на переднем плане в нижней панели"
+platforms = ["linux"]
+
+# Сборку при chezmoi apply делает run_onchange-сценарий источника; plugin link
+# сборку не запускает, а plugin install выполняет этот раздел.
+[[build]]
+command = ["cargo", "build", "--release", "--locked"]
+
+[[actions]]
+id = "toggle"
+title = "Подсказка клавиш"
+contexts = ["workspace"]
+command = ["target/release/keys-help", "toggle"]
+
+[[panes]]
+id = "viewer"
+title = "keys"
+placement = "split"
+command = ["target/release/keys-help", "viewer"]

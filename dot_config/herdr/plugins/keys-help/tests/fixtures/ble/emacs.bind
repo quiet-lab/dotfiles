@@ -1,0 +1,218 @@
+ble-bind -m 'emacs' -f NUL set-mark
+ble-bind -m 'emacs' -f BS 'delete-region-or delete-backward-char'
+ble-bind -m 'emacs' -f TAB complete
+ble-bind -m 'emacs' -f RET accept-single-line-or-newline
+ble-bind -m 'emacs' -f SP magic-space
+ble-bind -m 'emacs' -f - append-arg
+ble-bind -m 'emacs' -f / magic-slash
+ble-bind -m 'emacs' -f 0 append-arg
+ble-bind -m 'emacs' -f 1 append-arg
+ble-bind -m 'emacs' -f 2 append-arg
+ble-bind -m 'emacs' -f 3 append-arg
+ble-bind -m 'emacs' -f 4 append-arg
+ble-bind -m 'emacs' -f 5 append-arg
+ble-bind -m 'emacs' -f 6 append-arg
+ble-bind -m 'emacs' -f 7 append-arg
+ble-bind -m 'emacs' -f 8 append-arg
+ble-bind -m 'emacs' -f 9 append-arg
+ble-bind -m 'emacs' -f DEL 'delete-region-or delete-backward-char'
+ble-bind -m 'emacs' -f __batch_char__ batch-insert
+ble-bind -m 'emacs' -f __defchar__ self-insert
+ble-bind -m 'emacs' -f __before_widget__ emacs/__before_widget__
+ble-bind -m 'emacs' -f __after_widget__ emacs/__after_widget__
+ble-bind -m 'emacs' -f __attach__ safe/__attach__
+ble-bind -m 'emacs' -f __line_limit__ __line_limit__
+ble-bind -m 'emacs' -f ac_enter auto-complete-enter
+ble-bind -m 'emacs' -f insert overwrite-mode
+ble-bind -m 'emacs' -f home beginning-of-line
+ble-bind -m 'emacs' -f prior history-search-backward
+ble-bind -m 'emacs' -f delete 'delete-region-or delete-forward-char'
+ble-bind -m 'emacs' -f end end-of-line
+ble-bind -m 'emacs' -f next history-search-forward
+ble-bind -m 'emacs' -f f1 command-help
+ble-bind -m 'emacs' -f paste_begin emacs/bracketed-paste
+ble-bind -m 'emacs' -f up 'backward-line history'
+ble-bind -m 'emacs' -f down 'forward-line history'
+ble-bind -m 'emacs' -f right forward-char
+ble-bind -m 'emacs' -f left backward-char
+ble-bind -m 'emacs' -f S-TAB 'menu-complete backward'
+ble-bind -m 'emacs' -f S-insert yank
+ble-bind -m 'emacs' -f S-home '@marked beginning-of-line'
+ble-bind -m 'emacs' -f S-delete 'kill-region-or kill-backward-uword'
+ble-bind -m 'emacs' -f S-end '@marked end-of-line'
+ble-bind -m 'emacs' -f S-up '@marked backward-line'
+ble-bind -m 'emacs' -f S-down '@marked forward-line'
+ble-bind -m 'emacs' -f S-right '@marked forward-char'
+ble-bind -m 'emacs' -f S-left '@marked backward-char'
+ble-bind -m 'emacs' -f C-BS emacs/undo
+ble-bind -m 'emacs' -f C-TAB menu-complete
+ble-bind -m 'emacs' -f C-RET accept-line
+ble-bind -m 'emacs' -f C-SP set-mark
+ble-bind -m 'emacs' -f C-- append-arg
+ble-bind -m 'emacs' -f C-/ emacs/undo
+ble-bind -m 'emacs' -f C-0 append-arg
+ble-bind -m 'emacs' -f C-1 append-arg
+ble-bind -m 'emacs' -f C-2 append-arg
+ble-bind -m 'emacs' -f C-3 append-arg
+ble-bind -m 'emacs' -f C-4 append-arg
+ble-bind -m 'emacs' -f C-5 append-arg
+ble-bind -m 'emacs' -f C-6 append-arg
+ble-bind -m 'emacs' -f C-7 append-arg
+ble-bind -m 'emacs' -f C-8 append-arg
+ble-bind -m 'emacs' -f C-9 append-arg
+ble-bind -m 'emacs' -f 'C-?' 'delete-region-or delete-backward-char'
+ble-bind -m 'emacs' -f C-@ set-mark
+ble-bind -m 'emacs' -f 'C-\' bell
+ble-bind -m 'emacs' -f 'C-]' character-search-forward
+ble-bind -m 'emacs' -f 'C-^' bell
+ble-bind -m 'emacs' -f C-_ emacs/undo
+ble-bind -m 'emacs' -f C-a beginning-of-line
+ble-bind -m 'emacs' -f C-b backward-char
+ble-bind -m 'emacs' -f C-c discard-line
+ble-bind -m 'emacs' -f C-d 'delete-region-or delete-forward-char-or-exit'
+ble-bind -m 'emacs' -f C-e end-of-line
+ble-bind -m 'emacs' -f C-f forward-char
+ble-bind -m 'emacs' -f C-g bell
+ble-bind -m 'emacs' -f C-h 'delete-region-or delete-backward-char'
+ble-bind -m 'emacs' -f C-i complete
+ble-bind -m 'emacs' -f C-j accept-line
+ble-bind -m 'emacs' -f C-k kill-forward-line
+ble-bind -m 'emacs' -f C-l clear-screen
+ble-bind -m 'emacs' -f C-m accept-single-line-or-newline
+ble-bind -m 'emacs' -f C-n 'forward-line history'
+ble-bind -m 'emacs' -f C-o accept-and-next
+ble-bind -m 'emacs' -f C-p 'backward-line history'
+ble-bind -m 'emacs' -f C-q emacs/quoted-insert
+ble-bind -m 'emacs' -f C-r history-isearch-backward
+ble-bind -m 'emacs' -f C-s history-isearch-forward
+ble-bind -m 'emacs' -f C-t transpose-chars
+ble-bind -m 'emacs' -f C-u kill-backward-line
+ble-bind -m 'emacs' -f C-v emacs/quoted-insert
+ble-bind -m 'emacs' -f C-w 'kill-region-or kill-backward-uword'
+ble-bind -m 'emacs' -f 'C-x !' 'complete show_menu:context=command'
+ble-bind -m 'emacs' -f 'C-x $' 'complete show_menu:context=variable'
+ble-bind -m 'emacs' -f 'C-x '\' sabbrev-expand
+ble-bind -m 'emacs' -f 'C-x (' start-keyboard-macro
+ble-bind -m 'emacs' -f 'C-x )' end-keyboard-macro
+ble-bind -m 'emacs' -f 'C-x *' 'complete insert_all:context=glob'
+ble-bind -m 'emacs' -f 'C-x ,' history-nsearch-backward-again
+ble-bind -m 'emacs' -f 'C-x .' history-nsearch-forward-again
+ble-bind -m 'emacs' -f 'C-x /' 'complete show_menu:context=filename'
+ble-bind -m 'emacs' -f 'C-x <' history-nsearch-backward
+ble-bind -m 'emacs' -f 'C-x >' history-nsearch-forward
+ble-bind -m 'emacs' -f 'C-x @' 'complete show_menu:context=hostname'
+ble-bind -m 'emacs' -f 'C-x P' print-keyboard-macro
+ble-bind -m 'emacs' -f 'C-x U' emacs/redo
+ble-bind -m 'emacs' -f 'C-x e' call-keyboard-macro
+ble-bind -m 'emacs' -f 'C-x g' 'complete show_menu:context=glob'
+ble-bind -m 'emacs' -f 'C-x n' history-substring-search-forward
+ble-bind -m 'emacs' -f 'C-x p' history-substring-search-backward
+ble-bind -m 'emacs' -f 'C-x u' emacs/undo
+ble-bind -m 'emacs' -f 'C-x ~' 'complete show_menu:context=username'
+ble-bind -m 'emacs' -f 'C-x up' history-search-backward
+ble-bind -m 'emacs' -f 'C-x down' history-search-forward
+ble-bind -m 'emacs' -s 'C-x C-_ A 0 C-g' 
+ble-bind -m 'emacs' -f 'C-x C-e' edit-and-execute-command
+ble-bind -m 'emacs' -f 'C-x C-g' bell
+ble-bind -m 'emacs' -f 'C-x C-n' history-search-forward
+ble-bind -m 'emacs' -f 'C-x C-p' history-search-backward
+ble-bind -m 'emacs' -f 'C-x C-r' dabbrev-expand
+ble-bind -m 'emacs' -f 'C-x C-u' emacs/undo
+ble-bind -m 'emacs' -f 'C-x C-v' display-shell-version
+ble-bind -m 'emacs' -f 'C-x C-x' exchange-point-and-mark
+ble-bind -m 'emacs' -f 'C-x C-S-u' emacs/redo
+ble-bind -m 'emacs' -f C-y yank
+ble-bind -m 'emacs' -c C-z fg
+ble-bind -m 'emacs' -f C-DEL emacs/undo
+ble-bind -m 'emacs' -f C-insert 'copy-region-or copy-backward-uword'
+ble-bind -m 'emacs' -f C-home beginning-of-text
+ble-bind -m 'emacs' -f C-prior history-beginning
+ble-bind -m 'emacs' -f C-delete delete-forward-cword
+ble-bind -m 'emacs' -f C-end end-of-text
+ble-bind -m 'emacs' -f C-next history-end
+ble-bind -m 'emacs' -f C-up history-prev
+ble-bind -m 'emacs' -f C-down history-next
+ble-bind -m 'emacs' -f C-right forward-cword
+ble-bind -m 'emacs' -f C-left backward-cword
+ble-bind -m 'emacs' -f C-S-a '@marked beginning-of-line'
+ble-bind -m 'emacs' -f C-S-b '@marked backward-char'
+ble-bind -m 'emacs' -f C-S-e '@marked end-of-line'
+ble-bind -m 'emacs' -f C-S-f '@marked forward-char'
+ble-bind -m 'emacs' -f C-S-i 'menu-complete backward'
+ble-bind -m 'emacs' -f C-S-n '@marked forward-line'
+ble-bind -m 'emacs' -f C-S-p '@marked backward-line'
+ble-bind -m 'emacs' -f C-S-home '@marked beginning-of-text'
+ble-bind -m 'emacs' -f C-S-end '@marked end-of-text'
+ble-bind -m 'emacs' -f C-S-right '@marked forward-cword'
+ble-bind -m 'emacs' -f C-S-left '@marked backward-cword'
+ble-bind -m 'emacs' -f M-BS copy-backward-sword
+ble-bind -m 'emacs' -f M-TAB 'complete context=dynamic-history'
+ble-bind -m 'emacs' -f M-RET newline
+ble-bind -m 'emacs' -f M-SP set-mark
+ble-bind -m 'emacs' -f 'M-!' 'complete context=command'
+ble-bind -m 'emacs' -f 'M-#' insert-comment
+ble-bind -m 'emacs' -f 'M-$' 'complete context=variable'
+ble-bind -m 'emacs' -f 'M-&' tilde-expand
+ble-bind -m 'emacs' -f M-\' sabbrev-expand
+ble-bind -m 'emacs' -f 'M-*' 'complete insert_all'
+ble-bind -m 'emacs' -f M-- append-arg
+ble-bind -m 'emacs' -f M-. insert-last-argument
+ble-bind -m 'emacs' -f M-/ 'complete context=filename'
+ble-bind -m 'emacs' -f M-0 append-arg
+ble-bind -m 'emacs' -f M-1 append-arg
+ble-bind -m 'emacs' -f M-2 append-arg
+ble-bind -m 'emacs' -f M-3 append-arg
+ble-bind -m 'emacs' -f M-4 append-arg
+ble-bind -m 'emacs' -f M-5 append-arg
+ble-bind -m 'emacs' -f M-6 append-arg
+ble-bind -m 'emacs' -f M-7 append-arg
+ble-bind -m 'emacs' -f M-8 append-arg
+ble-bind -m 'emacs' -f M-9 append-arg
+ble-bind -m 'emacs' -f 'M-<' history-beginning
+ble-bind -m 'emacs' -f 'M->' history-end
+ble-bind -m 'emacs' -f 'M-?' 'complete show_menu'
+ble-bind -m 'emacs' -f M-@ 'complete context=hostname'
+ble-bind -m 'emacs' -f M-B '@marked backward-cword'
+ble-bind -m 'emacs' -f M-F '@marked forward-cword'
+ble-bind -m 'emacs' -f M-M '@marked non-space-beginning-of-line'
+ble-bind -m 'emacs' -f M-Y 'yank-pop backward'
+ble-bind -m 'emacs' -f 'M-\' delete-horizontal-space
+ble-bind -m 'emacs' -f 'M-^' history-expand-line
+ble-bind -m 'emacs' -f M-_ insert-last-argument
+ble-bind -m 'emacs' -f M-b backward-cword
+ble-bind -m 'emacs' -f M-c capitalize-eword
+ble-bind -m 'emacs' -f M-d kill-forward-cword
+ble-bind -m 'emacs' -f M-f forward-cword
+ble-bind -m 'emacs' -f M-g 'complete context=glob'
+ble-bind -m 'emacs' -f M-h kill-backward-cword
+ble-bind -m 'emacs' -f M-l downcase-eword
+ble-bind -m 'emacs' -f M-m non-space-beginning-of-line
+ble-bind -m 'emacs' -f M-r emacs/revert
+ble-bind -m 'emacs' -f M-t transpose-ewords
+ble-bind -m 'emacs' -f M-u upcase-eword
+ble-bind -m 'emacs' -f M-w 'copy-region-or copy-backward-uword'
+ble-bind -m 'emacs' -f M-x emacs/execute-named-command
+ble-bind -m 'emacs' -f M-y yank-pop
+ble-bind -m 'emacs' -f M-z zap-to-char
+ble-bind -m 'emacs' -f 'M-{' 'complete insert_braces'
+ble-bind -m 'emacs' -f 'M-~' 'complete context=username'
+ble-bind -m 'emacs' -f M-DEL copy-backward-sword
+ble-bind -m 'emacs' -f M-delete copy-forward-sword
+ble-bind -m 'emacs' -f M-right forward-sword
+ble-bind -m 'emacs' -f M-left backward-sword
+ble-bind -m 'emacs' -f M-S-b '@marked backward-cword'
+ble-bind -m 'emacs' -f M-S-f '@marked forward-cword'
+ble-bind -m 'emacs' -f M-S-m '@marked non-space-beginning-of-line'
+ble-bind -m 'emacs' -f M-S-y 'yank-pop backward'
+ble-bind -m 'emacs' -f M-S-right '@marked forward-sword'
+ble-bind -m 'emacs' -f M-S-left '@marked backward-sword'
+ble-bind -m 'emacs' -f 'C-M-?' copy-backward-sword
+ble-bind -m 'emacs' -f 'C-M-]' character-search-backward
+ble-bind -m 'emacs' -f C-M-e shell-expand-line
+ble-bind -m 'emacs' -f C-M-g bell
+ble-bind -m 'emacs' -f C-M-h copy-backward-sword
+ble-bind -m 'emacs' -f C-M-i 'complete context=dynamic-history'
+ble-bind -m 'emacs' -f C-M-l redraw-line
+ble-bind -m 'emacs' -f C-M-m newline
+ble-bind -m 'emacs' -f C-M-u universal-arg
+ble-bind -m 'emacs' -f C-M-y insert-nth-argument

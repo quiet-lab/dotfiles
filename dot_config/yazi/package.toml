@@ -1,0 +1,9 @@
+[[plugin.deps]]
+use = "yazi-rs/plugins:full-border"
+rev = "4848aac"
+hash = "f281261ff04ad7ec867c3f802a50835f"
+
+[[flavor.deps]]
+use = "yazi-rs/flavors:catppuccin-frappe"
+rev = "be0b21d"
+hash = "ab7c71d442d3a9e16331ea0d95ab36a8"

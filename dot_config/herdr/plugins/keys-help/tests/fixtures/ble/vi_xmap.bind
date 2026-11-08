@@ -1,0 +1,139 @@
+ble-bind -m 'vi_xmap' -f BS 'vi-command/backward-char wrap'
+ble-bind -m 'vi_xmap' -f RET vi-command/forward-first-non-space
+ble-bind -m 'vi_xmap' -f ESC vi_xmap/exit
+ble-bind -m 'vi_xmap' -f SP 'vi-command/forward-char wrap'
+ble-bind -m 'vi_xmap' -f '!' 'vi-command/operator filter'
+ble-bind -m 'vi_xmap' -f '"' vi-command/register
+ble-bind -m 'vi_xmap' -f '#' vi-command/search-word-backward
+ble-bind -m 'vi_xmap' -f '$' vi-command/forward-eol
+ble-bind -m 'vi_xmap' -f % 'vi-command/search-matchpair-or vi-command/percentage-line'
+ble-bind -m 'vi_xmap' -f \' 'vi-command/goto-mark line'
+ble-bind -m 'vi_xmap' -f '*' vi-command/search-word-forward
+ble-bind -m 'vi_xmap' -f + vi-command/forward-first-non-space
+ble-bind -m 'vi_xmap' -f ',' vi-command/search-char-reverse-repeat
+ble-bind -m 'vi_xmap' -f - vi-command/backward-first-non-space
+ble-bind -m 'vi_xmap' -f / vi-command/search-forward
+ble-bind -m 'vi_xmap' -f 0 vi-command/append-arg
+ble-bind -m 'vi_xmap' -f 1 vi-command/append-arg
+ble-bind -m 'vi_xmap' -f 2 vi-command/append-arg
+ble-bind -m 'vi_xmap' -f 3 vi-command/append-arg
+ble-bind -m 'vi_xmap' -f 4 vi-command/append-arg
+ble-bind -m 'vi_xmap' -f 5 vi-command/append-arg
+ble-bind -m 'vi_xmap' -f 6 vi-command/append-arg
+ble-bind -m 'vi_xmap' -f 7 vi-command/append-arg
+ble-bind -m 'vi_xmap' -f 8 vi-command/append-arg
+ble-bind -m 'vi_xmap' -f 9 vi-command/append-arg
+ble-bind -m 'vi_xmap' -f ':' vi-command/commandline
+ble-bind -m 'vi_xmap' -f ';' vi-command/search-char-repeat
+ble-bind -m 'vi_xmap' -f '<' 'vi-command/operator indent-left'
+ble-bind -m 'vi_xmap' -f '>' 'vi-command/operator indent-right'
+ble-bind -m 'vi_xmap' -f '?' vi-command/search-backward
+ble-bind -m 'vi_xmap' -f A vi_xmap/append-mode
+ble-bind -m 'vi_xmap' -f B vi-command/backward-uword
+ble-bind -m 'vi_xmap' -f C vi_xmap/replace-block-lines
+ble-bind -m 'vi_xmap' -f D vi_xmap/delete-block-lines
+ble-bind -m 'vi_xmap' -f E vi-command/forward-uword-end
+ble-bind -m 'vi_xmap' -f F vi-command/search-backward-char
+ble-bind -m 'vi_xmap' -f G vi-command/history-end
+ble-bind -m 'vi_xmap' -f H vi-command/nth-line
+ble-bind -m 'vi_xmap' -f I vi_xmap/insert-mode
+ble-bind -m 'vi_xmap' -f J vi_xmap/connect-line-with-space
+ble-bind -m 'vi_xmap' -f K vi_xmap/command-help
+ble-bind -m 'vi_xmap' -f L vi-command/nth-last-line
+ble-bind -m 'vi_xmap' -f N vi-command/search-reverse-repeat
+ble-bind -m 'vi_xmap' -f O vi_xmap/exchange-boundaries
+ble-bind -m 'vi_xmap' -f P vi_xmap/paste-before
+ble-bind -m 'vi_xmap' -f R vi_xmap/delete-lines
+ble-bind -m 'vi_xmap' -f S vi_xmap/delete-lines
+ble-bind -m 'vi_xmap' -f T vi-command/search-backward-char-prev
+ble-bind -m 'vi_xmap' -f U 'vi-command/operator U'
+ble-bind -m 'vi_xmap' -f V vi_xmap/switch-to-linewise
+ble-bind -m 'vi_xmap' -f W vi-command/forward-uword
+ble-bind -m 'vi_xmap' -f X vi_xmap/delete-block-lines
+ble-bind -m 'vi_xmap' -f Y vi_xmap/copy-block-or-lines
+ble-bind -m 'vi_xmap' -f '^' vi-command/first-non-space
+ble-bind -m 'vi_xmap' -f _ vi-command/first-non-space-forward
+ble-bind -m 'vi_xmap' -f '`' vi-command/goto-mark
+ble-bind -m 'vi_xmap' -f a vi-command/text-object-outer
+ble-bind -m 'vi_xmap' -f b vi-command/backward-vword
+ble-bind -m 'vi_xmap' -f c 'vi-command/operator c'
+ble-bind -m 'vi_xmap' -f d 'vi-command/operator d'
+ble-bind -m 'vi_xmap' -f e vi-command/forward-vword-end
+ble-bind -m 'vi_xmap' -f f vi-command/search-forward-char
+ble-bind -m 'vi_xmap' -f 'g $' vi-command/graphical-forward-eol
+ble-bind -m 'vi_xmap' -f 'g 0' vi-command/beginning-of-graphical-line
+ble-bind -m 'vi_xmap' -f 'g ?' 'vi-command/operator rot13'
+ble-bind -m 'vi_xmap' -f 'g @' 'vi-command/operator map'
+ble-bind -m 'vi_xmap' -f 'g E' vi-command/backward-uword-end
+ble-bind -m 'vi_xmap' -f 'g J' vi_xmap/connect-line
+ble-bind -m 'vi_xmap' -f 'g U' 'vi-command/operator U'
+ble-bind -m 'vi_xmap' -f 'g ^' vi-command/graphical-first-non-space
+ble-bind -m 'vi_xmap' -f 'g _' vi-command/last-non-space
+ble-bind -m 'vi_xmap' -f 'g e' vi-command/backward-vword-end
+ble-bind -m 'vi_xmap' -f 'g g' vi-command/history-beginning
+ble-bind -m 'vi_xmap' -f 'g j' vi-command/graphical-forward-line
+ble-bind -m 'vi_xmap' -f 'g k' vi-command/graphical-backward-line
+ble-bind -m 'vi_xmap' -f 'g m' vi-command/middle-of-graphical-line
+ble-bind -m 'vi_xmap' -f 'g o' vi-command/nth-byte
+ble-bind -m 'vi_xmap' -f 'g q' 'vi-command/operator fold'
+ble-bind -m 'vi_xmap' -f 'g u' 'vi-command/operator u'
+ble-bind -m 'vi_xmap' -f 'g v' vi-command/previous-visual-area
+ble-bind -m 'vi_xmap' -f 'g w' 'vi-command/operator fold-preserve-point'
+ble-bind -m 'vi_xmap' -f 'g ~' 'vi-command/operator toggle_case'
+ble-bind -m 'vi_xmap' -f 'g home' vi-command/beginning-of-graphical-line
+ble-bind -m 'vi_xmap' -f 'g end' vi-command/graphical-forward-eol
+ble-bind -m 'vi_xmap' -f 'g up' vi-command/graphical-backward-line
+ble-bind -m 'vi_xmap' -f 'g down' vi-command/graphical-forward-line
+ble-bind -m 'vi_xmap' -f 'g C-a' vi_xmap/progressive-increment
+ble-bind -m 'vi_xmap' -f 'g C-x' vi_xmap/progressive-decrement
+ble-bind -m 'vi_xmap' -f h vi-command/backward-char
+ble-bind -m 'vi_xmap' -f i vi-command/text-object-inner
+ble-bind -m 'vi_xmap' -f j vi-command/forward-line
+ble-bind -m 'vi_xmap' -f k vi-command/backward-line
+ble-bind -m 'vi_xmap' -f l vi-command/forward-char
+ble-bind -m 'vi_xmap' -f n vi-command/search-repeat
+ble-bind -m 'vi_xmap' -f o vi_xmap/exchange-points
+ble-bind -m 'vi_xmap' -f p vi_xmap/paste-after
+ble-bind -m 'vi_xmap' -f r vi_xmap/visual-replace-char
+ble-bind -m 'vi_xmap' -f s 'vi-command/operator c'
+ble-bind -m 'vi_xmap' -f t vi-command/search-forward-char-prev
+ble-bind -m 'vi_xmap' -f u 'vi-command/operator u'
+ble-bind -m 'vi_xmap' -f v vi_xmap/switch-to-charwise
+ble-bind -m 'vi_xmap' -f w vi-command/forward-vword
+ble-bind -m 'vi_xmap' -f x 'vi-command/operator d'
+ble-bind -m 'vi_xmap' -f y 'vi-command/operator y'
+ble-bind -m 'vi_xmap' -f '|' vi-command/nth-column
+ble-bind -m 'vi_xmap' -f '~' 'vi-command/operator toggle_case'
+ble-bind -m 'vi_xmap' -f DEL 'vi-command/backward-char wrap'
+ble-bind -m 'vi_xmap' -f __default__ vi-command/decompose-meta
+ble-bind -m 'vi_xmap' -f home vi-command/beginning-of-line
+ble-bind -m 'vi_xmap' -f delete 'vi-command/operator d'
+ble-bind -m 'vi_xmap' -f end vi-command/forward-eol
+ble-bind -m 'vi_xmap' -f f1 vi_xmap/command-help
+ble-bind -m 'vi_xmap' -f paste_begin vi-command/bracketed-paste
+ble-bind -m 'vi_xmap' -f up vi-command/backward-line
+ble-bind -m 'vi_xmap' -f down vi-command/forward-line
+ble-bind -m 'vi_xmap' -f right vi-command/forward-char
+ble-bind -m 'vi_xmap' -f left vi-command/backward-char
+ble-bind -m 'vi_xmap' -f S-right vi-command/forward-vword
+ble-bind -m 'vi_xmap' -f S-left vi-command/backward-vword
+ble-bind -m 'vi_xmap' -f 'C-?' 'vi-command/backward-char wrap'
+ble-bind -m 'vi_xmap' -f 'C-[' vi_xmap/exit
+ble-bind -m 'vi_xmap' -f 'C-\ C-g' vi_xmap/cancel
+ble-bind -m 'vi_xmap' -f 'C-\ C-n' vi_xmap/cancel
+ble-bind -m 'vi_xmap' -f C-a vi_xmap/increment
+ble-bind -m 'vi_xmap' -f C-c vi_xmap/cancel
+ble-bind -m 'vi_xmap' -f C-g vi_xmap/switch-to-select
+ble-bind -m 'vi_xmap' -f C-h 'vi-command/backward-char wrap'
+ble-bind -m 'vi_xmap' -f C-j vi-command/forward-line
+ble-bind -m 'vi_xmap' -f C-m vi-command/forward-first-non-space
+ble-bind -m 'vi_xmap' -f C-n vi-command/forward-line
+ble-bind -m 'vi_xmap' -f C-p vi-command/backward-line
+ble-bind -m 'vi_xmap' -f C-q vi_xmap/switch-to-blockwise
+ble-bind -m 'vi_xmap' -f C-v vi_xmap/switch-to-blockwise
+ble-bind -m 'vi_xmap' -f C-x vi_xmap/decrement
+ble-bind -m 'vi_xmap' -c C-z fg
+ble-bind -m 'vi_xmap' -f C-home vi-command/first-nol
+ble-bind -m 'vi_xmap' -f C-end vi-command/last-eol
+ble-bind -m 'vi_xmap' -f C-right vi-command/forward-vword
+ble-bind -m 'vi_xmap' -f C-left vi-command/backward-vword

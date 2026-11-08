@@ -1,0 +1,16 @@
+ble-bind -m 'isearch' -f BS isearch/prev
+ble-bind -m 'isearch' -f RET isearch/exit
+ble-bind -m 'isearch' -f DEL isearch/prev
+ble-bind -m 'isearch' -f __defchar__ isearch/self-insert
+ble-bind -m 'isearch' -f __default__ isearch/exit-default
+ble-bind -m 'isearch' -f __line_limit__ nop
+ble-bind -m 'isearch' -f C-RET isearch/accept-line
+ble-bind -m 'isearch' -f 'C-?' isearch/prev
+ble-bind -m 'isearch' -f C-g isearch/cancel
+ble-bind -m 'isearch' -f C-h isearch/prev
+ble-bind -m 'isearch' -f C-j isearch/accept-line
+ble-bind -m 'isearch' -f C-m isearch/exit
+ble-bind -m 'isearch' -f C-r isearch/backward
+ble-bind -m 'isearch' -f C-s isearch/forward
+ble-bind -m 'isearch' -f 'C-x C-g' isearch/cancel
+ble-bind -m 'isearch' -f C-M-g isearch/cancel

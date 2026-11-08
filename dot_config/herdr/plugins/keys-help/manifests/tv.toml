@@ -1,0 +1,232 @@
+# Манифест television (D6 изменения herdr-keys-help). Таблица — раздел [keybindings]
+# ~/.config/television/config.toml (ключ — клавиша, значение — действие или массив
+# действий; форма `map`). Внутри открытого tv таблица статична: строится один раз при
+# входе в контекст. Короткие описания — в правилах [[describe]], полный текст — из
+# документации перечисления Action исходников tv 0.15.9.
+
+program = "tv"
+priority = 100
+origins = ["tv"]
+
+[detect]
+process = ["tv"]
+shell_commands = ["tv", "tv *", "tv_*"]
+
+# Режима нет: контекст — просто `tv` (спецификация, «Контекст и запись таблицы»).
+
+[[source]]
+modes = ["*"]
+kind = "toml"
+file = "~/.config/television/config.toml"
+tables = ["keybindings"]
+origin = "tv"
+
+[[describe]]
+action = '^delete_prev_char$'
+desc = "удалить символ слева"
+desc_full = "Delete the character before the cursor from the input buffer."
+
+[[describe]]
+action = '^delete_prev_word$'
+desc = "удалить слово слева"
+desc_full = "Delete the previous word from the input buffer."
+
+[[describe]]
+action = '^delete_next_char$'
+desc = "удалить символ справа"
+desc_full = "Delete the character after the cursor from the input buffer."
+
+[[describe]]
+action = '^delete_line$'
+desc = "очистить строку"
+desc_full = "Delete the current line from the input buffer."
+
+[[describe]]
+action = '^go_to_prev_char$'
+desc = "символ влево"
+desc_full = "Move the cursor to the character before the current cursor position."
+
+[[describe]]
+action = '^go_to_next_char$'
+desc = "символ вправо"
+desc_full = "Move the cursor to the character after the current cursor position."
+
+[[describe]]
+action = '^go_to_input_start$'
+desc = "в начало ввода"
+desc_full = "Move the cursor to the start of the input buffer."
+
+[[describe]]
+action = '^go_to_input_end$'
+desc = "в конец ввода"
+desc_full = "Move the cursor to the end of the input buffer."
+
+[[describe]]
+action = '^toggle_selection_down$'
+desc = "отметить и вниз"
+desc_full = "Add entry under cursor to the list of selected entries and move the cursor down."
+
+[[describe]]
+action = '^toggle_selection_up$'
+desc = "отметить и вверх"
+desc_full = "Add entry under cursor to the list of selected entries and move the cursor up."
+
+[[describe]]
+action = '^confirm_selection$'
+desc = "подтвердить выбор"
+desc_full = "Confirm current selection (multi select or entry under cursor)."
+
+[[describe]]
+action = '^select_and_exit$'
+desc = "выбрать и выйти"
+desc_full = "Select the entry currently under the cursor and exit the application."
+
+[[describe]]
+action = '^select_next_entry$'
+desc = "запись ниже"
+desc_full = "Select the next entry in the currently focused list."
+
+[[describe]]
+action = '^select_prev_entry$'
+desc = "запись выше"
+desc_full = "Select the previous entry in the currently focused list."
+
+[[describe]]
+action = '^select_next_page$'
+desc = "страница вниз"
+desc_full = "Select the next page of entries in the currently focused list."
+
+[[describe]]
+action = '^select_prev_page$'
+desc = "страница вверх"
+desc_full = "Select the previous page of entries in the currently focused list."
+
+[[describe]]
+action = '^copy_entry_to_clipboard$'
+desc = "копировать запись"
+desc_full = "Copy the currently selected entry to the clipboard."
+
+[[describe]]
+action = '^scroll_preview_up$'
+desc = "просмотр вверх"
+desc_full = "Scroll the preview up by one line."
+
+[[describe]]
+action = '^scroll_preview_down$'
+desc = "просмотр вниз"
+desc_full = "Scroll the preview down by one line."
+
+[[describe]]
+action = '^scroll_preview_half_page_up$'
+desc = "просмотр на полстраницы вверх"
+desc_full = "Scroll the preview up by half a page."
+
+[[describe]]
+action = '^scroll_preview_half_page_down$'
+desc = "просмотр на полстраницы вниз"
+desc_full = "Scroll the preview down by half a page."
+
+[[describe]]
+action = '^quit$'
+desc = "выйти"
+desc_full = "Quit the application."
+
+[[describe]]
+action = '^toggle_remote_control$'
+desc = "выбор канала"
+desc_full = "Toggle a UI feature (remote control: switching channels)."
+
+[[describe]]
+action = '^toggle_action_picker$'
+desc = "меню действий"
+desc_full = "Toggle a UI feature (action picker)."
+
+[[describe]]
+action = '^toggle_help$'
+desc = "справка по клавишам"
+desc_full = "Toggle a UI feature (help panel)."
+
+[[describe]]
+action = '^toggle_status_bar$'
+desc = "строка состояния"
+desc_full = "Toggle a UI feature (status bar)."
+
+[[describe]]
+action = '^toggle_preview$'
+desc = "панель просмотра"
+desc_full = "Toggle a UI feature (preview panel)."
+
+[[describe]]
+action = '^toggle_layout$'
+desc = "книжная или альбомная"
+desc_full = "Switch between the portrait and landscape modes."
+
+[[describe]]
+action = '^no_op$'
+desc = "ничего не делает"
+desc_full = "No operation."
+
+[[describe]]
+action = '^cycle_sources$'
+desc = "следующий источник"
+desc_full = "Cycle between different source commands."
+
+[[describe]]
+action = '^cycle_previews$'
+desc = "следующий просмотр"
+desc_full = "Cycle between different preview commands."
+
+[[describe]]
+action = '^reload_source$'
+desc = "перечитать источник"
+desc_full = "Reload the current source command."
+
+[[describe]]
+action = '^select_prev_history$'
+desc = "прежний запрос"
+desc_full = "Navigate to the previous entry in the history."
+
+[[describe]]
+action = '^select_next_history$'
+desc = "следующий запрос"
+desc_full = "Navigate to the next entry in the history."
+
+[[group]]
+action = '^(delete_prev_char|delete_prev_word|delete_next_char|delete_line)$'
+group = "edit"
+
+[[group]]
+action = '^(go_to_prev_char|go_to_next_char|go_to_input_start|go_to_input_end|select_next_entry|select_prev_entry|select_next_page|select_prev_page)$'
+group = "motion"
+
+[[group]]
+action = '^(toggle_selection_down|toggle_selection_up|confirm_selection|select_and_exit|copy_entry_to_clipboard)$'
+group = "select"
+
+[[group]]
+action = '^(scroll_preview_up|scroll_preview_down|scroll_preview_half_page_up|scroll_preview_half_page_down|toggle_preview|cycle_previews)$'
+group = "preview"
+
+[[group]]
+action = '^(quit|toggle_action_picker|toggle_help)$'
+group = "app"
+
+[[group]]
+action = '^(toggle_remote_control|cycle_sources|reload_source)$'
+group = "source"
+
+[[group]]
+action = '^(toggle_status_bar|toggle_layout)$'
+group = "view"
+
+[[group]]
+action = '^(no_op)$'
+group = "other"
+
+[[group]]
+action = '^(select_prev_history|select_next_history)$'
+group = "history"
+
+[[group]]
+action = '.*'
+group = "other"

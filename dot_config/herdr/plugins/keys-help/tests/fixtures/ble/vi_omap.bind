@@ -1,0 +1,113 @@
+ble-bind -m 'vi_omap' -f BS 'vi-command/backward-char wrap'
+ble-bind -m 'vi_omap' -f RET vi-command/forward-first-non-space
+ble-bind -m 'vi_omap' -f ESC vi_omap/cancel
+ble-bind -m 'vi_omap' -f SP 'vi-command/forward-char wrap'
+ble-bind -m 'vi_omap' -f '!' 'vi-command/operator filter'
+ble-bind -m 'vi_omap' -f '#' vi-command/search-word-backward
+ble-bind -m 'vi_omap' -f '$' vi-command/forward-eol
+ble-bind -m 'vi_omap' -f % 'vi-command/search-matchpair-or vi-command/percentage-line'
+ble-bind -m 'vi_omap' -f \' 'vi-command/goto-mark line'
+ble-bind -m 'vi_omap' -f '*' vi-command/search-word-forward
+ble-bind -m 'vi_omap' -f + vi-command/forward-first-non-space
+ble-bind -m 'vi_omap' -f ',' vi-command/search-char-reverse-repeat
+ble-bind -m 'vi_omap' -f - vi-command/backward-first-non-space
+ble-bind -m 'vi_omap' -f / vi-command/search-forward
+ble-bind -m 'vi_omap' -f 0 vi-command/append-arg
+ble-bind -m 'vi_omap' -f 1 vi-command/append-arg
+ble-bind -m 'vi_omap' -f 2 vi-command/append-arg
+ble-bind -m 'vi_omap' -f 3 vi-command/append-arg
+ble-bind -m 'vi_omap' -f 4 vi-command/append-arg
+ble-bind -m 'vi_omap' -f 5 vi-command/append-arg
+ble-bind -m 'vi_omap' -f 6 vi-command/append-arg
+ble-bind -m 'vi_omap' -f 7 vi-command/append-arg
+ble-bind -m 'vi_omap' -f 8 vi-command/append-arg
+ble-bind -m 'vi_omap' -f 9 vi-command/append-arg
+ble-bind -m 'vi_omap' -f ':' vi-command/commandline
+ble-bind -m 'vi_omap' -f ';' vi-command/search-char-repeat
+ble-bind -m 'vi_omap' -f '<' 'vi-command/operator indent-left'
+ble-bind -m 'vi_omap' -f '>' 'vi-command/operator indent-right'
+ble-bind -m 'vi_omap' -f '?' vi_omap/operator-rot13-or-search-backward
+ble-bind -m 'vi_omap' -f B vi-command/backward-uword
+ble-bind -m 'vi_omap' -f E vi-command/forward-uword-end
+ble-bind -m 'vi_omap' -f F vi-command/search-backward-char
+ble-bind -m 'vi_omap' -f G vi-command/history-end
+ble-bind -m 'vi_omap' -f H vi-command/nth-line
+ble-bind -m 'vi_omap' -f L vi-command/nth-last-line
+ble-bind -m 'vi_omap' -f N vi-command/search-reverse-repeat
+ble-bind -m 'vi_omap' -f T vi-command/search-backward-char-prev
+ble-bind -m 'vi_omap' -f U 'vi-command/operator U'
+ble-bind -m 'vi_omap' -f V vi_omap/switch-to-linewise
+ble-bind -m 'vi_omap' -f W vi-command/forward-uword
+ble-bind -m 'vi_omap' -f '^' vi-command/first-non-space
+ble-bind -m 'vi_omap' -f _ vi-command/first-non-space-forward
+ble-bind -m 'vi_omap' -f '`' vi-command/goto-mark
+ble-bind -m 'vi_omap' -f a vi-command/text-object-outer
+ble-bind -m 'vi_omap' -f b vi-command/backward-vword
+ble-bind -m 'vi_omap' -f c 'vi-command/operator c'
+ble-bind -m 'vi_omap' -f d 'vi-command/operator d'
+ble-bind -m 'vi_omap' -f e vi-command/forward-vword-end
+ble-bind -m 'vi_omap' -f f vi-command/search-forward-char
+ble-bind -m 'vi_omap' -f 'g $' vi-command/graphical-forward-eol
+ble-bind -m 'vi_omap' -f 'g 0' vi-command/beginning-of-graphical-line
+ble-bind -m 'vi_omap' -f 'g ?' 'vi-command/operator rot13'
+ble-bind -m 'vi_omap' -f 'g @' 'vi-command/operator map'
+ble-bind -m 'vi_omap' -f 'g E' vi-command/backward-uword-end
+ble-bind -m 'vi_omap' -f 'g U' 'vi-command/operator U'
+ble-bind -m 'vi_omap' -f 'g ^' vi-command/graphical-first-non-space
+ble-bind -m 'vi_omap' -f 'g _' vi-command/last-non-space
+ble-bind -m 'vi_omap' -f 'g e' vi-command/backward-vword-end
+ble-bind -m 'vi_omap' -f 'g g' vi-command/history-beginning
+ble-bind -m 'vi_omap' -f 'g j' vi-command/graphical-forward-line
+ble-bind -m 'vi_omap' -f 'g k' vi-command/graphical-backward-line
+ble-bind -m 'vi_omap' -f 'g m' vi-command/middle-of-graphical-line
+ble-bind -m 'vi_omap' -f 'g o' vi-command/nth-byte
+ble-bind -m 'vi_omap' -f 'g q' 'vi-command/operator fold'
+ble-bind -m 'vi_omap' -f 'g u' 'vi-command/operator u'
+ble-bind -m 'vi_omap' -f 'g w' 'vi-command/operator fold-preserve-point'
+ble-bind -m 'vi_omap' -f 'g ~' 'vi-command/operator toggle_case'
+ble-bind -m 'vi_omap' -f 'g home' vi-command/beginning-of-graphical-line
+ble-bind -m 'vi_omap' -f 'g end' vi-command/graphical-forward-eol
+ble-bind -m 'vi_omap' -f 'g up' vi-command/graphical-backward-line
+ble-bind -m 'vi_omap' -f 'g down' vi-command/graphical-forward-line
+ble-bind -m 'vi_omap' -f h vi-command/backward-char
+ble-bind -m 'vi_omap' -f i vi-command/text-object-inner
+ble-bind -m 'vi_omap' -f j vi-command/forward-line
+ble-bind -m 'vi_omap' -f k vi-command/backward-line
+ble-bind -m 'vi_omap' -f l vi-command/forward-char
+ble-bind -m 'vi_omap' -f n vi-command/search-repeat
+ble-bind -m 'vi_omap' -f q 'vi-command/operator fold'
+ble-bind -m 'vi_omap' -f t vi-command/search-forward-char-prev
+ble-bind -m 'vi_omap' -f u 'vi-command/operator u'
+ble-bind -m 'vi_omap' -f v vi_omap/switch-to-charwise
+ble-bind -m 'vi_omap' -f w vi-command/forward-vword
+ble-bind -m 'vi_omap' -f y 'vi-command/operator y'
+ble-bind -m 'vi_omap' -f '|' vi-command/nth-column
+ble-bind -m 'vi_omap' -f '~' 'vi-command/operator toggle_case'
+ble-bind -m 'vi_omap' -f DEL 'vi-command/backward-char wrap'
+ble-bind -m 'vi_omap' -f __default__ vi_omap/__default__
+ble-bind -m 'vi_omap' -f __line_limit__ nop
+ble-bind -m 'vi_omap' -f home vi-command/beginning-of-line
+ble-bind -m 'vi_omap' -f end vi-command/forward-eol
+ble-bind -m 'vi_omap' -f paste_begin vi-command/bracketed-paste
+ble-bind -m 'vi_omap' -f up vi-command/backward-line
+ble-bind -m 'vi_omap' -f down vi-command/forward-line
+ble-bind -m 'vi_omap' -f right vi-command/forward-char
+ble-bind -m 'vi_omap' -f left vi-command/backward-char
+ble-bind -m 'vi_omap' -f S-right vi-command/forward-vword
+ble-bind -m 'vi_omap' -f S-left vi-command/backward-vword
+ble-bind -m 'vi_omap' -f 'C-?' 'vi-command/backward-char wrap'
+ble-bind -m 'vi_omap' -f 'C-[' vi_omap/cancel
+ble-bind -m 'vi_omap' -f 'C-\ C-n' nop
+ble-bind -m 'vi_omap' -f C-c vi_omap/cancel
+ble-bind -m 'vi_omap' -f C-h 'vi-command/backward-char wrap'
+ble-bind -m 'vi_omap' -f C-j vi-command/forward-line
+ble-bind -m 'vi_omap' -f C-m vi-command/forward-first-non-space
+ble-bind -m 'vi_omap' -f C-n vi-command/forward-line
+ble-bind -m 'vi_omap' -f C-p vi-command/backward-line
+ble-bind -m 'vi_omap' -f C-q vi_omap/switch-to-blockwise
+ble-bind -m 'vi_omap' -f C-v vi_omap/switch-to-blockwise
+ble-bind -m 'vi_omap' -c C-z fg
+ble-bind -m 'vi_omap' -f C-home vi-command/first-nol
+ble-bind -m 'vi_omap' -f C-end vi-command/last-eol
+ble-bind -m 'vi_omap' -f C-right vi-command/forward-vword
+ble-bind -m 'vi_omap' -f C-left vi-command/backward-vword

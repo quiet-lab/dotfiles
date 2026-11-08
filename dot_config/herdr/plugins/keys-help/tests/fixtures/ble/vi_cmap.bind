@@ -1,0 +1,165 @@
+ble-bind -m 'vi_cmap' -f NUL set-mark
+ble-bind -m 'vi_cmap' -f BS 'delete-region-or delete-backward-char'
+ble-bind -m 'vi_cmap' -f TAB complete
+ble-bind -m 'vi_cmap' -f RET vi_cmap/accept
+ble-bind -m 'vi_cmap' -f ESC vi_cmap/cancel
+ble-bind -m 'vi_cmap' -f DEL 'delete-region-or delete-backward-char'
+ble-bind -m 'vi_cmap' -f __batch_char__ batch-insert
+ble-bind -m 'vi_cmap' -f __defchar__ self-insert
+ble-bind -m 'vi_cmap' -f __before_widget__ vi_cmap/__before_widget__
+ble-bind -m 'vi_cmap' -f __line_limit__ vi_cmap/__line_limit__
+ble-bind -m 'vi_cmap' -f ac_enter auto-complete-enter
+ble-bind -m 'vi_cmap' -f insert overwrite-mode
+ble-bind -m 'vi_cmap' -f home beginning-of-line
+ble-bind -m 'vi_cmap' -f prior history-search-backward
+ble-bind -m 'vi_cmap' -f delete 'delete-region-or delete-forward-char'
+ble-bind -m 'vi_cmap' -f end end-of-line
+ble-bind -m 'vi_cmap' -f next history-search-forward
+ble-bind -m 'vi_cmap' -f paste_begin bracketed-paste
+ble-bind -m 'vi_cmap' -f up 'backward-line history'
+ble-bind -m 'vi_cmap' -f down 'forward-line history'
+ble-bind -m 'vi_cmap' -f right forward-char
+ble-bind -m 'vi_cmap' -f left backward-char
+ble-bind -m 'vi_cmap' -f S-TAB 'menu-complete backward'
+ble-bind -m 'vi_cmap' -f S-insert yank
+ble-bind -m 'vi_cmap' -f S-home '@marked beginning-of-line'
+ble-bind -m 'vi_cmap' -f S-delete 'kill-region-or kill-backward-uword'
+ble-bind -m 'vi_cmap' -f S-end '@marked end-of-line'
+ble-bind -m 'vi_cmap' -f S-up '@marked backward-line'
+ble-bind -m 'vi_cmap' -f S-down '@marked forward-line'
+ble-bind -m 'vi_cmap' -f S-right '@marked forward-char'
+ble-bind -m 'vi_cmap' -f S-left '@marked backward-char'
+ble-bind -m 'vi_cmap' -f C-BS delete-backward-cword
+ble-bind -m 'vi_cmap' -f C-TAB menu-complete
+ble-bind -m 'vi_cmap' -f C-SP set-mark
+ble-bind -m 'vi_cmap' -f 'C-?' 'delete-region-or delete-backward-char'
+ble-bind -m 'vi_cmap' -f C-@ set-mark
+ble-bind -m 'vi_cmap' -f 'C-[' vi_cmap/cancel
+ble-bind -m 'vi_cmap' -f 'C-\' bell
+ble-bind -m 'vi_cmap' -f 'C-]' character-search-forward
+ble-bind -m 'vi_cmap' -f 'C-^' bell
+ble-bind -m 'vi_cmap' -f C-_ delete-backward-cword
+ble-bind -m 'vi_cmap' -f C-a beginning-of-line
+ble-bind -m 'vi_cmap' -f C-b backward-char
+ble-bind -m 'vi_cmap' -f C-c vi_cmap/cancel
+ble-bind -m 'vi_cmap' -f C-d 'delete-region-or delete-forward-char'
+ble-bind -m 'vi_cmap' -f C-e end-of-line
+ble-bind -m 'vi_cmap' -f C-f forward-char
+ble-bind -m 'vi_cmap' -f C-g bell
+ble-bind -m 'vi_cmap' -f C-h 'delete-region-or delete-backward-char'
+ble-bind -m 'vi_cmap' -f C-i complete
+ble-bind -m 'vi_cmap' -f C-j vi_cmap/accept
+ble-bind -m 'vi_cmap' -f C-k kill-forward-line
+ble-bind -m 'vi_cmap' -f C-l redraw-line
+ble-bind -m 'vi_cmap' -f C-m vi_cmap/accept
+ble-bind -m 'vi_cmap' -f C-n 'forward-line history'
+ble-bind -m 'vi_cmap' -f C-p 'backward-line history'
+ble-bind -m 'vi_cmap' -f C-q quoted-insert
+ble-bind -m 'vi_cmap' -f C-r history-isearch-backward
+ble-bind -m 'vi_cmap' -f C-s history-isearch-forward
+ble-bind -m 'vi_cmap' -f C-t transpose-chars
+ble-bind -m 'vi_cmap' -f C-u kill-backward-line
+ble-bind -m 'vi_cmap' -f C-v quoted-insert
+ble-bind -m 'vi_cmap' -f C-w 'kill-region-or kill-backward-uword'
+ble-bind -m 'vi_cmap' -f 'C-x !' 'complete show_menu:context=command'
+ble-bind -m 'vi_cmap' -f 'C-x $' 'complete show_menu:context=variable'
+ble-bind -m 'vi_cmap' -f 'C-x '\' sabbrev-expand
+ble-bind -m 'vi_cmap' -f 'C-x (' start-keyboard-macro
+ble-bind -m 'vi_cmap' -f 'C-x )' end-keyboard-macro
+ble-bind -m 'vi_cmap' -f 'C-x *' 'complete insert_all:context=glob'
+ble-bind -m 'vi_cmap' -f 'C-x ,' history-nsearch-backward-again
+ble-bind -m 'vi_cmap' -f 'C-x .' history-nsearch-forward-again
+ble-bind -m 'vi_cmap' -f 'C-x /' 'complete show_menu:context=filename'
+ble-bind -m 'vi_cmap' -f 'C-x <' history-nsearch-backward
+ble-bind -m 'vi_cmap' -f 'C-x >' history-nsearch-forward
+ble-bind -m 'vi_cmap' -f 'C-x @' 'complete show_menu:context=hostname'
+ble-bind -m 'vi_cmap' -f 'C-x P' print-keyboard-macro
+ble-bind -m 'vi_cmap' -f 'C-x e' call-keyboard-macro
+ble-bind -m 'vi_cmap' -f 'C-x g' 'complete show_menu:context=glob'
+ble-bind -m 'vi_cmap' -f 'C-x n' history-substring-search-forward
+ble-bind -m 'vi_cmap' -f 'C-x p' history-substring-search-backward
+ble-bind -m 'vi_cmap' -f 'C-x ~' 'complete show_menu:context=username'
+ble-bind -m 'vi_cmap' -f 'C-x up' history-search-backward
+ble-bind -m 'vi_cmap' -f 'C-x down' history-search-forward
+ble-bind -m 'vi_cmap' -f 'C-x C-g' bell
+ble-bind -m 'vi_cmap' -f 'C-x C-n' history-search-forward
+ble-bind -m 'vi_cmap' -f 'C-x C-p' history-search-backward
+ble-bind -m 'vi_cmap' -f 'C-x C-r' dabbrev-expand
+ble-bind -m 'vi_cmap' -f 'C-x C-v' display-shell-version
+ble-bind -m 'vi_cmap' -f 'C-x C-x' exchange-point-and-mark
+ble-bind -m 'vi_cmap' -f C-y yank
+ble-bind -m 'vi_cmap' -f C-DEL delete-backward-cword
+ble-bind -m 'vi_cmap' -f C-insert 'copy-region-or copy-backward-uword'
+ble-bind -m 'vi_cmap' -f C-home beginning-of-text
+ble-bind -m 'vi_cmap' -f C-prior history-beginning
+ble-bind -m 'vi_cmap' -f C-delete delete-forward-cword
+ble-bind -m 'vi_cmap' -f C-end end-of-text
+ble-bind -m 'vi_cmap' -f C-next history-end
+ble-bind -m 'vi_cmap' -f C-up history-prev
+ble-bind -m 'vi_cmap' -f C-down history-next
+ble-bind -m 'vi_cmap' -f C-right forward-cword
+ble-bind -m 'vi_cmap' -f C-left backward-cword
+ble-bind -m 'vi_cmap' -f C-S-a '@marked beginning-of-line'
+ble-bind -m 'vi_cmap' -f C-S-b '@marked backward-char'
+ble-bind -m 'vi_cmap' -f C-S-e '@marked end-of-line'
+ble-bind -m 'vi_cmap' -f C-S-f '@marked forward-char'
+ble-bind -m 'vi_cmap' -f C-S-i 'menu-complete backward'
+ble-bind -m 'vi_cmap' -f C-S-n '@marked forward-line'
+ble-bind -m 'vi_cmap' -f C-S-p '@marked backward-line'
+ble-bind -m 'vi_cmap' -f C-S-home '@marked beginning-of-text'
+ble-bind -m 'vi_cmap' -f C-S-end '@marked end-of-text'
+ble-bind -m 'vi_cmap' -f C-S-right '@marked forward-cword'
+ble-bind -m 'vi_cmap' -f C-S-left '@marked backward-cword'
+ble-bind -m 'vi_cmap' -f M-BS copy-backward-sword
+ble-bind -m 'vi_cmap' -f M-TAB 'complete context=dynamic-history'
+ble-bind -m 'vi_cmap' -f M-RET newline
+ble-bind -m 'vi_cmap' -f M-SP set-mark
+ble-bind -m 'vi_cmap' -f 'M-!' 'complete context=command'
+ble-bind -m 'vi_cmap' -f 'M-$' 'complete context=variable'
+ble-bind -m 'vi_cmap' -f M-\' sabbrev-expand
+ble-bind -m 'vi_cmap' -f 'M-*' 'complete insert_all'
+ble-bind -m 'vi_cmap' -f M-. insert-last-argument
+ble-bind -m 'vi_cmap' -f M-/ 'complete context=filename'
+ble-bind -m 'vi_cmap' -f 'M-<' history-beginning
+ble-bind -m 'vi_cmap' -f 'M->' history-end
+ble-bind -m 'vi_cmap' -f 'M-?' 'complete show_menu'
+ble-bind -m 'vi_cmap' -f M-@ 'complete context=hostname'
+ble-bind -m 'vi_cmap' -f M-B '@marked backward-cword'
+ble-bind -m 'vi_cmap' -f M-F '@marked forward-cword'
+ble-bind -m 'vi_cmap' -f M-M '@marked non-space-beginning-of-line'
+ble-bind -m 'vi_cmap' -f M-Y 'yank-pop backward'
+ble-bind -m 'vi_cmap' -f 'M-\' delete-horizontal-space
+ble-bind -m 'vi_cmap' -f M-_ insert-last-argument
+ble-bind -m 'vi_cmap' -f M-b backward-cword
+ble-bind -m 'vi_cmap' -f M-c capitalize-eword
+ble-bind -m 'vi_cmap' -f M-d kill-forward-cword
+ble-bind -m 'vi_cmap' -f M-f forward-cword
+ble-bind -m 'vi_cmap' -f M-g 'complete context=glob'
+ble-bind -m 'vi_cmap' -f M-h kill-backward-cword
+ble-bind -m 'vi_cmap' -f M-l downcase-eword
+ble-bind -m 'vi_cmap' -f M-m non-space-beginning-of-line
+ble-bind -m 'vi_cmap' -f M-t transpose-ewords
+ble-bind -m 'vi_cmap' -f M-u upcase-eword
+ble-bind -m 'vi_cmap' -f M-w 'copy-region-or copy-backward-uword'
+ble-bind -m 'vi_cmap' -f M-x execute-named-command
+ble-bind -m 'vi_cmap' -f M-y yank-pop
+ble-bind -m 'vi_cmap' -f 'M-{' 'complete insert_braces'
+ble-bind -m 'vi_cmap' -f 'M-~' 'complete context=username'
+ble-bind -m 'vi_cmap' -f M-DEL copy-backward-sword
+ble-bind -m 'vi_cmap' -f M-delete copy-forward-sword
+ble-bind -m 'vi_cmap' -f M-right forward-sword
+ble-bind -m 'vi_cmap' -f M-left backward-sword
+ble-bind -m 'vi_cmap' -f M-S-b '@marked backward-cword'
+ble-bind -m 'vi_cmap' -f M-S-f '@marked forward-cword'
+ble-bind -m 'vi_cmap' -f M-S-m '@marked non-space-beginning-of-line'
+ble-bind -m 'vi_cmap' -f M-S-y 'yank-pop backward'
+ble-bind -m 'vi_cmap' -f M-S-right '@marked forward-sword'
+ble-bind -m 'vi_cmap' -f M-S-left '@marked backward-sword'
+ble-bind -m 'vi_cmap' -f 'C-M-?' copy-backward-sword
+ble-bind -m 'vi_cmap' -f 'C-M-]' character-search-backward
+ble-bind -m 'vi_cmap' -f C-M-g bell
+ble-bind -m 'vi_cmap' -f C-M-h copy-backward-sword
+ble-bind -m 'vi_cmap' -f C-M-i 'complete context=dynamic-history'
+ble-bind -m 'vi_cmap' -f C-M-l redraw-line
+ble-bind -m 'vi_cmap' -f C-M-m newline
+ble-bind -m 'vi_cmap' -f C-M-y insert-nth-argument

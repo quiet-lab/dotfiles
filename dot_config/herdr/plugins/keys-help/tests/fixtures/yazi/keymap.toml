@@ -1,0 +1,10 @@
+# пользовательские клавиши yazi
+[mgr]
+prepend_keymap = [
+	{ on = "q", run = "close", desc = "My own quit that closes tab" },
+	{ on = ["g", "z"], run = "cd ~/work", desc = "Go to work" },
+	{ on = "<C-e>", run = "shell --block", desc = "Run a shell" },
+]
+append_keymap = [
+	{ on = "<F9>", run = "help", desc = "Extra help key" },
+]

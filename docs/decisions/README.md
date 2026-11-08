@@ -43,3 +43,4 @@
 | 0007 | [Таймеры запрещены — состояние меняют события](0007-no-timers.md) |
 | 0008 | [Пароль для sudo спрашивает только окно Quickshell askpass](0008-askpass-quickshell-only.md) |
 | 0009 | [Туннель AmneziaWG — awg-quick с выбором маршрута по адресу назначения](0009-amneziawg-split-by-destination.md) |
+| 0010 | [Подсказка клавиш по контексту — плагин herdr с панелью split](0010-keys-help-herdr-plugin.md) |

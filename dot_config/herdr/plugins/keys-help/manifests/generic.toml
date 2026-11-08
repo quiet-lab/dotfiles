@@ -1,0 +1,77 @@
+# Универсальный извлекатель (D7 и D7а изменения herdr-keys-help): манифест для команды,
+# у которой нет своего манифеста. Контекст — `<команда>.generic`, источник записей —
+# `generic`. Источники идут по порядку, побеждает первый непустой результат
+# (`first_nonempty`): раздел о клавишах в `man`, затем вывод `--help`, затем известные
+# файлы конфигурации клавиш. Короткие описания ядро строит правилом D7а из полного
+# текста; таблица кешируется на диске по входам.
+#
+# У источников с `sections` и без `regex` ядро разбирает строки раздела само: клавиша
+# (`C-x`, `Ctrl+X`, `^X`, `<Esc>`, `Alt-x`, `F1`, одиночный символ, несколько через
+# запятую или «or»), описание через два пробела или строкой ниже с большим отступом;
+# группа — ближайший подзаголовок раздела.
+
+program = "*"
+priority = 0
+origins = ["generic"]
+first_nonempty = true
+
+[detect]
+fallback = true
+
+[modes]
+default = "generic"
+
+[[source]]
+modes = ["*"]
+kind = "regex"
+command = ["man", "-P", "cat", "{command}"]
+sections = '^(KEY ?BINDINGS|KEYS|KEYBOARD( SHORTCUTS| COMMANDS)?|COMMANDS|INTERACTIVE( COMMANDS| MODE)?|SHORTCUTS|NAVIGATION)\b'
+origin = "generic"
+
+[[source]]
+modes = ["*"]
+kind = "regex"
+command = ["{command}", "--help"]
+sections = '(?i)^(keys|key ?bindings|keyboard( shortcuts)?|interactive( commands| mode)?|shortcuts|commands)\b:?'
+origin = "generic"
+
+# Известные файлы конфигурации клавиш: таблицы keybindings, keys и keymap файла
+# config.toml программы (ключ — клавиша, значение — действие).
+
+[[source]]
+modes = ["*"]
+kind = "toml"
+file = "~/.config/{command}/config.toml"
+tables = ["keybindings"]
+origin = "generic"
+
+[[source]]
+modes = ["*"]
+kind = "toml"
+file = "~/.config/{command}/config.toml"
+tables = ["keys"]
+origin = "generic"
+
+[[source]]
+modes = ["*"]
+kind = "toml"
+file = "~/.config/{command}/config.toml"
+tables = ["keymap"]
+origin = "generic"
+
+# Файлы вида ~/.config/<команда>/keybindings.conf: строки `bind <клавиша> <действие>`
+# и `<клавиша> = <действие>`.
+
+[[source]]
+modes = ["*"]
+kind = "regex"
+file = "~/.config/{command}/keybindings.conf"
+regex = '''^\s*bind\s+(?P<key>\S+)\s+(?P<action>.+)$'''
+origin = "generic"
+
+[[source]]
+modes = ["*"]
+kind = "regex"
+file = "~/.config/{command}/keybindings.conf"
+regex = '''^\s*(?P<key>[^\s=#\[]+)\s*=\s*(?P<action>.+)$'''
+origin = "generic"
