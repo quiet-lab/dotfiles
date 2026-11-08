@@ -126,7 +126,7 @@ class Shell:
 
 
 class Harness:
-    def __init__(self, tmp, pane_id):
+    def __init__(self, tmp, pane_id, env_vars=None, extra_env=None):
         self.tmp = tmp
         self.home = os.path.join(tmp, "home")
         self.run = os.path.join(tmp, "run")
@@ -178,6 +178,12 @@ ble-attach
             self.env["HERDR_PANE_ID"] = pane_id
         self.base = os.path.join(self.run, "herdr-keys-help")
         self.pane_dir = os.path.join(self.base, "panes", pane_id or "-")
+        self.env.update(extra_env or {})
+        if env_vars is not None:
+            # Файл env-vars просмотрщика уже есть до старта оболочки.
+            os.makedirs(self.base)
+            with open(os.path.join(self.base, "env-vars"), "w") as f:
+                f.write(env_vars)
         self.ino = Inotify()
         self.shell = Shell(self.env, rc)
         self.record_path = os.path.join(self.pane_dir, f"ble-{self.shell.pid}.json")
@@ -345,6 +351,20 @@ def test_in_herdr(tmp):
     h.wait_exit()
     check(not os.path.exists(h.record_path), "при выходе запись удалена")
     check(not os.path.exists(h.dump_dir), "при выходе каталог дампов удалён")
+    check(os.path.isdir(h.pane_dir), "каталог панели остаётся (его наблюдает просмотрщик)")
+
+
+def test_env_file_before_start(tmp):
+    print("== файл env-vars есть до старта оболочки")
+    h = Harness(tmp, PANE_ID, env_vars="KH_TEST_VAR\n", extra_env={"KH_TEST_VAR": "v"})
+    h.wait_record("запись active с env", state="active", mode="vi_imap", env={"KH_TEST_VAR": "v"})
+    h.send_key(b"echo KH_\"\"READY\r")
+    h.wait("приглашение после echo", lambda: b"KH_READY" in h.shell.output)
+    check(b"No such file" not in h.shell.output and b"env-vars.read" not in h.shell.output,
+          "модуль не печатает ошибок в терминал")
+    h.send_key(b"exit\r")
+    h.wait_exit()
+    check(not os.path.exists(h.record_path), "при выходе запись удалена")
 
 
 def test_outside_herdr(tmp):
@@ -372,7 +392,7 @@ def main():
             print(f"нет файла {path}", file=sys.stderr)
             return 2
     failed = False
-    for test in (test_in_herdr, test_outside_herdr):
+    for test in (test_in_herdr, test_env_file_before_start, test_outside_herdr):
         tmp = tempfile.mkdtemp(prefix="kh-ble-")
         try:
             test(tmp)

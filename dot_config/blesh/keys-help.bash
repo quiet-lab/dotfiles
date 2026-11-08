@@ -71,15 +71,17 @@ function keys_help/ensure-dirs {
 # новее прочитанного. Без внешних процессов.
 function keys_help/read-env-names {
   [[ -f $_keys_help_env_file ]] || return 0
+  keys_help/ensure-dirs || return 0
   [[ -e $_keys_help_env_mark && ! $_keys_help_env_file -nt $_keys_help_env_mark ]] && return 0
   local -a names=()
-  mapfile -t names < "$_keys_help_env_file" 2>/dev/null
+  mapfile -t names 2>/dev/null < "$_keys_help_env_file"
   _keys_help_env_names=()
   local name
   for name in "${names[@]}"; do
     [[ $name =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] && _keys_help_env_names+=("$name")
   done
-  : > "$_keys_help_env_mark" 2>/dev/null
+  # 2>/dev/null — до перенаправления в файл, иначе ошибка открытия видна.
+  : 2>/dev/null > "$_keys_help_env_mark"
   keys_help/update-env-json
 }
 
@@ -98,7 +100,7 @@ function keys_help/update-env-json {
 function keys_help/dump {
   local keymap=$1
   [[ ${_keys_help_dumped[$keymap]-} ]] && return 0
-  ble-bind -m "$keymap" -P > "$_keys_help_dump_dir/$keymap.bind" 2>/dev/null
+  ble-bind -m "$keymap" -P 2>/dev/null > "$_keys_help_dump_dir/$keymap.bind"
   _keys_help_dumped[$keymap]=1
 }
 
@@ -123,7 +125,7 @@ function keys_help/write {
   fi
   printf '{"v":1,"program":"ble","mode":%s,"pid":%d,"state":"%s","command":%s,"table":%s,"server":null,"env":%s}\n' \
     "$mode" "$$" "$state" "$cmd" "$table" "$_keys_help_env_json" \
-    > "$_keys_help_record" 2>/dev/null || { _keys_help_ready=; return 0; }
+    2>/dev/null > "$_keys_help_record" || { _keys_help_ready=; return 0; }
   _keys_help_last=$key
 }
 
@@ -155,6 +157,8 @@ function keys_help/preexec {
 function keys_help/exit {
   [[ $BASHPID == "$$" ]] || return 0
   command rm -rf -- "$_keys_help_record" "$_keys_help_dump_dir" 2>/dev/null
+  # Каталог панели не удаляется: его создаёт и наблюдает просмотрщик
+  # (inotify), после удаления наблюдение пропало бы.
 }
 
 ble/function#advice after ble/decode/keymap/push 'keys_help/notify'
