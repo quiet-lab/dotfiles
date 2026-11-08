@@ -412,6 +412,15 @@ def test_input_line(tmp):
     h.wait("эхо «ls -l» без отметки", lambda: b"ls -l" in h.plain())
     check(read_file(line) is None and read_file(words) is None, "без отметки viewer .line и .words нет")
 
+    # Прежнее имя отметки viewer (без pid) наблюдением не считается.
+    old = os.path.join(h.pane_dir, "viewer")
+    open(old, "w").close()
+    h.send_key(b"x")
+    h.wait("эхо «x» при отметке viewer", lambda: b"-lx" in h.plain())
+    check(read_file(line) is None, "отметка viewer без pid не включает запись")
+    os.unlink(old)
+    h.send_key(b"\x7f")  # DEL: снова «ls -l»
+
     # Отметка есть: первое же изменение пишет строку и слова.
     open(marker, "w").close()
     h.send_key(b"\x01")  # C-a: в начало строки

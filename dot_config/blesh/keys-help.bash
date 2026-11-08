@@ -7,7 +7,7 @@
 # в $XDG_RUNTIME_DIR/herdr-keys-help/ble/$$/, лежат дампы `ble-bind -P`
 # по одному на keymap; путь дампа — поле table записи.
 #
-# Пока просмотрщик держит в каталоге панели отметку viewer (решение D17),
+# Пока просмотрщик держит в каталоге панели отметку viewer.<pid> (D17),
 # модуль пишет рядом с записью строку ввода ble-$$.line (курсор и текст,
 # после каждой отрисовки), слова оболочки ble-$$.words (аббревиатуры,
 # псевдонимы, функции; по PRECMD) и кандидаты дополнения ble-$$.cands
@@ -28,8 +28,8 @@ _keys_help_record=$_keys_help_pane_dir/ble-$$.json
 _keys_help_dump_dir=$_keys_help_base/ble/$$
 _keys_help_env_file=$_keys_help_base/env-vars
 _keys_help_env_mark=$_keys_help_dump_dir/env-vars.read
-# Самая свежая отметка просмотрщика (viewer.<pid просмотрщика>; прежнее
-# имя viewer тоже принимается), найденная последней проверкой.
+# Самая свежая отметка просмотрщика (viewer.<pid просмотрщика>),
+# найденная последней проверкой.
 _keys_help_mark=
 _keys_help_line_file=$_keys_help_pane_dir/ble-$$.line
 _keys_help_words_file=$_keys_help_pane_dir/ble-$$.words
@@ -163,12 +163,12 @@ function keys_help/write {
 }
 
 # Наблюдает ли панель просмотрщик: есть ли хоть одна отметка
-# viewer.* (или viewer). Самая свежая — в _keys_help_mark. Встроенный
+# viewer.*. Самая свежая — в _keys_help_mark. Встроенный
 # glob, без внешних процессов; failglob пользователя на время снимается.
 function keys_help/marked {
   local f newest= fg=
   [[ :$BASHOPTS: == *:failglob:* ]] && { fg=1; builtin shopt -u failglob; }
-  for f in "$_keys_help_pane_dir"/viewer "$_keys_help_pane_dir"/viewer.*; do
+  for f in "$_keys_help_pane_dir"/viewer.*; do
     [[ -e $f ]] || continue
     [[ $newest && ! $f -nt $newest ]] || newest=$f
   done
