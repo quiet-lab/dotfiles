@@ -16,6 +16,7 @@ use crate::engine::Engine;
 use crate::entry::Entry;
 use crate::extract::Build;
 use crate::herdr::{event_data, event_name, s, Client, Incoming, Subscription};
+use crate::input::{Input, VIEWER_MARK};
 use crate::ui::{self, Action, Header, UiState};
 use crate::view::{self, Edit, ViewConfig};
 use crate::{paths, term, toggle, unknown};
@@ -60,6 +61,12 @@ struct Viewer {
     counted: HashSet<(String, i32)>,
     forgotten: HashSet<String>,
     shown_key: String,
+    /// Строка ввода цели (D17).
+    input: Input,
+    /// Ячейки раздела «дополнение».
+    completion: Vec<Entry>,
+    /// Извлечение параметров первого слова: команда и процесс.
+    opt_job: Option<(String, Job)>,
 }
 
 fn str_list(v: &Value, key: &str) -> Vec<Value> {
@@ -128,8 +135,33 @@ impl Viewer {
     }
 
     fn sections(&self) -> Vec<view::Section> {
-        let eff = view::effective(&self.view_cfg, &self.ctx);
-        view::apply(&self.table, &eff)
+        let manifest = self.resolution.as_ref().and_then(|r| self.engine.manifests.get(r.manifest));
+        let eff = view::effective_with(&self.view_cfg, &self.ctx, manifest.map(|m| &m.view));
+        let pos = self.input.pos();
+        let modes: Vec<&str> = self
+            .resolution
+            .as_ref()
+            .map(|r| vec![r.mode_native.as_str(), r.mode.as_str()])
+            .unwrap_or_default();
+        let rule = |e: &Entry| -> Option<(usize, bool)> {
+            let (m, p) = (manifest?, pos.as_ref()?);
+            m.applies
+                .iter()
+                .position(|a| a.matches(&e.action, &modes))
+                .map(|i| (i, m.applies[i].when.eval(p)))
+        };
+        let has_rules = manifest.is_some_and(|m| !m.applies.is_empty()) && pos.is_some();
+        let extra = view::Extra {
+            origin_order: manifest.map(|m| m.origin_order.clone()).unwrap_or_default(),
+            applies: if has_rules { Some(&rule) } else { None },
+            completion: if pos.is_some() { self.completion.clone() } else { Vec::new() },
+        };
+        let base = view::apply_ext(&self.table, &eff, &extra);
+        let Some(p) = &self.ui.search else {
+            return base;
+        };
+        // Поиск: список совпадений по релевантности вместо таблицы (D16).
+        ui::search_sections(&base, p)
     }
 
     fn render(&mut self) -> bool {
@@ -212,6 +244,7 @@ impl Viewer {
         if !self.target.is_empty() {
             let old = paths::pane_dir(&self.target);
             self.ino.unwatch(&old);
+            crate::input::remove_mark(&old);
         }
         self.target = pane.to_string();
         self.records = Records::default();
@@ -237,7 +270,73 @@ impl Viewer {
         let _ = std::fs::create_dir_all(&dir);
         self.ino.unwatch(&dir);
         self.ino.watch(&dir);
+        // Отметка открытой панели: по ней поставщик пишет строку ввода (D17).
+        let _ = std::fs::write(dir.join(VIEWER_MARK), b"");
         self.records = Records::scan(&dir);
+    }
+
+    /// Строка ввода активной записи, команды `PATH`, раздел «дополнение».
+    fn update_input(&mut self) {
+        let dir = paths::pane_dir(&self.target);
+        let pidfds: HashSet<i32> = self.pidfds.keys().copied().collect();
+        let name = self.records.active_name(|p| pidfds.contains(&p)).map(str::to_string);
+        let pid = self.records.active(|p| pidfds.contains(&p)).map(|r| r.pid);
+        let stem = name.and_then(|n| n.strip_suffix(".json").map(str::to_string));
+        self.input.set_active(&dir, stem);
+        if self.input.line.is_some() {
+            if let Some((old, new)) = self.input.refresh_path(pid) {
+                let keep = self.keep_dirs();
+                for d in old {
+                    if !keep.contains(&d) && !self.input_dirs.contains(&d) {
+                        self.ino.unwatch(&d);
+                    }
+                }
+                for d in new {
+                    self.ino.watch(&d);
+                }
+            }
+        }
+        let (c, need) = self.input.completion();
+        self.completion = c;
+        if let Some(n) = need {
+            if self.opt_job.is_none() {
+                self.job_n += 1;
+                match cmdrun::spawn(&n.argv, self.job_n) {
+                    Some(j) => self.opt_job = Some((n.command, j)),
+                    None => {
+                        let _ = self.input.opts_done(&n.command, &n.argv, "");
+                    }
+                }
+            }
+        }
+    }
+
+    /// Завершилось извлечение параметров: следующий шаг или новый раздел.
+    fn opt_job_done(&mut self) {
+        let Some((cmd, j)) = self.opt_job.take() else { return };
+        let argv = j.argv.clone();
+        let out = j.finish();
+        if let Some(next) = self.input.opts_done(&cmd, &argv, &out) {
+            self.job_n += 1;
+            match cmdrun::spawn(&next, self.job_n) {
+                Some(j) => self.opt_job = Some((cmd, j)),
+                None => {
+                    let _ = self.input.opts_done(&cmd, &next, "");
+                }
+            }
+        }
+        self.update_input();
+        self.render();
+    }
+
+    /// Каталоги, наблюдение которых не снимается сменой входов таблицы.
+    fn keep_dirs(&self) -> HashSet<PathBuf> {
+        self.view_dirs()
+            .into_iter()
+            .chain(self.manifest_dirs.iter().cloned())
+            .chain(std::iter::once(paths::pane_dir(&self.target)))
+            .chain(std::iter::once(paths::panes_dir()))
+            .collect()
     }
 
     /// pidfd процесса записи; умерший процесс — удаление его записей.
@@ -360,6 +459,7 @@ impl Viewer {
                 self.step(&res);
             }
         }
+        self.update_input();
         self.show();
     }
 
@@ -415,12 +515,8 @@ impl Viewer {
     }
 
     fn watch_inputs(&mut self, dirs: Vec<PathBuf>) {
-        let keep: HashSet<PathBuf> = self
-            .view_dirs()
-            .into_iter()
-            .chain(self.manifest_dirs.iter().cloned())
-            .chain(std::iter::once(paths::pane_dir(&self.target)))
-            .collect();
+        let mut keep = self.keep_dirs();
+        keep.extend(self.input.path_dirs.iter().cloned());
         for d in std::mem::take(&mut self.input_dirs) {
             if !keep.contains(&d) {
                 self.ino.unwatch(&d);
@@ -586,6 +682,8 @@ impl Viewer {
         let mut recompute = false;
         let mut reload_view = false;
         let mut reload_manifests = false;
+        let mut input_changed = false;
+        let mut path_changed = false;
         let panes_dir = paths::panes_dir();
         for e in events {
             if e.dir == panes_dir && e.dir != target_dir {
@@ -604,6 +702,11 @@ impl Viewer {
             }
             if e.dir == target_dir {
                 if !e.name.ends_with(".json") {
+                    if e.mask & (libc::IN_CLOSE_WRITE | libc::IN_MOVED_TO | libc::IN_DELETE | libc::IN_MOVED_FROM) != 0
+                        && self.input.on_file(&e.name)
+                    {
+                        input_changed = true;
+                    }
                     continue;
                 }
                 if e.mask & (libc::IN_CLOSE_WRITE | libc::IN_MOVED_TO) != 0 {
@@ -629,6 +732,9 @@ impl Viewer {
             if self.input_dirs.contains(&e.dir) {
                 recompute = true;
             }
+            if self.input.is_path_dir(&e.dir) {
+                path_changed = true;
+            }
         }
         if reload_manifests {
             self.engine.reload(&self.manifest_dirs);
@@ -642,8 +748,16 @@ impl Viewer {
         if reload_view {
             self.load_view();
         }
+        if path_changed {
+            self.input.rebuild_path();
+            input_changed = true;
+        }
         if recompute {
             self.recompute();
+        } else if input_changed {
+            // Строка ввода меняет только верхние разделы, без пересчёта контекста.
+            self.update_input();
+            self.render();
         } else if reload_view {
             self.render();
         }
@@ -725,6 +839,12 @@ impl Viewer {
 
     fn cleanup(&mut self) {
         self.kill_job();
+        if let Some((_, j)) = self.opt_job.take() {
+            j.kill();
+        }
+        if !self.target.is_empty() {
+            crate::input::remove_mark(&paths::pane_dir(&self.target));
+        }
     }
 }
 
@@ -735,6 +855,7 @@ enum Tag {
     Ino,
     Sig,
     Job,
+    OptJob,
     Pid(i32),
 }
 
@@ -788,6 +909,9 @@ pub fn run() -> Result<(), String> {
         counted: HashSet::new(),
         forgotten: HashSet::new(),
         shown_key: String::new(),
+        input: Input::default(),
+        completion: Vec::new(),
+        opt_job: None,
     };
     v.load_view();
     for d in v.view_dirs() {
@@ -845,6 +969,9 @@ fn event_loop(v: &mut Viewer) -> Result<(), String> {
         }
         if let Some(j) = &v.job {
             add(j.pidfd.as_raw_fd(), Tag::Job, &mut fds);
+        }
+        if let Some((_, j)) = &v.opt_job {
+            add(j.pidfd.as_raw_fd(), Tag::OptJob, &mut fds);
         }
         for (pid, fd) in &v.pidfds {
             add(fd.as_raw_fd(), Tag::Pid(*pid), &mut fds);
@@ -942,6 +1069,7 @@ fn event_loop(v: &mut Viewer) -> Result<(), String> {
                     }
                 }
                 Tag::Job => v.job_done(),
+                Tag::OptJob => v.opt_job_done(),
                 Tag::Pid(pid) => {
                     v.drop_pid(pid);
                     v.recompute();
@@ -976,7 +1104,12 @@ pub fn print_table(ctx: &str, pane: Option<&str>, as_json: bool) -> Result<(), S
         .map(|t| view::parse(&t))
         .transpose()?
         .unwrap_or_default();
-    let sections = view::apply(&built.entries, &view::effective(&cfg, &res.ctx));
+    let m = &engine.manifests[res.manifest];
+    let extra = view::Extra {
+        origin_order: m.origin_order.clone(),
+        ..Default::default()
+    };
+    let sections = view::apply_ext(&built.entries, &view::effective_with(&cfg, &res.ctx, Some(&m.view)), &extra);
     use std::io::Write;
     let mut out = std::io::stdout().lock();
     // Закрытый канал вывода (`| head`) — не ошибка.

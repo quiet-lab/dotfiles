@@ -1372,5 +1372,10 @@ when = "row > 0"
 
 [[applies]]
 modes = ["vi_imap", "emacs"]
+action = '^history-next$'
+when = "rows_below > 0"
+
+[[applies]]
+modes = ["vi_imap", "emacs"]
 action = '^end-of-text$'
 when = "point < len"

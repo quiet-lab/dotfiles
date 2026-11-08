@@ -1,23 +1,17 @@
-//! Вид просмотрщика (D13): шапка, ячейки «клавиша → действие» в 3/4/5
-//! колонок, заголовки групп, подписи происхождения, прокрутка, навигация
+//! Вид просмотрщика (D13): шапка, ячейки «клавиша → действие» шириной
+//! не меньше 50 символов (1–5 колонок), заголовки групп, подписи происхождения, прокрутка, навигация
 //! `h j k l g G`, поиск `/` с `n`/`N`, окно подробностей `K`, скрытие `d D u`.
 
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 use crate::view::{Section, Shown};
 
-/// Наименьшая ширина ячейки.
-pub const CELL_MIN: usize = 28;
+/// Наименьшая ширина ячейки (D13).
+pub const CELL_MIN: usize = 50;
 
-/// Число колонок по ширине панели: 5 при W ≥ 140, 4 при W ≥ 112, иначе 3.
+/// Число колонок по ширине панели: `n = min(5, max(1, ⌊W / 50⌋))`.
 pub fn columns_for_width(w: usize) -> usize {
-    if w >= 5 * CELL_MIN {
-        5
-    } else if w >= 4 * CELL_MIN {
-        4
-    } else {
-        3
-    }
+    (w / CELL_MIN).clamp(1, 5)
 }
 
 /// Подпись блока закреплённых записей.
@@ -239,14 +233,31 @@ pub struct UiState {
     pub input: Option<String>,
     /// Окно подробностей: прокрутка.
     pub details: Option<usize>,
+    /// Выбор до поиска: Esc возвращает его вместе с прежним видом.
+    pub saved: Option<usize>,
 }
 
-/// Совпадает ли запись с образцом (клавиша или короткое описание, без учёта регистра).
+/// Поиск (D16): вместо таблицы — один раздел совпадений по убыванию
+/// релевантности, при равенстве — в порядке таблицы, с подсветкой.
+pub fn search_sections(base: &[Section], pat: &str) -> Vec<Section> {
+    let flat = flatten(base);
+    let ranked = crate::search::rank(flat.iter().map(|s| &s.entry), pat);
+    vec![Section {
+        title: Some(format!("поиск: {pat}")),
+        entries: ranked
+            .into_iter()
+            .map(|(i, _, hl)| Shown {
+                hl,
+                dim: false,
+                ..flat[i].clone()
+            })
+            .collect(),
+    }]
+}
+
+/// Совпадает ли запись с образцом (любая ступень D16).
 pub fn entry_matches(e: &Shown, pat: &str) -> bool {
-    let p = pat.to_lowercase();
-    !p.is_empty()
-        && (e.entry.key.to_lowercase().contains(&p)
-            || e.entry.shown_desc().to_lowercase().contains(&p))
+    crate::search::score(&e.entry, pat).is_some()
 }
 
 impl UiState {
@@ -255,14 +266,11 @@ impl UiState {
         *self = UiState::default();
     }
 
+    /// Совпадения: при активном поиске записи к показу — это и есть список
+    /// совпадений в порядке релевантности (D16).
     pub fn matches(&self, entries: &[&Shown]) -> Vec<usize> {
         match &self.search {
-            Some(p) => entries
-                .iter()
-                .enumerate()
-                .filter(|(_, e)| entry_matches(e, p))
-                .map(|(i, _)| i)
-                .collect(),
+            Some(_) => (0..entries.len()).collect(),
             None => Vec::new(),
         }
     }
@@ -295,10 +303,16 @@ impl UiState {
                 Key::Enter => {
                     let p = inp.clone();
                     self.input = None;
-                    self.search = (!p.is_empty()).then_some(p);
-                    if let Some(&first) = self.matches(entries).first() {
-                        self.selected = first;
+                    if p.is_empty() {
+                        return Action::Redraw;
                     }
+                    if self.search.is_none() {
+                        self.saved = Some(self.selected);
+                    }
+                    // Список совпадений строит вызывающий; выбор — на самое релевантное.
+                    self.search = Some(p);
+                    self.selected = 0;
+                    self.top = 0;
                 }
                 Key::Backspace => {
                     inp.pop();
@@ -310,6 +324,11 @@ impl UiState {
         }
         if n == 0 {
             return match key {
+                Key::Esc if self.search.is_some() => {
+                    self.search = None;
+                    self.selected = self.saved.take().unwrap_or(0);
+                    Action::Redraw
+                }
                 Key::Char('q') => Action::Focus,
                 Key::Char('/') => {
                     self.input = Some(String::new());
@@ -331,19 +350,12 @@ impl UiState {
             Key::Char('g') => Some(0),
             Key::Char('G') => Some(n - 1),
             Key::Char('n') | Key::Char('N') => {
-                let m = self.matches(entries);
-                if m.is_empty() {
+                if self.search.is_none() {
                     None
                 } else if key == Key::Char('n') {
-                    Some(m.iter().copied().find(|&i| i > sel).unwrap_or(m[0]))
+                    Some((sel + 1) % n)
                 } else {
-                    Some(
-                        m.iter()
-                            .rev()
-                            .copied()
-                            .find(|&i| i < sel)
-                            .unwrap_or(m[m.len() - 1]),
-                    )
+                    Some((sel + n - 1) % n)
                 }
             }
             _ => None,
@@ -358,7 +370,9 @@ impl UiState {
                 Action::Redraw
             }
             Key::Esc => {
-                self.search = None;
+                if self.search.take().is_some() {
+                    self.selected = self.saved.take().unwrap_or(0);
+                }
                 Action::Redraw
             }
             Key::Char('K') => {
@@ -411,33 +425,28 @@ const DIM: &str = "\x1b[2m";
 const BOLD: &str = "\x1b[1m";
 const HL: &str = "\x1b[1;33m";
 
-/// Подсветка вхождений образца (без учёта регистра); `base` — стиль вне вхождений.
-fn highlight(text: &str, pat: Option<&str>, base: &str) -> String {
-    let Some(p) = pat.filter(|p| !p.is_empty()) else {
-        return format!("{base}{text}");
-    };
-    let lower = text.to_lowercase();
-    let pl = p.to_lowercase();
-    // Сопоставление по символам: нижний регистр может менять длину в байтах.
-    let tc: Vec<char> = text.chars().collect();
-    let lc: Vec<char> = lower.chars().collect();
-    let pc: Vec<char> = pl.chars().collect();
-    if lc.len() != tc.len() {
+/// Подсветка символов с номерами `idx`; `base` — стиль остальных символов.
+fn highlight(text: &str, idx: &[usize], base: &str) -> String {
+    if idx.is_empty() {
         return format!("{base}{text}");
     }
     let mut out = String::from(base);
-    let mut i = 0;
-    while i < tc.len() {
-        if i + pc.len() <= lc.len() && lc[i..i + pc.len()] == pc[..] {
+    let mut on = false;
+    for (i, c) in text.chars().enumerate() {
+        let want = idx.contains(&i);
+        if want && !on {
             out.push_str(HL);
-            out.extend(&tc[i..i + pc.len()]);
+            on = true;
+        } else if !want && on {
             out.push_str(RESET);
             out.push_str(base);
-            i += pc.len();
-        } else {
-            out.push(tc[i]);
-            i += 1;
+            on = false;
         }
+        out.push(c);
+    }
+    if on {
+        out.push_str(RESET);
+        out.push_str(base);
     }
     out
 }
@@ -451,7 +460,7 @@ pub struct Header {
     pub message: Option<String>,
 }
 
-fn render_cell(e: &Shown, key_w: usize, cw: usize, selected: bool, pat: Option<&str>) -> String {
+fn render_cell(e: &Shown, key_w: usize, cw: usize, selected: bool) -> String {
     let inner = cw.saturating_sub(1);
     let key = pad(&truncate(&e.entry.key, key_w), key_w);
     let label = if e.show_origin && !e.entry.origin.is_empty() {
@@ -464,16 +473,21 @@ fn render_cell(e: &Shown, key_w: usize, cw: usize, selected: bool, pat: Option<&
     let desc = truncate(e.entry.shown_desc(), desc_room_text);
     let plain_w = key.width() + 1 + desc.width() + label.width();
     let fill = " ".repeat(cw.saturating_sub(plain_w));
-    let base = if selected { REV } else { "" };
+    let base = match (selected, e.dim) {
+        (true, _) => REV.to_string(),
+        (false, true) => DIM.to_string(),
+        (false, false) => String::new(),
+    };
+    let key_style = if e.dim && !selected { DIM.to_string() } else { format!("{base}{BOLD}") };
     let mut s = String::new();
-    s.push_str(&highlight(&key, pat, &format!("{base}{BOLD}")));
+    s.push_str(&highlight(&key, &e.hl.key, &key_style));
     s.push_str(RESET);
-    s.push_str(base);
+    s.push_str(&base);
     s.push(' ');
-    s.push_str(&highlight(&desc, pat, base));
+    s.push_str(&highlight(&desc, &e.hl.desc, &base));
     if !label.is_empty() {
         s.push_str(RESET);
-        s.push_str(base);
+        s.push_str(&base);
         s.push_str(DIM);
         s.push_str(&label);
     }
@@ -576,9 +590,10 @@ pub fn render(
     if let Some(inp) = &st.input {
         lines.push(format!("/{inp}\x1b[7m \x1b[0m"));
     } else if let Some(p) = &st.search {
-        let m = st.matches(&entries);
-        let pos = m.iter().position(|&i| i == st.selected).map(|x| x + 1).unwrap_or(0);
-        lines.push(format!("{DIM}/{p}  [{pos}/{}]{RESET}", m.len()));
+        let total = entries.len();
+        let pos = if total == 0 { 0 } else { st.selected.min(total - 1) + 1 };
+        let tail = if total == 0 { "  нет совпадений, Esc — назад" } else { "" };
+        lines.push(format!("{DIM}/{p}  [{pos}/{total}]{tail}{RESET}"));
     }
     let avail = height.saturating_sub(lines.len());
     if entries.is_empty() {
@@ -602,7 +617,6 @@ pub fn render(
         st.top = srow + 1 - avail;
     }
     st.top = st.top.min(lay.rows.saturating_sub(avail));
-    let pat = st.search.as_deref();
     // Ширина клавиши — по самой длинной клавише колонки, не больше половины ячейки.
     let key_ws: Vec<usize> = lay
         .columns
@@ -624,7 +638,7 @@ pub fn render(
             let cw = lay.col_width;
             match col.get(row) {
                 Some(Cell::Entry(i)) => {
-                    line.push_str(&render_cell(entries[*i], key_ws[ci], cw, *i == st.selected, pat))
+                    line.push_str(&render_cell(entries[*i], key_ws[ci], cw, *i == st.selected))
                 }
                 Some(Cell::Header(t)) => {
                     let t = truncate(t, cw.saturating_sub(1));
@@ -655,6 +669,7 @@ mod tests {
                         ..Default::default()
                     },
                     show_origin: false,
+                    ..Default::default()
                 })
                 .collect(),
         }
@@ -662,16 +677,16 @@ mod tests {
 
     #[test]
     fn widths() {
-        assert_eq!(columns_for_width(90), 3);
-        assert_eq!(columns_for_width(120), 4);
-        assert_eq!(columns_for_width(140), 5);
-        assert_eq!(columns_for_width(112), 4);
+        assert_eq!(columns_for_width(40), 1);
+        assert_eq!(columns_for_width(120), 2);
+        assert_eq!(columns_for_width(160), 3);
+        assert_eq!(columns_for_width(260), 5);
     }
 
     #[test]
     fn nav_columns() {
         let s = vec![sec("a", &["1", "2", "3", "4", "5"]), sec("b", &["6", "7", "8"])];
-        let lay = layout(&s, 90);
+        let lay = layout(&s, 160);
         assert!(lay.columns.len() <= 3);
         let entries = flatten(&s);
         let mut st = UiState::default();
@@ -688,22 +703,26 @@ mod tests {
 
     #[test]
     fn search_cycle() {
+        // Список совпадений строит вызывающий: здесь он уже отсортирован.
         let s = vec![sec("a", &["x", "y", "xx"])];
         let lay = layout(&s, 120);
         let entries = flatten(&s);
-        let mut st = UiState::default();
+        let mut st = UiState { selected: 2, ..Default::default() };
         st.handle(Key::Char('/'), &lay, &entries);
         st.handle(Key::Char('X'), &lay, &entries);
         st.handle(Key::Enter, &lay, &entries);
-        assert_eq!(st.selected, 0);
+        assert_eq!((st.selected, st.search.as_deref()), (0, Some("X")));
         st.handle(Key::Char('n'), &lay, &entries);
-        assert_eq!(st.selected, 2);
-        st.handle(Key::Char('n'), &lay, &entries);
-        assert_eq!(st.selected, 0);
+        assert_eq!(st.selected, 1);
+        st.handle(Key::Char('N'), &lay, &entries);
         st.handle(Key::Char('N'), &lay, &entries);
         assert_eq!(st.selected, 2);
+        st.handle(Key::Char('n'), &lay, &entries);
+        assert_eq!(st.selected, 0);
+        // Esc — прежний вид и прежний выбор.
         st.handle(Key::Esc, &lay, &entries);
         assert!(st.search.is_none());
+        assert_eq!(st.selected, 2);
         assert_eq!(st.handle(Key::Char('d'), &lay, &entries), Action::Hide("xx".into()));
         assert_eq!(st.handle(Key::Char('q'), &lay, &entries), Action::Focus);
     }

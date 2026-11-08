@@ -15,6 +15,7 @@ fn shown(key: &str, desc: &str) -> Shown {
             ..Default::default()
         },
         show_origin: false,
+        ..Default::default()
     }
 }
 
@@ -67,32 +68,31 @@ fn width_of(s: &str) -> usize {
 
 #[test]
 fn columns_by_width_spec() {
-    assert_eq!(columns_for_width(140), 5);
-    assert_eq!(columns_for_width(120), 4);
-    assert_eq!(columns_for_width(90), 3);
-    // Границы: 140 и 112.
-    assert_eq!(columns_for_width(139), 4);
-    assert_eq!(columns_for_width(141), 5);
-    assert_eq!(columns_for_width(112), 4);
-    assert_eq!(columns_for_width(111), 3);
-    assert_eq!(columns_for_width(40), 3);
-    assert_eq!(ui::CELL_MIN, 28);
+    // D13: n = min(5, max(1, ⌊W / 50⌋)).
+    assert_eq!(columns_for_width(40), 1);
+    assert_eq!(columns_for_width(99), 1);
+    assert_eq!(columns_for_width(100), 2);
+    assert_eq!(columns_for_width(120), 2);
+    assert_eq!(columns_for_width(160), 3);
+    assert_eq!(columns_for_width(200), 4);
+    assert_eq!(columns_for_width(260), 5);
+    assert_eq!(columns_for_width(400), 5);
+    assert_eq!(ui::CELL_MIN, 50);
 }
 
 #[test]
 fn layout_ncols_follow_width() {
     let s = numbered(40);
-    assert_eq!(layout(&s, 90).ncols, 3);
-    assert_eq!(layout(&s, 120).ncols, 4);
-    assert_eq!(layout(&s, 140).ncols, 5);
-    assert_eq!(layout(&s, 90).col_width, 30);
-    assert_eq!(layout(&s, 120).col_width, 30);
-    assert_eq!(layout(&s, 140).col_width, 28);
+    assert_eq!(layout(&s, 150).ncols, 3);
+    assert_eq!(layout(&s, 200).ncols, 4);
+    assert_eq!(layout(&s, 250).ncols, 5);
+    assert_eq!(layout(&s, 150).col_width, 50);
+    assert_eq!(layout(&s, 260).col_width, 52);
 }
 
 #[test]
 fn entries_flow_top_to_bottom_then_next_column() {
-    for w in [90usize, 120, 140] {
+    for w in [150usize, 200, 250] {
         let s = numbered(30);
         let lay = layout(&s, w);
         assert!(lay.columns.len() <= lay.ncols, "w={w}");
@@ -156,14 +156,14 @@ fn render_truncates_long_description_with_ellipsis() {
     let s = vec![sec(Some("g"), &[("C-x", long), ("q", "выйти")])];
     let mut st = UiState::default();
     let hd = Header { ctx: "demo.main".into(), target: "1-2".into(), message: None };
-    let lines = ui::render(&mut st, &hd, &s, 90, 20);
+    let lines = ui::render(&mut st, &hd, &s, 150, 20);
     let plain: Vec<String> = lines.iter().map(|l| strip_ansi(l)).collect();
     let row = plain.iter().find(|l| l.contains("C-x")).expect("строка клавиши");
     assert!(row.contains('…'), "{row:?}");
     assert!(!row.contains("ячейку"), "описание не обрезано: {row:?}");
     assert!(row.contains("выйти"), "короткое описание обрезано: {row:?}");
     for l in &plain[1..] {
-        assert!(width_of(l) <= 90, "строка шире панели: {l:?}");
+        assert!(width_of(l) <= 150, "строка шире панели: {l:?}");
     }
 }
 
@@ -180,9 +180,9 @@ fn render_header_has_context_and_target() {
 
 #[test]
 fn render_column_count_matches_width() {
-    // 60 записей: на ширине 140 строка таблицы содержит 5 ячеек, на 90 — 3.
+    // 60 записей: на ширине 250 строка таблицы содержит 5 ячеек, на 150 — 3.
     let s = numbered(60);
-    for (w, n) in [(90usize, 3usize), (120, 4), (140, 5)] {
+    for (w, n) in [(150usize, 3usize), (200, 4), (250, 5), (40, 1)] {
         let mut st = UiState::default();
         let lines = ui::render(&mut st, &Header::default(), &s, w, 100);
         let plain: Vec<String> = lines.iter().map(|l| strip_ansi(l)).collect();
@@ -216,7 +216,7 @@ fn setup(n: usize, w: usize) -> (Vec<Section>, ui::Layout) {
 
 #[test]
 fn hjkl_on_layouts_3_4_5() {
-    for w in [90usize, 120, 140] {
+    for w in [150usize, 200, 250] {
         let (s, lay) = setup(30, w);
         let es = flatten(&s);
         assert_eq!(lay.ncols, columns_for_width(w));
@@ -263,7 +263,7 @@ fn hjkl_on_layouts_3_4_5() {
 
 #[test]
 fn spec_scenario_h_from_first_of_second_column() {
-    for w in [90usize, 120, 140] {
+    for w in [150usize, 200, 250] {
         let (s, lay) = setup(30, w);
         let es = flatten(&s);
         let first_of_col1 = (0..es.len()).find(|&i| lay.pos[i].0 == 1).expect("вторая колонка");
@@ -294,7 +294,7 @@ fn q_returns_focus() {
 
 #[test]
 fn arrows_work_like_hjkl() {
-    let (s, lay) = setup(30, 90);
+    let (s, lay) = setup(30, 150);
     let es = flatten(&s);
     let mut a = UiState::default();
     let mut b = UiState::default();
@@ -318,51 +318,52 @@ fn history_table() -> Vec<Section> {
     ]
 }
 
+/// Ввод образца и Enter; список совпадений (D16) строит `search_sections`.
+fn search(st: &mut UiState, s: &[Section], pat: &str) -> Vec<Section> {
+    let lay = layout(s, 200);
+    let es = flatten(s);
+    st.handle(Key::Char('/'), &lay, &es);
+    type_text(st, pat, &lay, &es);
+    st.handle(Key::Enter, &lay, &es);
+    ui::search_sections(s, st.search.as_deref().unwrap_or(""))
+}
+
+fn keys_of(s: &[Section]) -> Vec<String> {
+    flatten(s).iter().map(|e| e.entry.key.clone()).collect()
+}
+
 #[test]
 fn search_by_description_case_insensitive_selects_first() {
     let s = history_table();
-    let lay = layout(&s, 120);
-    let es = flatten(&s);
     let mut st = UiState { selected: 5, ..Default::default() };
-    st.handle(Key::Char('/'), &lay, &es);
-    assert_eq!(st.input.as_deref(), Some(""));
-    type_text(&mut st, "ИСТОР", &lay, &es);
-    st.handle(Key::Enter, &lay, &es);
+    let ss = search(&mut st, &s, "ИСТОР");
     assert_eq!(st.input, None);
     assert_eq!(st.search.as_deref(), Some("ИСТОР"));
-    assert_eq!(st.matches(&es), vec![0, 1]);
+    // Слово описания с начала: «история» (первое слово) выше «истории» (третье).
+    assert_eq!(keys_of(&ss), vec!["M-h", "C-r"]);
     assert_eq!(st.selected, 0);
 }
 
 #[test]
-fn search_by_key_and_not_by_full_description() {
+fn search_by_key_first_and_full_description_last() {
     let mut s = history_table();
     s[0].entries[2].entry.desc_full = "скрытый текст про истории".into();
-    let lay = layout(&s, 120);
-    let es = flatten(&s);
     let mut st = UiState::default();
-    st.handle(Key::Char('/'), &lay, &es);
-    type_text(&mut st, "c-k", &lay, &es);
-    st.handle(Key::Enter, &lay, &es);
-    assert_eq!(st.matches(&es), vec![3]);
-    assert_eq!(st.selected, 3);
-    // desc_full не участвует в поиске (по спецификации — клавиша и короткое описание).
+    let ss = search(&mut st, &s, "c-k");
+    assert_eq!(keys_of(&ss)[0], "C-k");
+    assert_eq!(st.selected, 0);
+    // desc_full — ступень 6 (D16): запись находится.
     let mut st2 = UiState::default();
-    st2.handle(Key::Char('/'), &lay, &es);
-    type_text(&mut st2, "скрытый", &lay, &es);
-    st2.handle(Key::Enter, &lay, &es);
-    assert!(st2.matches(&es).is_empty());
+    assert_eq!(keys_of(&search(&mut st2, &s, "скрытый")), vec!["C-p"]);
 }
 
 #[test]
 fn n_and_big_n_cycle() {
     let s = history_table();
-    let lay = layout(&s, 120);
-    let es = flatten(&s);
     let mut st = UiState::default();
-    st.handle(Key::Char('/'), &lay, &es);
-    type_text(&mut st, "истор", &lay, &es);
-    st.handle(Key::Enter, &lay, &es);
+    let ss = search(&mut st, &s, "истор");
+    let lay = layout(&ss, 200);
+    let es = flatten(&ss);
     assert_eq!(st.selected, 0);
     st.handle(Key::Char('n'), &lay, &es);
     assert_eq!(st.selected, 1);
@@ -377,19 +378,17 @@ fn n_and_big_n_cycle() {
 #[test]
 fn esc_resets_search_and_highlight() {
     let s = history_table();
-    let lay = layout(&s, 120);
-    let es = flatten(&s);
-    let mut st = UiState::default();
-    st.handle(Key::Char('/'), &lay, &es);
-    type_text(&mut st, "истор", &lay, &es);
-    st.handle(Key::Enter, &lay, &es);
+    let mut st = UiState { selected: 4, ..Default::default() };
+    let ss = search(&mut st, &s, "истор");
     let hd = Header::default();
-    let with = ui::render(&mut st, &hd, &s, 120, 20).join("\n");
+    let with = ui::render(&mut st, &hd, &ss, 200, 20).join("\n");
     assert!(with.contains("\x1b[1;33m"), "подсветки нет");
+    let lay = layout(&ss, 200);
+    let es = flatten(&ss);
     st.handle(Key::Esc, &lay, &es);
     assert_eq!(st.search, None);
-    assert!(st.matches(&es).is_empty());
-    let without = ui::render(&mut st, &hd, &s, 120, 20).join("\n");
+    assert_eq!(st.selected, 4, "Esc возвращает прежний выбор");
+    let without = ui::render(&mut st, &hd, &s, 200, 20).join("\n");
     assert!(!without.contains("\x1b[1;33m"), "подсветка осталась");
 }
 
@@ -427,13 +426,9 @@ fn context_change_resets_search() {
 #[test]
 fn search_status_line_shows_position() {
     let s = history_table();
-    let lay = layout(&s, 120);
-    let es = flatten(&s);
     let mut st = UiState::default();
-    st.handle(Key::Char('/'), &lay, &es);
-    type_text(&mut st, "истор", &lay, &es);
-    st.handle(Key::Enter, &lay, &es);
-    let lines = ui::render(&mut st, &Header::default(), &s, 120, 20);
+    let ss = search(&mut st, &s, "истор");
+    let lines = ui::render(&mut st, &Header::default(), &ss, 200, 20);
     assert!(strip_ansi(&lines[1]).contains("[1/2]"), "{:?}", strip_ansi(&lines[1]));
 }
 
@@ -454,6 +449,7 @@ fn detailed() -> Vec<Section> {
                 raw: "ble-bind -m 'vi_imap' -x M-f fzf-file-widget".into(),
             },
             show_origin: true,
+            ..Default::default()
         }],
     }]
 }

@@ -133,6 +133,15 @@ impl Records {
             .map(|s| &s.record)
     }
 
+    /// Имя файла активной записи.
+    pub fn active_name(&self, alive: impl Fn(i32) -> bool) -> Option<&str> {
+        self.slots
+            .iter()
+            .rev()
+            .find(|s| alive(s.record.pid))
+            .map(|s| s.name.as_str())
+    }
+
     /// Последняя запись программы (для подстановок при печати таблицы).
     pub fn latest_of(&self, program: &str) -> Option<&Record> {
         self.slots.iter().rev().find(|s| s.record.program == program).map(|s| &s.record)

@@ -79,7 +79,7 @@ fn str_list(v: &toml::Value, what: &str, normalize: bool) -> Result<Vec<String>,
         .collect()
 }
 
-fn parse_level(t: &toml::Table, what: &str) -> Result<Level, String> {
+pub fn parse_level(t: &toml::Table, what: &str) -> Result<Level, String> {
     let mut l = Level::default();
     for (k, v) in t {
         let w = format!("{what}.{k}");
@@ -191,6 +191,11 @@ fn union(into: &mut Vec<String>, add: &[String]) {
 
 /// Слияние уровней для контекста.
 pub fn effective(cfg: &ViewConfig, ctx: &str) -> Effective {
+    effective_with(cfg, ctx, None)
+}
+
+/// Слияние уровней «умолчания → `[view]` манифеста программы → контексты».
+pub fn effective_with(cfg: &ViewConfig, ctx: &str, program: Option<&Level>) -> Effective {
     let mut levels: Vec<(usize, usize, &Level)> = cfg
         .contexts
         .iter()
@@ -199,7 +204,10 @@ pub fn effective(cfg: &ViewConfig, ctx: &str) -> Effective {
         .collect();
     levels.sort_by_key(|&(s, i, _)| (s, i));
     let mut e = Effective::default();
-    for l in std::iter::once(&cfg.defaults).chain(levels.iter().map(|x| x.2)) {
+    for l in std::iter::once(&cfg.defaults)
+        .chain(program)
+        .chain(levels.iter().map(|x| x.2))
+    {
         if let Some(v) = &l.order {
             e.order = v.clone();
         }
@@ -246,14 +254,45 @@ pub struct Section {
 }
 
 /// Запись к показу с признаком подписи происхождения.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Shown {
     pub entry: Entry,
     pub show_origin: bool,
+    /// Неприменима при текущей позиции курсора (D17): показывается приглушённой.
+    pub dim: bool,
+    /// Подсветка совпадения поиска (D16).
+    pub hl: crate::search::Hl,
+}
+
+/// Заголовок раздела «по позиции курсора».
+pub const CURSOR_TITLE: &str = "по позиции курсора";
+/// Заголовок раздела «дополнение».
+pub const COMPLETION_TITLE: &str = "дополнение";
+
+/// Применимость записи при текущей позиции курсора: номер правила
+/// `[[applies]]` и значение его `when`; `None` — правило не подходит.
+pub type ApplyRule<'a> = &'a dyn Fn(&Entry) -> Option<(usize, bool)>;
+
+/// Дополнительные разделы и порядок поверх `apply` (D15, D17).
+#[derive(Default)]
+pub struct Extra<'a> {
+    /// Порядок разделов по происхождению из манифеста.
+    pub origin_order: Vec<String>,
+    /// Правила применимости; `None` — позиция курсора неизвестна
+    /// (раздела «по позиции курсора» и приглушения нет).
+    pub applies: Option<ApplyRule<'a>>,
+    /// Ячейки раздела «дополнение».
+    pub completion: Vec<Entry>,
 }
 
 /// Применяет `[entry]`, фильтры и порядок к таблице.
 pub fn apply(table: &[Entry], eff: &Effective) -> Vec<Section> {
+    apply_ext(table, eff, &Extra::default())
+}
+
+/// То же с разделами «по позиции курсора», «дополнение» и порядком
+/// по происхождению: `pin` → курсор → дополнение → происхождения → группы.
+pub fn apply_ext(table: &[Entry], eff: &Effective, extra: &Extra) -> Vec<Section> {
     let mut list: Vec<Entry> = table.to_vec();
     for (key, o) in &eff.entries {
         if let Some(e) = list.iter_mut().find(|e| &e.key == key) {
@@ -284,6 +323,7 @@ pub fn apply(table: &[Entry], eff: &Effective) -> Vec<Section> {
     let shown = |e: Entry| Shown {
         show_origin: eff.show_origin.label_for(&e.origin),
         entry: e,
+        ..Default::default()
     };
     let mut out = Vec::new();
     let mut pinned = Vec::new();
@@ -296,6 +336,52 @@ pub fn apply(table: &[Entry], eff: &Effective) -> Vec<Section> {
         out.push(Section {
             title: None,
             entries: pinned,
+        });
+    }
+    // Раздел «по позиции курсора»: записи с истинным `when` в порядке правил;
+    // записи с ложным `when` остаются на месте приглушёнными.
+    let mut dims: HashSet<String> = HashSet::new();
+    if let Some(rule) = extra.applies {
+        let mut moved: Vec<(usize, usize, Entry)> = Vec::new();
+        let mut rest = Vec::new();
+        for (i, e) in list.into_iter().enumerate() {
+            match rule(&e) {
+                Some((r, true)) => moved.push((r, i, e)),
+                Some((_, false)) => {
+                    dims.insert(e.key.clone());
+                    rest.push(e);
+                }
+                None => rest.push(e),
+            }
+        }
+        list = rest;
+        moved.sort_by_key(|(r, i, _)| (*r, *i));
+        if !moved.is_empty() {
+            out.push(Section {
+                title: Some(CURSOR_TITLE.to_string()),
+                entries: moved.into_iter().map(|(_, _, e)| shown(e)).collect(),
+            });
+        }
+    }
+    if !extra.completion.is_empty() {
+        out.push(Section {
+            title: Some(COMPLETION_TITLE.to_string()),
+            entries: extra.completion.iter().cloned().map(shown).collect(),
+        });
+    }
+    for o in &extra.origin_order {
+        let (mut mine, rest): (Vec<Entry>, Vec<Entry>) = list.into_iter().partition(|e| &e.origin == o);
+        list = rest;
+        if mine.is_empty() {
+            continue;
+        }
+        mine.sort_by(|a, b| a.key.cmp(&b.key));
+        out.push(Section {
+            title: Some(o.clone()),
+            entries: mine.into_iter().map(|e| {
+                let d = dims.contains(&e.key);
+                Shown { dim: d, ..shown(e) }
+            }).collect(),
         });
     }
     let mut groups: BTreeMap<String, Vec<Entry>> = BTreeMap::new();
@@ -318,7 +404,13 @@ pub fn apply(table: &[Entry], eff: &Effective) -> Vec<Section> {
         es.sort_by(|a, b| a.key.cmp(&b.key));
         out.push(Section {
             title: Some(n),
-            entries: es.into_iter().map(shown).collect(),
+            entries: es
+                .into_iter()
+                .map(|e| {
+                    let d = dims.contains(&e.key);
+                    Shown { dim: d, ..shown(e) }
+                })
+                .collect(),
         });
     }
     out

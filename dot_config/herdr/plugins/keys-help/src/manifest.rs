@@ -23,6 +23,33 @@ struct ManifestFile {
     describe: Vec<toml::Table>,
     group: Vec<toml::Table>,
     origin: Vec<toml::Table>,
+    view: toml::Table,
+    applies: Vec<AppliesFile>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(default)]
+struct AppliesFile {
+    modes: Vec<String>,
+    action: String,
+    when: String,
+}
+
+/// Правило применимости `[[applies]]` (D17): записи с подходящим действием
+/// в подходящем режиме переносятся в раздел «по позиции курсора» при истинном
+/// `when` и приглушаются при ложном.
+#[derive(Debug, Clone)]
+pub struct Applies {
+    pub modes: Vec<String>,
+    pub action: Regex,
+    pub when: crate::cursor::When,
+}
+
+impl Applies {
+    pub fn matches(&self, action: &str, mode: &[&str]) -> bool {
+        (self.modes.is_empty() || self.modes.iter().any(|m| m == "*" || mode.contains(&m.as_str())))
+            && self.action.is_match(action)
+    }
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -252,6 +279,11 @@ pub struct Manifest {
     pub describe: Vec<Rule>,
     pub group: Vec<Rule>,
     pub origin: Vec<Rule>,
+    /// Раздел `[view]`: умолчания представления программы (D15).
+    pub view: crate::view::Level,
+    /// Порядок разделов по происхождению (`[view] origin_order`).
+    pub origin_order: Vec<String>,
+    pub applies: Vec<Applies>,
 }
 
 impl Manifest {
@@ -359,7 +391,7 @@ fn rules(list: &[toml::Table], result_fields: &[&str], what: &str) -> Result<Vec
 
 /// Известные поля разделов манифеста (для предупреждений об опечатках).
 const KNOWN: &[(&str, &[&str])] = &[
-    ("", &["program", "priority", "origins", "env", "first_nonempty", "detect", "modes", "source", "key", "describe", "group", "origin"]),
+    ("", &["program", "priority", "origins", "env", "first_nonempty", "detect", "modes", "source", "key", "describe", "group", "origin", "view", "applies"]),
     ("detect", &["provider", "process", "shell_commands", "title", "screen", "fallback"]),
     ("modes", &["default", "names", "from_config", "screen"]),
     ("key", &["map"]),
@@ -462,6 +494,33 @@ pub fn parse(text: &str, path: &Path) -> Result<Manifest, String> {
         .file_stem()
         .map(|s| s.to_string_lossy().to_string())
         .unwrap_or_default();
+    let mut view_table = f.view.clone();
+    let origin_order = match view_table.remove("origin_order") {
+        Some(toml::Value::Array(a)) => a
+            .iter()
+            .map(|v| v.as_str().map(str::to_string).ok_or("view.origin_order: нужен список строк".to_string()))
+            .collect::<Result<Vec<_>, _>>()?,
+        Some(_) => return Err("view.origin_order: нужен список строк".to_string()),
+        None => Vec::new(),
+    };
+    let view = crate::view::parse_level(&view_table, "view")?;
+    let mut applies = Vec::new();
+    for (i, a) in f.applies.iter().enumerate() {
+        let what = format!("applies[{i}]");
+        if a.action.is_empty() {
+            return Err(format!("{what}: нет action"));
+        }
+        let when = if a.when.trim().is_empty() {
+            return Err(format!("{what}: нет when"));
+        } else {
+            crate::cursor::When::parse(&a.when, &format!("{what}.when"))?
+        };
+        applies.push(Applies {
+            modes: a.modes.clone(),
+            action: compile(&a.action, &format!("{what}.action"))?,
+            when,
+        });
+    }
     Ok(Manifest {
         path: path.to_path_buf(),
         dir: path.parent().map(Path::to_path_buf).unwrap_or_default(),
@@ -491,6 +550,9 @@ pub fn parse(text: &str, path: &Path) -> Result<Manifest, String> {
         describe: rules(&f.describe, &["desc", "desc_full"], "describe")?,
         group: rules(&f.group, &["group"], "group")?,
         origin: rules(&f.origin, &["origin"], "origin")?,
+        view,
+        origin_order,
+        applies,
     })
 }
 
