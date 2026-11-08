@@ -264,6 +264,9 @@ pub struct Shown {
     pub hl: crate::search::Hl,
 }
 
+/// Предел ячеек раздела «по позиции курсора» (D17).
+pub const MAX_CURSOR: usize = 8;
+
 /// Заголовок раздела «по позиции курсора».
 pub const CURSOR_TITLE: &str = "по позиции курсора";
 /// Заголовок раздела «дополнение».
@@ -338,28 +341,43 @@ pub fn apply_ext(table: &[Entry], eff: &Effective, extra: &Extra) -> Vec<Section
             entries: pinned,
         });
     }
-    // Раздел «по позиции курсора»: записи с истинным `when` в порядке правил;
-    // записи с ложным `when` остаются на месте приглушёнными.
+    // Раздел «по позиции курсора»: по одной записи на правило `[[applies]]`
+    // с истинным `when` — самая короткая клавиша, при равенстве первая
+    // по таблице; правила по порядку манифеста, не больше MAX_CURSOR.
+    // Остальные применимые записи остаются в своих группах как обычные,
+    // записи с ложным `when` — приглушёнными.
     let mut dims: HashSet<String> = HashSet::new();
     if let Some(rule) = extra.applies {
-        let mut moved: Vec<(usize, usize, Entry)> = Vec::new();
-        let mut rest = Vec::new();
-        for (i, e) in list.into_iter().enumerate() {
-            match rule(&e) {
-                Some((r, true)) => moved.push((r, i, e)),
+        let mut best: BTreeMap<usize, (usize, usize)> = BTreeMap::new();
+        for (i, e) in list.iter().enumerate() {
+            match rule(e) {
+                Some((r, true)) => {
+                    let w = e.key.chars().count();
+                    let slot = best.entry(r).or_insert((w, i));
+                    if w < slot.0 {
+                        *slot = (w, i);
+                    }
+                }
                 Some((_, false)) => {
                     dims.insert(e.key.clone());
-                    rest.push(e);
                 }
-                None => rest.push(e),
+                None => {}
             }
         }
-        list = rest;
-        moved.sort_by_key(|(r, i, _)| (*r, *i));
-        if !moved.is_empty() {
+        let chosen: Vec<usize> = best.values().map(|&(_, i)| i).take(MAX_CURSOR).collect();
+        if !chosen.is_empty() {
+            let mut moved: Vec<Option<Entry>> = vec![None; chosen.len()];
+            let mut rest = Vec::new();
+            for (i, e) in list.into_iter().enumerate() {
+                match chosen.iter().position(|&c| c == i) {
+                    Some(p) => moved[p] = Some(e),
+                    None => rest.push(e),
+                }
+            }
+            list = rest;
             out.push(Section {
                 title: Some(CURSOR_TITLE.to_string()),
-                entries: moved.into_iter().map(|(_, _, e)| shown(e)).collect(),
+                entries: moved.into_iter().flatten().map(shown).collect(),
             });
         }
     }

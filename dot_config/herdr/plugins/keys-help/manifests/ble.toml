@@ -1356,32 +1356,91 @@ origin = "readline"
 [[origin]]
 origin = "ble"
 
-# Применимость команд редактирования при позиции курсора в строке ввода (D17):
-# применимые поднимаются в раздел «по позиции курсора», остальные приглушаются.
+# Применимость команд редактирования при позиции курсора в строке ввода (D17).
+# Раздел «по позиции курсора» берёт по одной записи на правило с истинным when
+# (самую короткую клавишу, при равенстве — первую по таблице) в порядке правил,
+# не больше 8; остальные применимые остаются в своих группах, неприменимые
+# приглушаются. Поэтому правила идут от самых частых команд к редким, и каждое
+# правило — одна команда (с синонимами из разных keymap).
 
+# в начало и в конец строки
 [[applies]]
 modes = ["vi_imap", "emacs", "auto_complete"]
-action = '^(backward-char|backward-cword|backward-sword|beginning-of-line|non-space-beginning-of-line|transpose-chars|transpose-ewords)$'
+action = '^(beginning-of-line|non-space-beginning-of-line)$'
 when = "col > 0"
-
 [[applies]]
 modes = ["vi_imap", "emacs", "auto_complete"]
-action = '^(delete-region-or delete-backward-char|vi_imap/delete-region-or vi_imap/delete-backward-indent-or delete-backward-char|delete-backward-cword|kill-backward-cword|kill-backward-line|kill-region-or kill-backward-uword|vi_imap/kill-backward-word|copy-backward-sword|copy-region-or copy-backward-uword)$'
+action = '^end-of-line$'
+when = "col < line_len"
+
+# символ влево и вправо
+[[applies]]
+modes = ["vi_imap", "emacs", "auto_complete"]
+action = '^backward-char$'
 when = "col > 0"
-
 [[applies]]
 modes = ["vi_imap", "emacs", "auto_complete"]
-action = '^(forward-char|forward-cword|forward-sword|end-of-line)$'
+action = '^forward-char$'
+when = "col < line_len"
+
+# слово влево и вправо
+[[applies]]
+modes = ["vi_imap", "emacs", "auto_complete"]
+action = '^(backward-cword|backward-sword)$'
+when = "col > 0"
+[[applies]]
+modes = ["vi_imap", "emacs", "auto_complete"]
+action = '^(forward-cword|forward-sword)$'
+when = "col < line_len"
+
+# удалить символ слева и справа
+[[applies]]
+modes = ["vi_imap", "emacs", "auto_complete"]
+action = '^(delete-region-or delete-backward-char|vi_imap/delete-region-or vi_imap/delete-backward-indent-or delete-backward-char)$'
+when = "col > 0"
+[[applies]]
+modes = ["vi_imap", "emacs", "auto_complete"]
+action = '^(delete-region-or delete-forward-char|delete-region-or delete-forward-char-or-exit)$'
+when = "col < line_len"
+
+# вырезать слово назад и вперёд
+[[applies]]
+modes = ["vi_imap", "emacs", "auto_complete"]
+action = '^(kill-region-or kill-backward-uword|vi_imap/kill-backward-word|kill-backward-cword|delete-backward-cword)$'
+when = "col > 0"
+[[applies]]
+modes = ["vi_imap", "emacs", "auto_complete"]
+action = '^(kill-forward-cword|delete-forward-cword)$'
+when = "col < line_len"
+
+# вырезать до начала и до конца строки
+[[applies]]
+modes = ["vi_imap", "emacs", "auto_complete"]
+action = '^kill-backward-line$'
+when = "col > 0"
+[[applies]]
+modes = ["vi_imap", "emacs", "auto_complete"]
+action = '^kill-forward-line$'
+when = "col < line_len"
+
+# прочие команды редактирования и переходы по строкам
+[[applies]]
+modes = ["vi_imap", "emacs", "auto_complete"]
+action = '^(transpose-chars|transpose-ewords|copy-backward-sword|copy-region-or copy-backward-uword)$'
+when = "col > 0"
+[[applies]]
+modes = ["vi_imap", "emacs", "auto_complete"]
+action = '^(copy-forward-sword|zap-to-char|delete-horizontal-space|upcase-eword|downcase-eword|capitalize-eword)$'
 when = "col < line_len"
 
 [[applies]]
 modes = ["vi_imap", "emacs", "auto_complete"]
-action = '^(delete-region-or delete-forward-char|delete-region-or delete-forward-char-or-exit|delete-forward-cword|kill-forward-cword|kill-forward-line|copy-forward-sword|zap-to-char|delete-horizontal-space|upcase-eword|downcase-eword|capitalize-eword)$'
-when = "col < line_len"
+action = '^history-prev$'
+when = "row > 0"
 
 [[applies]]
 modes = ["vi_imap", "emacs", "auto_complete"]
-action = '^(beginning-of-text|history-prev)$'
+action = '^beginning-of-text$'
 when = "row > 0"
 
 [[applies]]

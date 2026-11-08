@@ -68,16 +68,19 @@ fn width_of(s: &str) -> usize {
 
 #[test]
 fn columns_by_width_spec() {
-    // D13: n = min(5, max(1, ⌊W / 50⌋)).
+    // D13: n = min(5, max(1, ⌊W / 44⌋)).
     assert_eq!(columns_for_width(40), 1);
-    assert_eq!(columns_for_width(99), 1);
-    assert_eq!(columns_for_width(100), 2);
+    assert_eq!(columns_for_width(87), 1);
+    assert_eq!(columns_for_width(88), 2);
     assert_eq!(columns_for_width(120), 2);
     assert_eq!(columns_for_width(160), 3);
+    assert_eq!(columns_for_width(176), 4);
     assert_eq!(columns_for_width(200), 4);
+    assert_eq!(columns_for_width(219), 4);
+    assert_eq!(columns_for_width(220), 5);
     assert_eq!(columns_for_width(260), 5);
     assert_eq!(columns_for_width(400), 5);
-    assert_eq!(ui::CELL_MIN, 50);
+    assert_eq!(ui::CELL_MIN, 44);
 }
 
 #[test]

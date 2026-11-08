@@ -1,5 +1,5 @@
 //! Вид просмотрщика (D13): шапка, ячейки «клавиша → действие» шириной
-//! не меньше 50 символов (1–5 колонок), заголовки групп, подписи происхождения, прокрутка, навигация
+//! не меньше 44 символов (1–5 колонок), заголовки групп, подписи происхождения, прокрутка, навигация
 //! `h j k l g G`, поиск `/` с `n`/`N`, окно подробностей `K`, скрытие `d D u`.
 
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
@@ -7,9 +7,9 @@ use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 use crate::view::{Section, Shown};
 
 /// Наименьшая ширина ячейки (D13).
-pub const CELL_MIN: usize = 50;
+pub const CELL_MIN: usize = 44;
 
-/// Число колонок по ширине панели: `n = min(5, max(1, ⌊W / 50⌋))`.
+/// Число колонок по ширине панели: `n = min(5, max(1, ⌊W / 44⌋))`.
 pub fn columns_for_width(w: usize) -> usize {
     (w / CELL_MIN).clamp(1, 5)
 }
@@ -680,6 +680,7 @@ mod tests {
         assert_eq!(columns_for_width(40), 1);
         assert_eq!(columns_for_width(120), 2);
         assert_eq!(columns_for_width(160), 3);
+        assert_eq!(columns_for_width(180), 4);
         assert_eq!(columns_for_width(260), 5);
     }
 

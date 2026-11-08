@@ -621,3 +621,61 @@ fn path_commands_follow_directory_changes() {
     let _ = shell.wait();
 }
 
+
+// ---- 12.12: не больше 8 записей, одна на правило ----
+
+fn full_table() -> Vec<Entry> {
+    vec![
+        ble_entry("home", "beginning-of-line", "motion"),
+        ble_entry("C-a", "beginning-of-line", "motion"),
+        ble_entry("C-e", "end-of-line", "motion"),
+        ble_entry("end", "end-of-line", "motion"),
+        ble_entry("left", "backward-char", "motion"),
+        ble_entry("C-b", "backward-char", "motion"),
+        ble_entry("C-f", "forward-char", "motion"),
+        ble_entry("M-b", "backward-cword", "motion"),
+        ble_entry("M-f", "forward-cword", "motion"),
+        ble_entry("BS", "delete-region-or delete-backward-char", "edit"),
+        ble_entry("C-d", "delete-region-or delete-forward-char-or-exit", "edit"),
+        ble_entry("C-w", "kill-region-or kill-backward-uword", "edit"),
+        ble_entry("M-d", "kill-forward-cword", "edit"),
+        ble_entry("C-u", "kill-backward-line", "edit"),
+        ble_entry("C-k", "kill-forward-line", "edit"),
+        ble_entry("C-t", "transpose-chars", "edit"),
+    ]
+}
+
+fn full_sections_at(point: usize, text: &str) -> Vec<Section> {
+    let m = manifest_named("ble");
+    let p = pos(point, text);
+    let rule = |e: &Entry| m.applies.iter().position(|a| a.matches(&e.action, &["emacs"])).map(|i| (i, m.applies[i].when.eval(&p)));
+    let extra = Extra { origin_order: vec![], applies: Some(&rule), completion: vec![] };
+    let eff = view::effective(&view::parse("").unwrap(), "ble.emacs");
+    view::apply_ext(&full_table(), &eff, &extra)
+}
+
+#[test]
+fn cursor_section_at_most_8_one_per_rule_shortest_key() {
+    let s = full_sections_at(4, "echo abc");
+    let c = section(&s, CURSOR_TITLE).expect("раздел");
+    // Порядок правил ble.toml: начало/конец строки, символ, слово, удалить символ,
+    // вырезать слово, вырезать до начала/конца строки, прочие.
+    assert_eq!(keys_in(c), vec!["C-a", "C-e", "C-b", "C-f", "M-b", "M-f", "BS", "C-d"]);
+    assert_eq!(c.entries.len(), view::MAX_CURSOR);
+    // Вторая клавиша того же действия и применимые сверх предела — в группах, не приглушены.
+    let motion = keys_in(section(&s, "motion").unwrap());
+    assert!(motion.contains(&"home") && motion.contains(&"left") && motion.contains(&"end"), "{motion:?}");
+    let edit = keys_in(section(&s, "edit").unwrap());
+    assert!(edit.contains(&"C-w") && edit.contains(&"C-k") && edit.contains(&"C-t"), "{edit:?}");
+    assert!(dimmed(&s).is_empty(), "{:?}", dimmed(&s));
+}
+
+#[test]
+fn cursor_section_end_of_line_backward_commands() {
+    let s = full_sections_at(8, "echo abc");
+    let c = section(&s, CURSOR_TITLE).unwrap();
+    assert_eq!(keys_in(c), vec!["C-a", "C-b", "M-b", "BS", "C-w", "C-u", "C-t"]);
+    let mut d = dimmed(&s);
+    d.sort();
+    assert_eq!(d, vec!["C-d", "C-e", "C-f", "C-k", "M-d", "M-f", "end"]);
+}
