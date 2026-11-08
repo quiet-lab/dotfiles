@@ -26,7 +26,9 @@ regex = '''^ble-bind -m \S+ -(?P<type>[fxcs]) (?P<key>(?:'[^']*'|\\.|[^\s'\\])+)
 unquote = ["key", "action"]
 # Служебные виджеты (__attach__, __default__ и подобные), ввод символов, цифровые
 # аргументы, звонок и пустые действия, внутренние макросы atuin (C-x C-_ …).
-skip = { key = '^C-x C-_ ', action = '^(bell|nop|self-insert|batch-insert|bracketed-paste|(\S+/)?append-arg|(\S+/)?__\w+__|\S+/bell|\S+/self-insert|\S+/bracketed-paste|__atuin_widget_run \d+|\\C-x\\C-_.*)$' }
+# ac_enter — не клавиша клавиатуры, а код, который автодополнение ble.sh само подаёт
+# в декодер при вставке предложения (для записи макросов), поэтому в таблицу не идёт.
+skip = { key = '^(C-x C-_ |ac_enter$)', action = '^(bell|nop|self-insert|batch-insert|bracketed-paste|(\S+/)?append-arg|(\S+/)?__\w+__|\S+/bell|\S+/self-insert|\S+/bracketed-paste|__atuin_widget_run \d+|\\C-x\\C-_.*)$' }
 on_conflict = "override"
 
 

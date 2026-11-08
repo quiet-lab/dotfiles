@@ -23,9 +23,14 @@ pub fn runtime_dir() -> PathBuf {
     }
 }
 
+/// Каталог каталогов записей панелей.
+pub fn panes_dir() -> PathBuf {
+    runtime_dir().join("panes")
+}
+
 /// Каталог записей панели.
 pub fn pane_dir(pane_id: &str) -> PathBuf {
-    runtime_dir().join("panes").join(pane_id)
+    panes_dir().join(pane_id)
 }
 
 pub fn state_dir() -> PathBuf {

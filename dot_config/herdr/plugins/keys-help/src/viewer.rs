@@ -209,13 +209,15 @@ impl Viewer {
     }
 
     fn set_target(&mut self, pane: &str) {
-        let old = paths::pane_dir(&self.target);
-        self.ino.unwatch(&old);
+        if !self.target.is_empty() {
+            let old = paths::pane_dir(&self.target);
+            self.ino.unwatch(&old);
+        }
         self.target = pane.to_string();
-        let dir = paths::pane_dir(&self.target);
-        let _ = std::fs::create_dir_all(&dir);
-        self.ino.watch(&dir);
-        self.records = Records::scan(&dir);
+        self.records = Records::default();
+        if !self.target.is_empty() {
+            self.watch_target_dir();
+        }
         self.pidfds.clear();
         let pids: Vec<i32> = self.records.slots.iter().map(|s| s.record.pid).collect();
         for pid in pids {
@@ -224,6 +226,18 @@ impl Viewer {
         self.subscribe_screen();
         self.kill_job();
         self.recompute();
+    }
+
+    /// Наблюдение каталога записей цели и перечитывание записей. Каталог
+    /// создаётся здесь, до наблюдения; если его позже удалят и создадут
+    /// заново (оболочка делает `mkdir -p` перед записью), событие IN_CREATE
+    /// наблюдаемого каталога `panes/` вызывает эту функцию снова.
+    fn watch_target_dir(&mut self) {
+        let dir = paths::pane_dir(&self.target);
+        let _ = std::fs::create_dir_all(&dir);
+        self.ino.unwatch(&dir);
+        self.ino.watch(&dir);
+        self.records = Records::scan(&dir);
     }
 
     /// pidfd процесса записи; умерший процесс — удаление его записей.
@@ -533,6 +547,9 @@ impl Viewer {
                         self.set_target(&n);
                     }
                 }
+                // Каталог записей закрытой панели (и ссылки прежних id на него)
+                // больше не нужен: оболочка панели уже завершена.
+                channel::remove_pane_dir(pane);
             }
             "pane_moved" => {
                 let prev = s(d, "previous_pane_id").unwrap_or("").to_string();
@@ -569,7 +586,22 @@ impl Viewer {
         let mut recompute = false;
         let mut reload_view = false;
         let mut reload_manifests = false;
+        let panes_dir = paths::panes_dir();
         for e in events {
+            if e.dir == panes_dir && e.dir != target_dir {
+                if !self.target.is_empty()
+                    && e.name == self.target
+                    && e.mask & (libc::IN_CREATE | libc::IN_MOVED_TO) != 0
+                {
+                    self.watch_target_dir();
+                    let pids: Vec<i32> = self.records.slots.iter().map(|s| s.record.pid).collect();
+                    for pid in pids {
+                        self.track_pid(pid);
+                    }
+                    recompute = true;
+                }
+                continue;
+            }
             if e.dir == target_dir {
                 if !e.name.ends_with(".json") {
                     continue;
@@ -673,6 +705,24 @@ impl Viewer {
         }
     }
 
+    /// Уборка каталогов панелей, закрытых без просмотрщика. Снимок имён —
+    /// до запроса списка панелей, подписка на `pane.closed` уже открыта.
+    fn sweep_pane_dirs(&mut self) {
+        let panes = paths::panes_dir();
+        let names = channel::pane_dir_names_in(&panes);
+        let Ok(r) = self.client.call("pane.list", json!({})) else {
+            return;
+        };
+        let live: HashSet<String> = str_list(&r, "panes")
+            .iter()
+            .filter_map(|p| s(p, "pane_id").map(str::to_string))
+            .collect();
+        if live.is_empty() {
+            return;
+        }
+        channel::sweep_pane_dirs_in(&panes, &names, &live);
+    }
+
     fn cleanup(&mut self) {
         self.kill_job();
     }
@@ -747,7 +797,13 @@ pub fn run() -> Result<(), String> {
     for d in v.manifest_dirs.clone() {
         v.ino.watch(&d);
     }
+    // Каталог panes/ наблюдается ради IN_CREATE каталога цели (см.
+    // watch_target_dir).
+    let panes_dir = paths::panes_dir();
+    let _ = std::fs::create_dir_all(&panes_dir);
+    v.ino.watch(&panes_dir);
     v.subscribe();
+    v.sweep_pane_dirs();
     v.size_initial();
     v.ensure_min_rows();
     let target = if target.is_empty() {

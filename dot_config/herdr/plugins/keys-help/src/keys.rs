@@ -80,8 +80,11 @@ fn normalize_token(tok: &str) -> Vec<String> {
     if tok.chars().count() == 1 {
         return vec![single_char(tok.chars().next().unwrap_or(' '))];
     }
-    // Имя через дефис (`double-click`, `page-down`) — одна клавиша.
-    if tok.contains('-') && tok.chars().all(|c| c.is_alphanumeric() || c == '-') {
+    // Имя через дефис или подчёркивание (`double-click` в fzf, `ac_enter` в ble.sh) —
+    // одна клавиша.
+    if (tok.contains('-') || tok.contains('_'))
+        && tok.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+    {
         return vec![tok.to_string()];
     }
     // Ключ из нескольких символов без признаков аккорда — последовательность.
@@ -342,6 +345,8 @@ mod tests {
         assert_eq!(normalize("G"), "G");
         assert_eq!(normalize("pageup"), "prior");
         assert_eq!(normalize("ESC-v"), "ESC v");
+        assert_eq!(normalize("double-click"), "double-click");
+        assert_eq!(normalize("ac_enter"), "ac_enter");
     }
 
     #[test]

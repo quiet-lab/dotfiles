@@ -10,6 +10,10 @@
 # (`source`). Поверх привязок — базовые клавиши vim (data/vim-basic.toml, короткие
 # описания по-русски), записи из процесса сохраняются (`keep`). Режим replace
 # использует привязки режима insert.
+# Привязки с кириллицей в lhs не показываются (`skip`): это дубли модуля ru-layout
+# (dot_config/nvim/local/ru-layout) для русской раскладки с тем же rhs и описанием,
+# что у латинской привязки (`<C-M-h>` → `<C-M-р>`); собственная кириллическая
+# привязка пользователя скрывается вместе с ними.
 
 program = "nvim"
 priority = 100
@@ -33,7 +37,7 @@ desc_field = "desc"
 origin_field = "origin"
 group_field = "group"
 raw_fields = ["rhs", "source"]
-skip = { key = '^<Plug>' }
+skip = { key = '^<Plug>|[А-ЯЁа-яё]' }
 
 [[source]]
 modes = ["insert"]
@@ -45,7 +49,7 @@ desc_field = "desc"
 origin_field = "origin"
 group_field = "group"
 raw_fields = ["rhs", "source"]
-skip = { key = '^<Plug>' }
+skip = { key = '^<Plug>|[А-ЯЁа-яё]' }
 
 [[source]]
 modes = ["replace"]
@@ -57,7 +61,7 @@ desc_field = "desc"
 origin_field = "origin"
 group_field = "group"
 raw_fields = ["rhs", "source"]
-skip = { key = '^<Plug>' }
+skip = { key = '^<Plug>|[А-ЯЁа-яё]' }
 
 [[source]]
 modes = ["visual"]
@@ -69,7 +73,7 @@ desc_field = "desc"
 origin_field = "origin"
 group_field = "group"
 raw_fields = ["rhs", "source"]
-skip = { key = '^<Plug>' }
+skip = { key = '^<Plug>|[А-ЯЁа-яё]' }
 
 [[source]]
 modes = ["select"]
@@ -81,7 +85,7 @@ desc_field = "desc"
 origin_field = "origin"
 group_field = "group"
 raw_fields = ["rhs", "source"]
-skip = { key = '^<Plug>' }
+skip = { key = '^<Plug>|[А-ЯЁа-яё]' }
 
 [[source]]
 modes = ["cmdline"]
@@ -93,7 +97,7 @@ desc_field = "desc"
 origin_field = "origin"
 group_field = "group"
 raw_fields = ["rhs", "source"]
-skip = { key = '^<Plug>' }
+skip = { key = '^<Plug>|[А-ЯЁа-яё]' }
 
 [[source]]
 modes = ["terminal"]
@@ -105,7 +109,7 @@ desc_field = "desc"
 origin_field = "origin"
 group_field = "group"
 raw_fields = ["rhs", "source"]
-skip = { key = '^<Plug>' }
+skip = { key = '^<Plug>|[А-ЯЁа-яё]' }
 
 [[source]]
 modes = ["operator"]
@@ -117,7 +121,7 @@ desc_field = "desc"
 origin_field = "origin"
 group_field = "group"
 raw_fields = ["rhs", "source"]
-skip = { key = '^<Plug>' }
+skip = { key = '^<Plug>|[А-ЯЁа-яё]' }
 
 [[source]]
 modes = ["normal"]

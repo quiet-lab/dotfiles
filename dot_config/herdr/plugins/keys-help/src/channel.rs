@@ -189,6 +189,71 @@ pub fn move_pane_dir(old: &str, new: &str) {
     let _ = std::os::unix::fs::symlink(&to, &from);
 }
 
+/// Удаляет каталог записей закрытой панели `id` в каталоге `panes`
+/// вместе с символическими ссылками на него, оставленными `move_pane_dir`
+/// под прежними id. Если `id` сам — ссылка (панель закрыта под прежним id),
+/// удаляется только ссылка.
+pub fn remove_pane_dir_in(panes: &Path, id: &str) {
+    if id.is_empty() || id.contains('/') {
+        return;
+    }
+    let dir = panes.join(id);
+    let Ok(meta) = std::fs::symlink_metadata(&dir) else {
+        return;
+    };
+    if meta.file_type().is_symlink() {
+        let _ = std::fs::remove_file(&dir);
+        return;
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+    if let Ok(rd) = std::fs::read_dir(panes) {
+        for e in rd.flatten() {
+            let p = e.path();
+            if std::fs::read_link(&p).is_ok_and(|t| t == dir) {
+                let _ = std::fs::remove_file(&p);
+            }
+        }
+    }
+}
+
+pub fn remove_pane_dir(id: &str) {
+    remove_pane_dir_in(&crate::paths::panes_dir(), id);
+}
+
+/// Имена в каталоге `panes` (каталоги и ссылки) — снимок до запроса
+/// списка панелей herdr: каталог панели, созданной после снимка, в уборку
+/// не попадает, даже если панели нет в более раннем ответе.
+pub fn pane_dir_names_in(panes: &Path) -> Vec<String> {
+    std::fs::read_dir(panes)
+        .map(|rd| rd.flatten().map(|e| e.file_name().to_string_lossy().to_string()).collect())
+        .unwrap_or_default()
+}
+
+/// Уборка каталогов панелей, которых нет среди живых (`live`): каталоги
+/// закрытых без просмотрщика панелей. Ссылка прежнего id остаётся, пока
+/// жив каталог, на который она указывает: по ней пишет оболочка
+/// перенесённой панели.
+pub fn sweep_pane_dirs_in(panes: &Path, names: &[String], live: &std::collections::HashSet<String>) {
+    let mut links = Vec::new();
+    for n in names {
+        if live.contains(n) {
+            continue;
+        }
+        let p = panes.join(n);
+        if std::fs::symlink_metadata(&p).is_ok_and(|m| m.file_type().is_symlink()) {
+            links.push(p);
+        } else {
+            remove_pane_dir_in(panes, n);
+        }
+    }
+    for l in links {
+        // Ссылка на исчезнувший каталог (`exists` идёт по ссылке).
+        if !l.exists() {
+            let _ = std::fs::remove_file(&l);
+        }
+    }
+}
+
 /// Файл `env-vars`: имена переменных по строке; пишется, только если изменился,
 /// чтобы не менять `mtime` без нужды (оболочка перечитывает его по `-nt`).
 pub fn write_env_vars(names: &[String]) {
@@ -340,5 +405,49 @@ mod tests {
         assert_eq!(r.active(|p| p != 2).map(|x| x.program.as_str()), Some("ble"));
         r.put("ble-1.json".into(), rec("ble", 1));
         assert_eq!(r.active(|_| true).map(|x| x.program.as_str()), Some("ble"));
+    }
+
+    fn panes_tmp(name: &str) -> PathBuf {
+        let d = std::env::temp_dir().join(format!("kh-panes-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&d);
+        std::fs::create_dir_all(&d).expect("tmp");
+        d
+    }
+
+    #[test]
+    fn remove_closed_pane_dir_with_links() {
+        let d = panes_tmp("rm");
+        std::fs::create_dir_all(d.join("w:p2")).expect("dir");
+        std::fs::write(d.join("w:p2/ble-1.json"), "{}").expect("rec");
+        std::os::unix::fs::symlink(d.join("w:p2"), d.join("w:p1")).expect("link");
+        std::fs::create_dir_all(d.join("w:p3")).expect("other");
+        remove_pane_dir_in(&d, "w:p2");
+        assert!(std::fs::symlink_metadata(d.join("w:p2")).is_err());
+        assert!(std::fs::symlink_metadata(d.join("w:p1")).is_err());
+        assert!(d.join("w:p3").is_dir());
+        let _ = std::fs::remove_dir_all(&d);
+    }
+
+    #[test]
+    fn sweep_keeps_live_and_links_to_live() {
+        let d = panes_tmp("sweep");
+        for n in ["w:p5", "w:p6", "w:p7"] {
+            std::fs::create_dir_all(d.join(n)).expect("dir");
+        }
+        // w:p1 перенесена в w:p5 (жива), w:p2 — в w:p6 (закрыта).
+        std::os::unix::fs::symlink(d.join("w:p5"), d.join("w:p1")).expect("link");
+        std::os::unix::fs::symlink(d.join("w:p6"), d.join("w:p2")).expect("link");
+        let names = pane_dir_names_in(&d);
+        // Каталог, появившийся после снимка имён, уборка не трогает.
+        std::fs::create_dir_all(d.join("w:p9")).expect("new");
+        let live: std::collections::HashSet<String> = ["w:p5", "w:p7"].iter().map(|s| s.to_string()).collect();
+        sweep_pane_dirs_in(&d, &names, &live);
+        assert!(d.join("w:p5").is_dir());
+        assert!(d.join("w:p7").is_dir());
+        assert!(d.join("w:p9").is_dir());
+        assert!(std::fs::symlink_metadata(d.join("w:p1")).is_ok());
+        assert!(std::fs::symlink_metadata(d.join("w:p6")).is_err());
+        assert!(std::fs::symlink_metadata(d.join("w:p2")).is_err());
+        let _ = std::fs::remove_dir_all(&d);
     }
 }

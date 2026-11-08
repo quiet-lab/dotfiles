@@ -124,6 +124,17 @@ fn ble_origin_readline_for_vi_rlfunc() {
     }
 }
 
+/// `ac_enter` — служебный код автодополнения ble.sh, а не клавиша: в таблицах его нет,
+/// и ни одна клавиша не распадается на отдельные символы с подчёркиванием.
+#[test]
+fn ble_ac_enter_not_shown() {
+    for km in ["vi_imap", "vi_nmap", "vi_cmap", "emacs", "auto_complete"] {
+        let t = ble_table(km);
+        assert!(t.iter().all(|e| e.key != "ac_enter"), "{km}");
+        assert!(t.iter().all(|e| !e.key.contains(" _ ")), "{km}");
+    }
+}
+
 #[test]
 fn ble_all_keymaps_parse_nonempty() {
     for km in [
@@ -433,7 +444,10 @@ fn nvim_leader_space_is_normalized_to_sp() {
     let dump = r#"[
       {"lhs":" ff","rhs":"<cmd>Telescope find_files<cr>","desc":"Find Files","origin":"lazyvim","group":"lazyvim","source":"/x/keymaps.lua:10"},
       {"lhs":" fb","desc":"Switch buffer using the fuzzy finder for all open buffers","origin":"user","group":"user"},
-      {"lhs":"<Plug>(x)","rhs":"y","origin":"nvim"}
+      {"lhs":"<Plug>(x)","rhs":"y","origin":"nvim"},
+      {"lhs":"<C-M-h>","rhs":"<C-w>h","desc":"Window left","origin":"user"},
+      {"lhs":"<C-M-р>","rhs":"<C-w>h","desc":"Window left","origin":"user"},
+      {"lhs":" аа","rhs":"<cmd>Telescope find_files<cr>","desc":"Find Files","origin":"lazyvim"}
     ]"#;
     let out = outputs(&[(
         &["nvim", "--server", "/tmp/kh.sock", "--remote-expr", "luaeval('require(\"keys_help\").dump(\"n\")')"],
@@ -448,4 +462,7 @@ fn nvim_leader_space_is_normalized_to_sp() {
     assert!(fb.desc.chars().count() <= 32 && fb.desc.ends_with('…'));
     assert!(fb.desc_full.starts_with("Switch buffer"));
     assert!(find(&t, "<Plug>(x)").is_none());
+    // Дубли ru-layout с кириллицей в lhs не показываются, латинская привязка остаётся.
+    assert!(find(&t, "C-M-h").is_some());
+    assert!(t.iter().all(|e| !e.key.chars().any(|c| ('а'..='я').contains(&c.to_lowercase().next().unwrap_or(c)))), "кириллица в таблице");
 }
