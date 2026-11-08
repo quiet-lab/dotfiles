@@ -33,7 +33,7 @@ unquote = ["key", "action"]
 # аргументы, звонок и пустые действия, внутренние макросы atuin (C-x C-_ …).
 # ac_enter — не клавиша клавиатуры, а код, который автодополнение ble.sh само подаёт
 # в декодер при вставке предложения (для записи макросов), поэтому в таблицу не идёт.
-skip = { key = '^(C-x C-_ |ac_enter$)', action = '^(bell|nop|self-insert|batch-insert|bracketed-paste|(\S+/)?append-arg|(\S+/)?__\w+__|\S+/bell|\S+/self-insert|\S+/bracketed-paste|__atuin_widget_run \d+|\\C-x\\C-_.*)$' }
+skip = { key = '^(C-x C-_ |ac_enter$|__\w+__$)', action = '^(bell|nop|self-insert|batch-insert|bracketed-paste|(\S+/)?append-arg|(\S+/)?__\w+__|\S+/bell|\S+/self-insert|\S+/bracketed-paste|__atuin_widget_run \d+|\\C-x\\C-_.*)$' }
 on_conflict = "override"
 
 
@@ -1346,36 +1346,44 @@ origin = "ble"
 # применимые поднимаются в раздел «по позиции курсора», остальные приглушаются.
 
 [[applies]]
-modes = ["vi_imap", "emacs"]
+modes = ["vi_imap", "emacs", "auto_complete"]
 action = '^(backward-char|backward-cword|backward-sword|beginning-of-line|non-space-beginning-of-line|transpose-chars|transpose-ewords)$'
 when = "col > 0"
 
 [[applies]]
-modes = ["vi_imap", "emacs"]
+modes = ["vi_imap", "emacs", "auto_complete"]
 action = '^(delete-region-or delete-backward-char|vi_imap/delete-region-or vi_imap/delete-backward-indent-or delete-backward-char|delete-backward-cword|kill-backward-cword|kill-backward-line|kill-region-or kill-backward-uword|vi_imap/kill-backward-word|copy-backward-sword|copy-region-or copy-backward-uword)$'
 when = "col > 0"
 
 [[applies]]
-modes = ["vi_imap", "emacs"]
+modes = ["vi_imap", "emacs", "auto_complete"]
 action = '^(forward-char|forward-cword|forward-sword|end-of-line)$'
 when = "col < line_len"
 
 [[applies]]
-modes = ["vi_imap", "emacs"]
+modes = ["vi_imap", "emacs", "auto_complete"]
 action = '^(delete-region-or delete-forward-char|delete-region-or delete-forward-char-or-exit|delete-forward-cword|kill-forward-cword|kill-forward-line|copy-forward-sword|zap-to-char|delete-horizontal-space|upcase-eword|downcase-eword|capitalize-eword)$'
 when = "col < line_len"
 
 [[applies]]
-modes = ["vi_imap", "emacs"]
+modes = ["vi_imap", "emacs", "auto_complete"]
 action = '^(beginning-of-text|history-prev)$'
 when = "row > 0"
 
 [[applies]]
-modes = ["vi_imap", "emacs"]
+modes = ["vi_imap", "emacs", "auto_complete"]
 action = '^history-next$'
 when = "rows_below > 0"
 
 [[applies]]
-modes = ["vi_imap", "emacs"]
+modes = ["vi_imap", "emacs", "auto_complete"]
 action = '^end-of-text$'
 when = "point < len"
+
+# Подсказка автодополнения (keymap auto_complete) принимается только в конце непустой
+# строки; есть ли сама подсказка, переменные позиции не сообщают, поэтому условие
+# приблизительное.
+[[applies]]
+modes = ["auto_complete"]
+action = '^auto_complete/(@end insert(-cword|-word)?|insert|accept-line)$'
+when = "point == len && blank == 0"
