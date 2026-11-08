@@ -551,13 +551,26 @@ impl Drop for Env {
 }
 
 /// Процесс «оболочки» с заданным `PATH` в окружении (`/proc/<pid>/environ`).
+/// Возврат из `spawn` наступает, когда новый образ процесса ещё не
+/// заполнил область окружения, и `/proc/<pid>/environ` в этот момент
+/// бывает пуст. Поэтому процесс сам сообщает строкой в stdout, что
+/// выполняет свой код, и функция ждёт этой строки; дальше он ждёт закрытия
+/// stdin встроенной командой `read`, без нового `exec`.
 fn shell_with_path(bin: &Path) -> Child {
-    Command::new("/usr/bin/cat")
+    use std::io::BufRead;
+    let mut child = Command::new("/bin/sh")
+        .args(["-c", "echo ready; read x"])
         .stdin(Stdio::piped())
-        .stdout(Stdio::null())
+        .stdout(Stdio::piped())
         .env("PATH", bin.display().to_string())
         .spawn()
-        .unwrap()
+        .unwrap();
+    let mut line = String::new();
+    std::io::BufReader::new(child.stdout.take().unwrap())
+        .read_line(&mut line)
+        .unwrap();
+    assert_eq!(line, "ready\n");
+    child
 }
 
 fn exe(dir: &Path, name: &str) {
