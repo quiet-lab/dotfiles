@@ -97,3 +97,11 @@ pub fn log(msg: &str) {
         let _ = writeln!(f, "{} [{}] {msg}", crate::unknown::today(), std::process::id());
     }
 }
+
+/// Строка отладки в журнал плагина: пишется, только если задана переменная
+/// окружения `KEYS_HELP_DEBUG` (непустая).
+pub fn debug(msg: &str) {
+    if std::env::var("KEYS_HELP_DEBUG").is_ok_and(|v| !v.is_empty()) {
+        log(&format!("debug: {msg}"));
+    }
+}

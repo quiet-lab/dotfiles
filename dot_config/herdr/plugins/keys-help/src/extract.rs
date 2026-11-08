@@ -819,11 +819,24 @@ enum Input {
     Need(Vec<String>),
 }
 
+/// Подстановка для источника; нет значения — источник пропускается,
+/// причина пишется в журнал на уровне отладки.
+fn subst_or_skip(m: &Manifest, s: &str, sub: &Subst) -> Option<String> {
+    let v = substitute(s, sub);
+    if v.is_none() {
+        crate::paths::debug(&format!(
+            "{}: источник пропущен, нет значения подстановки в «{s}» (режим {})",
+            m.file_name, sub.mode_native
+        ));
+    }
+    v
+}
+
 fn source_input(m: &Manifest, src: &Source, sub: &Subst, outputs: &Outputs, files: &mut Vec<FileStamp>) -> Input {
     if let Some(cmd) = &src.spec.command {
         let mut argv = Vec::new();
         for a in cmd {
-            match substitute(a, sub) {
+            match subst_or_skip(m, a, sub) {
                 Some(v) => argv.push(v),
                 None => return Input::Skip,
             }
@@ -838,6 +851,7 @@ fn source_input(m: &Manifest, src: &Source, sub: &Subst, outputs: &Outputs, file
         };
     }
     if let Some(p) = src.spec.file.as_ref().or(src.spec.path.as_ref()) {
+        subst_or_skip(m, p, sub);
         let Some(path) = expand_path(p, sub, &m.dir) else {
             return Input::Skip;
         };
@@ -855,7 +869,7 @@ fn source_input(m: &Manifest, src: &Source, sub: &Subst, outputs: &Outputs, file
         };
     }
     if let Some(t) = &src.spec.text {
-        return match substitute(t, sub) {
+        return match subst_or_skip(m, t, sub) {
             Some(v) => Input::Text(v),
             None => Input::Skip,
         };

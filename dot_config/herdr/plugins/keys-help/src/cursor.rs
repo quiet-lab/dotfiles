@@ -48,7 +48,6 @@ pub struct Pos {
     pub col: usize,
     pub line_len: usize,
     pub word: String,
-    pub word_right: String,
     pub word_index: usize,
     pub blank: bool,
 }
@@ -72,8 +71,6 @@ impl Pos {
         let ws = |c: &char| c.is_whitespace();
         let wstart = before.iter().rposition(ws).map(|i| i + 1).unwrap_or(0);
         let word: String = chars[wstart..point].iter().collect();
-        let wend = chars[point..].iter().position(ws).map(|i| point + i).unwrap_or(len);
-        let word_right: String = chars[point..wend].iter().collect();
         // Номер слова в текущей команде: слова до курсора после последнего
         // разделителя команд (`;`, `|`, `&`, перевод строки).
         let cmd_start = before
@@ -91,7 +88,6 @@ impl Pos {
             col,
             line_len,
             word,
-            word_right,
             word_index,
             blank: chars.iter().all(|c| c.is_whitespace()),
         }

@@ -35,17 +35,14 @@ fn position_start_end_middle() {
     let start = pos(0, t);
     assert_eq!((start.point, start.len, start.row, start.rows, start.col, start.line_len), (0, 8, 0, 1, 0, 8));
     assert_eq!(start.word, "");
-    assert_eq!(start.word_right, "echo");
     assert_eq!(start.word_index, 0);
     let end = pos(8, t);
     assert_eq!((end.col, end.line_len), (8, 8));
     assert_eq!(end.word, "abc");
-    assert_eq!(end.word_right, "");
     assert_eq!(end.word_index, 1);
     let mid = pos(6, t); // echo a|bc
     assert_eq!(mid.col, 6);
     assert_eq!(mid.word, "a");
-    assert_eq!(mid.word_right, "bc");
     assert_eq!(mid.var("word_len"), Some(1));
     assert_eq!(mid.var("rows_below"), Some(0));
     assert!(!mid.blank);
@@ -67,7 +64,6 @@ fn position_multiline() {
     // Слово не пересекает перевод строки.
     assert_eq!(pos(3, t).word, "");
     assert_eq!(pos(2, t).word, "ab");
-    assert_eq!(pos(2, t).word_right, "");
 }
 
 #[test]
@@ -88,7 +84,7 @@ fn position_point_beyond_text_is_clamped_and_chars_not_bytes() {
     assert_eq!((p.point, p.len, p.col), (6, 6, 6));
     assert_eq!(p.word, "привет");
     let q = pos(3, "при вет");
-    assert_eq!((q.col, q.word.as_str(), q.word_right.as_str()), (3, "при", ""));
+    assert_eq!((q.col, q.word.as_str()), (3, "при"));
 }
 
 #[test]

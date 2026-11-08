@@ -28,6 +28,10 @@ pub struct Record {
     pub server: Option<String>,
     #[serde(default)]
     pub env: BTreeMap<String, String>,
+    /// Остальные поля записи: манифест может ссылаться на любое поле
+    /// (`{record.<поле>}`), ядро их имён не знает.
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, serde_json::Value>,
 }
 
 fn default_state() -> String {
@@ -50,6 +54,17 @@ impl Record {
             if let Some(v) = v {
                 m.insert(k.to_string(), v.clone());
             }
+        }
+        // Прочие строковые, числовые и логические поля; null, массивы
+        // и объекты подстановкой не бывают.
+        for (k, v) in &self.extra {
+            let text = match v {
+                serde_json::Value::String(s) => s.clone(),
+                serde_json::Value::Number(n) => n.to_string(),
+                serde_json::Value::Bool(b) => b.to_string(),
+                _ => continue,
+            };
+            m.entry(k.clone()).or_insert(text);
         }
         m
     }
@@ -400,6 +415,20 @@ mod tests {
             r#"{{"v":1,"program":"{program}","mode":null,"pid":{pid},"state":"active"}}"#
         ))
         .expect("record")
+    }
+
+    #[test]
+    fn extra_fields_for_substitution() {
+        let r = parse_record(
+            r#"{"v":1,"program":"ble","mode":"auto_complete","pid":7,"state":"active","table":"/t/ac.bind","base_table":"/t/vi_imap.bind","depth":2,"flag":true,"nothing":null,"list":[1]}"#,
+        )
+        .expect("record");
+        let f = r.fields();
+        assert_eq!(f.get("base_table").map(String::as_str), Some("/t/vi_imap.bind"));
+        assert_eq!(f.get("depth").map(String::as_str), Some("2"));
+        assert_eq!(f.get("flag").map(String::as_str), Some("true"));
+        assert_eq!(f.get("table").map(String::as_str), Some("/t/ac.bind"));
+        assert!(!f.contains_key("nothing") && !f.contains_key("list"));
     }
 
     #[test]
