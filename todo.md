@@ -2,14 +2,18 @@
 
 ## Текущая работа
 
-Снимок на 2026-11-07. Файл хранится в git, но в `$HOME` не попадает: он исключён в `.chezmoiignore`.
+Снимок на 2026-11-08. Файл хранится в git, но в `$HOME` не попадает: он исключён в `.chezmoiignore`.
 
 ### Цель
 
-Сессия Hyprland с демоном workspaced и панелью Quickshell доведена до нынешнего вида; модуль Neovim `ru-layout` (русская раскладка независимо от хоста), панель ввода `claude-input`, сторож внимания демона и следование herdr за диалогами агентов работают. Остаётся закрыть одиннадцать активных изменений OpenSpec: их дельты сведены для последовательной архивации, архивацию держат только проверки пользователя и одна перезагрузка. Конфиг сессии и поведение остального не меняются.
+Сессия Hyprland с демоном workspaced и панелью Quickshell доведена до нынешнего вида; модуль Neovim `ru-layout`, панель ввода `claude-input`, сторож внимания демона и следование herdr за диалогами агентов работают. Добавлены оболочка bash с ble.sh, fzf, atuin, television и zoxide на согласованных клавишах и плагин herdr `keys-help` — подсказка горячих клавиш по контексту в нижней панели ([`docs/keys-help.md`](docs/keys-help.md)). Остаётся закрыть двенадцать активных изменений OpenSpec: архивацию держат только проверки пользователя и одна перезагрузка. Конфиг сессии и поведение остального не меняются.
 
 ### Открытые вопросы к пользователю
 
+- [`herdr-keys-help`](openspec/changes/herdr-keys-help/tasks.md), 9.3 и таблица регрессий протокола kitty: после перезапуска клиента herdr (сервер ещё на сборке `duty-v0.9.5.14+ru-layout-chords`, установлен `duty-v0.9.5.15`) Alt+R, Alt+T, Alt+H в оболочке открывают atuin, tv и fzf с их таблицами в нижней панели; Esc и `i` меняют таблицу режима ble.sh; Alt+F, Alt+D, Alt+↑, Ctrl+Alt+T работают; Ctrl+Alt+Shift+/ и Ctrl+Alt+R срабатывают в русской раскладке; панель `claude-input` печатает как прежде. После подтверждения — архивация (шаг 1).
+- Панель ввода `claude-input`: стрелки вверх и вниз листают историю ввода Claude Code (после переоткрытия панели Ctrl+Alt+R); выбор пункта свободного ввода в диалоге не уводит с workspace диалога (форк herdr с `duty-v0.9.5.14`).
+- Neovim: `gq` не переносит строки, потому что `formatexpr` отдан conform.nvim с prettier (`--prose-wrap preserve`), работает только `gw`. Варианты: `formatexpr=""` с `textwidth` для markdown и текста в ftplugin; prettier с `--prose-wrap always --print-width 80`; `formatexpr=""` глобально. Решение не принято.
+- Перенос ble.sh с ручной копии `~/.local/share/blesh` на пакет AUR `blesh-git` с записью в `docs/host-state.md` и таблицы `docs/package-sources*.md`; заодно `pacman -D --asexplicit fzf`, `atuin import auto`, `HISTSIZE`/`HISTFILESIZE`/`histappend` в `dot_bashrc`. Пользователь не поручал, предложено.
 - Перезагрузка: пункт 4.1 [`session-instances`](openspec/changes/session-instances/tasks.md) и пункт 3.4 [`session-windows-transient`](openspec/changes/session-windows-transient/tasks.md) (действия до неё — в тексте задач). После входа агент сверяет журнал демона и `hyprctl clients -j`, затем архивирует цепочку. Той же перезагрузкой проверяются `snapshot-stale-rects` и `snapshot-stale-section`: окна `work` встают по `thirds-split`, при подъёме `surf` по Super+V Chrome AI слева и Chrome AI2 справа.
 - [`enter-backspace-keys`](openspec/changes/enter-backspace-keys/tasks.md), 5.5: при непустой истории уведомлений Shift+Super+Backspace — история пуста, число на плитке исчезло.
 - [`toggle-windows`](openspec/changes/toggle-windows/tasks.md), 4.2: при спрятанном Telegram приходит настоящее сообщение, левый клик по карточке — окно с топиком на текущем столе, окна `special:pool` не мелькают заметно. Пункт 4.3: клик по значку Telegram в трее при спрятанном окне — окно 1500×1500 по центру с фокусом.
@@ -19,54 +23,57 @@
 - Проверка состояния «поднят, связи нет» настоящим обрывом (изменение `tunnel-country-link`, архив): `sudo -A -p 'Проверка связи amn0' nft 'add table inet amntest; add chain inet amntest out { type filter hook output priority 0; }; add rule inet amntest out ip daddr <адрес Endpoint amn0> drop'` — значок `amn0` через 10–15 с оранжевый, подсказка называет «Handshake did not complete … (try 3)»; `sudo -A -p 'Конец проверки связи amn0' nft delete table inet amntest` — снова зелёный. Трафик через `amn0` на время проверки прерывается, поэтому её делает пользователь, когда через туннель никто не работает. Для `axata` проверки нет: профиль без `ping-restart` (решение пользователя, `docs/amnezia-split-tunnel.md`).
 - Проверка перезагрузкой автозапуска туннелей (изменение `tunnel-tray-autostart`, архив) и чистого старта herdr (изменение `herdr-prestart`, архив): после входа оба значка туннелей зелёные, в выводе `journalctl -b -o short-monotonic -u awg-quick@amn0 -u axata-vpn -u tunnels-before-login -u greetd | grep -E 'Starting|Finished|Started'` строки `Finished` у `awg-quick@amn0` и `axata-vpn` стоят раньше `Started` у `greetd`; `journalctl --user -b -u herdr-prestart` содержит итог `claude update`, `herdr update`, интеграции и строку о переименовании `session.json`, окно herdr показывает одно пространство в `~/work/telecom/axata/monorepo-ocp`, `pgrep -x claude` пусто. Итог по туннелям — в `docs/amnezia-split-tunnel.md`, раздел «Автозапуск туннелей».
 - Отправка черновиков из `docs/upstream/` (отчёты Hyprland и Chromium о родителе окна): срок, на который решение было отложено, истёк 23.10.2026, вопрос задаётся снова ([`hyprland-window-parent.md`](docs/open-questions/hyprland-window-parent.md)).
-- Оценка следования herdr за диалогами агентов, фокуса панели ввода и паузы видео при вопросе: пользователь перезапускает клиент herdr, Neovim/Neovide и сессии Claude Code сам, позже.
 
 ### Где остановились
 
-- Деревья chezmoi (`main`) и `~/work/pets/workspaced` (`master`, `ca1db63`) чисты, всё отправлено в `origin`.
-- OpenSpec: 11 активных изменений, каждое проходит `openspec validate <имя> --strict`. Порядок архивации одной командой на изменение: `session-instances` → `live-layout` → `work-area-center` → `askpass-only-quickshell` → `sticky-chains` → `chains-sticky` → `session-windows-transient` → `toggle-windows` → `shared-app-chain` → `enter-backspace-keys`; `notifications-top-stack` вне цепочки. Симуляция архивации в копии прошла. Основные спецификации `hyprland-binds` и `ws-config` приведены к живому поведению. Живые проверки ydotool прошли: `session-windows-transient` 3.3, 3.5; `enter-backspace-keys` 5.1–5.4; `shared-app-chain` 5.1–5.2; `toggle-windows` 4.1, 4.3 (по D-Bus), 4.4 ([`report.md`](/home/mne/.local/state/duty/dotfiles/results/openspec-reconcile/report.md), `live-checks/results.md` рядом).
-- `openspec validate --specs` падает на длинных требованиях и до этого, им не пользоваться: проверка идёт по каждому изменению с `--strict`.
-- Neovim: модуль `ru-layout` (формы `<C-В>`, `<M-C-в>`, независимость от wezterm и Neovide; [`docs/ru-layout.md`](docs/ru-layout.md)), изменение заархивировано. `claude-input`: виртуальный перенос, буфер диалога закрывается после `:w`, `<S-CR>` и `<S-Space>` подтверждают выбор, панель ввода у любой сессии Claude Code, хук открывает её только через `herdr pane activate` (изменение `input-pane-activate-only`), токен `input_pane` на панели; TabNine удалён ([`docs/claude-input.md`](docs/claude-input.md)). Проверка набора `claude-input-buffer` 6.1 закрыта: панель используется ежедневно.
-- workspaced `[attention]`: пауза MPRIS, остановка игры сигналом SIGSTOP, фокус herdr при вопросе агента. В `~/.config/herdr/config.toml` включено `[ui.follow_blocked] enabled = true`, форк herdr `duty-v0.9.5.7`.
-- Перестановка ячеек `work` после перезапуска workspaced разобрана: причина — Super+C пользователя в режиме `home`, дефекта демона нет ([`report.md`](/home/mne/.local/state/duty/workspaced/results/ws-restore-cells/report.md)).
-- Панель: четыре плитки столов, правая колонка вровень, заливка плиток 0.8 (`Theme.tileBg`). Размытие и прозрачность в `hyprland.lua` подобраны; варианты размытия ждут Hyprland 0.57 в pacman ([`hyprland-blur-variants.md`](docs/open-questions/hyprland-blur-variants.md); сейчас 0.56.2).
-- Super+Shift+Пробел намеренно свободен. Окно пароля sudo — только Quickshell ([`0008`](docs/decisions/0008-askpass-quickshell-only.md)); раскладка после диктовки VoxType возвращается перехватом `post_output_command` ([`hyprland-keymap-group-after-virtual-keyboard.md`](docs/open-questions/hyprland-keymap-group-after-virtual-keyboard.md)).
+- Деревья chezmoi (`main`, `3ce734d`), `~/work/pets/duty-herdr` (`duty`, `bea0f9d2`, выпуск `duty-v0.9.5.15` на GitHub и в `~/.local/bin/herdr`) и `~/work/pets/workspaced` (`master`, `ca1db63`) чисты, всё отправлено в `origin`. Сервер herdr не перезапускался: он работает на сборке с той же правкой русской раскладки, новый бинарник подхватится при перезапуске.
+- Оболочка: `dot_blerc` и `dot_bashrc` — fzf (Alt+H история, Alt+F файлы, Alt+D cd; штатные C-t/C-r/M-c сняты), atuin (Alt+R, Alt+↑, собственные привязки выключены), television (Alt+T, Ctrl+Alt+T; его `bind -x` на C-t/C-r перебиты после `tv init`), zoxide; ble.sh оставлен на Ctrl+R/S/T/H/F/], Ctrl+Z, ↑. Таблица сверена `ble-bind -P`. В vi-режимах ble.sh привязок с Alt нет: незанятое Alt+клавиша — это Esc и клавиша.
+- `keys-help`: плагин зарегистрирован (`herdr plugin list`), ссылка `~/.config/herdr/keys-help/view.toml` стоит, протокол kitty в wezterm и рамки herdr только разделителями применены, хук `SessionStart` печатает неизвестные программы; 213 тестов плагина зелёные, ревью high — 10 находок исправлено ([`report.md`](/home/mne/.local/state/duty/dotfiles/results/keys-help/report.md), запись [`0010`](docs/decisions/0010-keys-help-herdr-plugin.md)). Открыты 9.3 и 11.1.
+- Hyprland 0.57.1: `render.cm_auto_hdr = 0` — полноэкранный Chromium больше не переводит монитор в HDR (картинка подтверждена). Условие пересмотра [`hyprland-blur-variants.md`](docs/open-questions/hyprland-blur-variants.md) наступило: 0.57 в pacman и установлен.
+- Форк herdr: тест `federated_client_starts_without_local_and_survives_its_restart` падал из-за дефекта теста (команда с кавычками после обрывка ввода при переподключении), исправлен коммитом в `duty`; полный nextest 4437/4437.
+- Кэш пакетов yazi (`~/.cache/yazi/packages`) был повреждён и ронял `ya pkg install` при `chezmoi apply`; пересоздан, плагины стоят.
+- OpenSpec: 12 активных изменений, каждое проходит `openspec validate <имя> --strict`; `openspec validate --specs` падает на длинных требованиях, им не пользоваться. Порядок архивации цепочки: `session-instances` → `live-layout` → `work-area-center` → `askpass-only-quickshell` → `sticky-chains` → `chains-sticky` → `session-windows-transient` → `toggle-windows` → `shared-app-chain` → `enter-backspace-keys`; `notifications-top-stack` и `herdr-keys-help` вне цепочки. Живые проверки ydotool прошли ([`report.md`](/home/mne/.local/state/duty/dotfiles/results/openspec-reconcile/report.md)).
+- VoxType: `initial_prompt` переписана короче со всеми латинскими названиями (wezterm, atuin, ble.sh, herdr, neovide, neovim, prettier). `claude-input`: подсказка диалога в правом окне (1:4, не меньше 20 столбцов), кнопка «Next» в множественном выборе, история ввода стрелками; детектор herdr держит `blocked` в поле свободного ввода ([`docs/claude-input.md`](docs/claude-input.md)).
 
 ### Следующие шаги
 
-1. После ответов пользователя и перезагрузки: сверить журнал и `hyprctl clients -j`, плитку стола 1 (`qs -c panel ipc call workspaces row 1`), `conceal_vrr_caps = Y` (`system/modprobe.d/nvidia-vrr.sh status`); итог дописать в `docs/host-state.md`, отметить 4.1 и 5.4 `session-instances`.
-2. Архивировать цепочку в порядке из «Где остановились» (`openspec validate <имя> --strict`, затем `openspec archive <имя> -y`), `notifications-top-stack` — после оценки вида. Ссылки в `docs/window-model.md` перевести на архивные.
-3. Дефект демона: поднятие workspace и `workspaced arrange` при полноэкранном окне завершаются ошибкой композитора «Window is fullscreen» (демон двигает такое окно), окна расставляются верно — пропускать полноэкранные окна или снимать ошибку.
-4. Дефект демона: правка геометрии ячеек шаблона при работающем демоне раскладку не пересобирает (`keep_layout` сравнивает только разделы workspace) — учесть шаблон в сравнении; записан в `design.md` изменения `snapshot-stale-rects`.
-5. Комментарий в `daemon.rs`: к запуску записей без workspace ссылка на D16 вместо D17 (`session-instances`, пункт 5.7) — при следующей правке.
-6. Агент polkit на Quickshell (`Quickshell.Services.Polkit`) — отдельное изменение по плану D5 из `openspec/changes/askpass-only-quickshell/design.md`.
-7. По желанию пользователя: понизить до info предупреждение демона «исполняемый файл команды … не найден» для процессов из контейнера distrobox (`proc_info`, `src/daemon.rs`); оно повторяется при каждом захвате окна браузера из `fedora-box`.
+1. После подтверждения 9.3: отметить 9.3 и 11.1 в `tasks.md`, `openspec validate herdr-keys-help --strict`, `openspec archive herdr-keys-help -y`, коммит и push.
+2. По решению пользователя о `gq`: субагент на Sonnet правит `dot_config/nvim` (ftplugin или conform), `chezmoi apply`, проверка `gq}` на абзаце markdown в Neovide.
+3. По решению о ble.sh из AUR: `paru`/`pacman` `blesh-git`, `dot_bashrc` на `/usr/share/blesh/ble.sh`, удалить ручную копию, `docs/host-state.md` и `docs/package-sources*.md`; тем же изменением `HISTSIZE`, `atuin import auto`.
+4. Варианты размытия панели ([`hyprland-blur-variants.md`](docs/open-questions/hyprland-blur-variants.md)): условие наступило, Hyprland 0.57.1 — подобрать по плану файла, вопрос закрыть.
+5. После перезагрузки по вопросам снимка: сверить журнал демона и `hyprctl clients -j`, плитку стола 1 (`qs -c panel ipc call workspaces row 1`), `conceal_vrr_caps = Y` (`system/modprobe.d/nvidia-vrr.sh status`); дописать `docs/host-state.md`, отметить 4.1 и 5.4 `session-instances`; архивировать цепочку в порядке из «Где остановились», `notifications-top-stack` — после оценки вида; ссылки в `docs/window-model.md` перевести на архивные.
+6. Дефекты демона workspaced: поднятие workspace и `workspaced arrange` при полноэкранном окне дают ошибку композитора «Window is fullscreen» — пропускать такие окна; правка геометрии ячеек шаблона при работающем демоне раскладку не пересобирает (`keep_layout`) — учесть шаблон (`design.md` изменения `snapshot-stale-rects`); комментарий в `daemon.rs` к записям без workspace — D16 вместо D17.
+7. Агент polkit на Quickshell — отдельное изменение по плану D5 из `openspec/changes/askpass-only-quickshell/design.md`.
+8. По желанию пользователя: понизить до info предупреждение демона «исполняемый файл команды … не найден» для процессов из `fedora-box` (`proc_info`, `src/daemon.rs`).
 
 ### Как проверить
 
 ```bash
-openspec list                              # 11 активных изменений
+openspec list                              # 12 активных изменений
 for c in $(openspec list --json | jq -r '.changes[].name'); do openspec validate $c --strict; done
+herdr --version                            # duty-v0.9.5.15
+herdr plugin list | rg keys-help           # quiet-lab.keys-help enabled
+ls -l ~/.config/herdr/keys-help/view.toml  # ссылка в источник chezmoi
+cd ~/.config/herdr/plugins/keys-help && cargo test --locked 2>&1 | tail -3   # 213 passed
+script -qec 'bash -ic "ble-bind -m vi_imap -P; ble-bind -m vi_nmap -P"' /dev/null | rg -e 'M-h|M-f|M-d|M-r|M-up|M-t|C-M-t|C-t|C-r'
+SIG=$(ls -t $XDG_RUNTIME_DIR/hypr | head -1); HYPRLAND_INSTANCE_SIGNATURE=$SIG hyprctl getoption render:cm_auto_hdr   # int: 0
 cd ~/.config/nvim/local/ru-layout && bash tests/run-all.sh   # тесты ru-layout
-herdr --version                            # duty-v0.9.5.7
 systemctl --user is-active workspaced.service ydotool.service
 workspaced check && workspaced status --json | jq -c '.desktops | to_entries | map({(.key): [.value.active, [.value.workspaces[].name]]}) | add'
-journalctl --user -u workspaced.service -b | rg 'собирается заново из конфига|не действуют'
-SIG=$(ls -t $XDG_RUNTIME_DIR/hypr | head -1); HYPRLAND_INSTANCE_SIGNATURE=$SIG hyprctl clients -j | jq -c '.[] | {class, ws: .workspace.name, at, size, fullscreen}'
+HYPRLAND_INSTANCE_SIGNATURE=$SIG hyprctl clients -j | jq -c '.[] | {class, ws: .workspace.name, at, size, fullscreen}'
 cd ~/work/pets/workspaced && cargo test 2>&1 | tail -3   # 209 passed
-chezmoi status && git status -sb          # расхождений и незакоммиченного быть не должно
+chezmoi status && git status -sb          # только строка R link-herdr-keys-help.sh (сценарий run_after)
 ```
 
 Тесты `claude-input`: `cd dot_config/nvim/local/claude-input && nvim --headless --clean -u NONE -l tests/switch_spec.lua && nvim --headless --clean -u NONE -l tests/dialog_spec.lua` — ALL OK ([`docs/claude-input.md`](docs/claude-input.md)).
 
 ### Что пробовали и отвергли
 
-- Снимать и снова ставить fullscreen или `bring_to_top` для полноэкранного окна: браузер выходит из полноэкранного видео, `bring_to_top` ставит признак самому окну, соседям не снимает ([`design.md`](openspec/changes/archive/2026-10-23-fullscreen-raise/design.md)).
-- Считать прямоугольник окна из снимка устаревшим, если он не совпадает ни с ячейкой, ни с `moved`: второй экземпляр, сдвинутый мышью, законно стоит вне обоих ([`design.md`](openspec/changes/archive/2026-10-24-snapshot-stale-rects/design.md)).
-- Размытие `size 9, passes 1` двоит картинку; `hyprland-git` из AUR ради вариантов размытия пользователь отверг.
-- Таймеры вместо событий ([`0007`](docs/decisions/0007-no-timers.md)); правило окна `focus_on_activate = false` для Telegram отключило бы переход к топику по клику на уведомление.
-- Запускать общее окно при восстановлении сессии вторым экземпляром там, где его приложение не описано в конфиге: общие окна остаются общими; запасной pinentry у окна пароля отвергнут.
-- `openspec validate --specs` как общая проверка: падает на длинных требованиях, заменена проверкой каждого изменения с `--strict`.
+- Прямой `source /usr/share/fzf/key-bindings.bash`: он безусловно переназначает Ctrl+Z на смену keymap readline; взят `ble-import contrib/integration/fzf-key-bindings`, где эти `bind` глушатся. Снимать `bind -x` от `tv init` через `bind -r`: ble.sh удалял и свои C-t/C-r — вместо этого `ble-bind -f` после `tv init`.
+- Для HDR в полном экране: 10-битный режим монитора и флаги Chromium отвергнуты в пользу `cm_auto_hdr = 0` — HDR-контент в браузере не смотрят, поддержка протокола цвета в Hyprland 0.57 не завершена.
+- Снимать и снова ставить fullscreen или `bring_to_top` для полноэкранного окна ([`design.md`](openspec/changes/archive/2026-10-23-fullscreen-raise/design.md)); считать прямоугольник окна из снимка устаревшим по несовпадению с ячейкой и `moved` ([`design.md`](openspec/changes/archive/2026-10-24-snapshot-stale-rects/design.md)).
+- Таймеры вместо событий ([`0007`](docs/decisions/0007-no-timers.md)); правило окна `focus_on_activate = false` для Telegram; `hyprland-git` из AUR ради размытия; запасной pinentry у окна пароля.
+- `openspec validate --specs` как общая проверка: падает на длинных требованиях.
 
 ## Возможные доработки
 
