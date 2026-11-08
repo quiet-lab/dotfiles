@@ -7,9 +7,15 @@
 # в $XDG_RUNTIME_DIR/herdr-keys-help/ble/$$/, лежат дампы `ble-bind -P`
 # по одному на keymap; путь дампа — поле table записи.
 #
-# Запись делает встроенный printf, смена keymap внешних процессов
-# не запускает. Внешние mkdir и rm запускаются только при первой
-# записи (создание каталогов) и при выходе оболочки (уборка).
+# Пока просмотрщик держит в каталоге панели отметку viewer (решение D17),
+# модуль пишет рядом с записью строку ввода ble-$$.line (курсор и текст,
+# после каждой отрисовки), слова оболочки ble-$$.words (аббревиатуры,
+# псевдонимы, функции; по PRECMD) и кандидаты дополнения ble-$$.cands
+# (после того, как их построил ble.sh).
+#
+# Запись делает встроенный printf, смена keymap и нажатия внешних
+# процессов не запускают. Внешние mkdir и rm запускаются только при
+# первой записи (создание каталогов) и при выходе оболочки (уборка).
 #
 # Вне herdr (нет HERDR_PANE_ID или XDG_RUNTIME_DIR) модуль ничего
 # не делает. Подключается из ~/.blerc.
@@ -22,6 +28,21 @@ _keys_help_record=$_keys_help_pane_dir/ble-$$.json
 _keys_help_dump_dir=$_keys_help_base/ble/$$
 _keys_help_env_file=$_keys_help_base/env-vars
 _keys_help_env_mark=$_keys_help_dump_dir/env-vars.read
+_keys_help_marker=$_keys_help_pane_dir/viewer
+_keys_help_line_file=$_keys_help_pane_dir/ble-$$.line
+_keys_help_words_file=$_keys_help_pane_dir/ble-$$.words
+_keys_help_cands_file=$_keys_help_pane_dir/ble-$$.cands
+# Последние записанные курсор и строка, слова и кандидаты: запись
+# только при изменении. Пустое значение — «ещё не писали при этой
+# отметке»: пропажа отметки сбрасывает их, и после её появления файлы
+# пишутся заново.
+_keys_help_line_last=
+_keys_help_words_last=
+_keys_help_cands_last=
+# Строки аббревиатур и версия _ble_complete_sabbrev_version, по которой
+# они собраны.
+_keys_help_sabbrev_lines=
+_keys_help_sabbrev_version=
 # Последняя записанная пара «состояние режим команда»: запись только
 # при её изменении.
 _keys_help_last=
@@ -129,6 +150,89 @@ function keys_help/write {
   _keys_help_last=$key
 }
 
+# Есть ли отметка просмотрщика; без неё — сброс запомненного, чтобы
+# после появления отметки файлы строки, слов и кандидатов писались
+# заново.
+function keys_help/marked {
+  [[ -e $_keys_help_marker ]] && return 0
+  _keys_help_line_last= _keys_help_words_last= _keys_help_cands_last=
+  return 1
+}
+
+# Значение для поля TSV: табуляции и переводы строк — пробелами.
+function keys_help/tsv-field {
+  ret=${1//[$'\t\n']/ }
+}
+
+# Строка ввода после отрисовки: «курсор\nтекст» при изменении.
+function keys_help/on-render {
+  [[ $BASHPID == "$$" ]] || return 0
+  keys_help/marked || return 0
+  local cur=$_ble_edit_ind:$_ble_edit_str
+  [[ $cur == "$_keys_help_line_last" ]] && return 0
+  [[ $_keys_help_words_last ]] || keys_help/write-words
+  printf '%s\n%s' "$_ble_edit_ind" "$_ble_edit_str" 2>/dev/null > "$_keys_help_line_file" || return 0
+  _keys_help_line_last=$cur
+}
+
+# Аббревиатуры ble-sabbrev строками TSV — только при смене их версии.
+function keys_help/collect-sabbrev {
+  [[ ${_ble_complete_sabbrev_version-} ]] || return 0
+  [[ $_ble_complete_sabbrev_version == "$_keys_help_sabbrev_version" ]] && return 0
+  local out= key value ret keys
+  ble/gdict#keys _ble_complete_sabbrev
+  keys=("${ret[@]}")
+  for key in "${keys[@]}"; do
+    ble/gdict#get _ble_complete_sabbrev "$key" || continue
+    value=${ret#*:}
+    keys_help/tsv-field "$key"; key=$ret
+    keys_help/tsv-field "$value"
+    out+=sabbrev$'\t'$key$'\t'$ret$'\n'
+  done
+  _keys_help_sabbrev_lines=$out
+  _keys_help_sabbrev_version=$_ble_complete_sabbrev_version
+}
+
+# Слова оболочки: аббревиатуры, псевдонимы (BASH_ALIASES), функции
+# (compgen -A function без имён с / и с ведущим _). Файл пишется только
+# при изменении содержимого.
+function keys_help/write-words {
+  keys_help/ensure-dirs || return 0
+  keys_help/collect-sabbrev
+  local out=$_keys_help_sabbrev_lines name ret
+  for name in "${!BASH_ALIASES[@]}"; do
+    keys_help/tsv-field "${BASH_ALIASES[$name]}"
+    out+=alias$'\t'$name$'\t'$ret$'\n'
+  done
+  # compgen пишет в файл, а не в подстановку $(…): без fork.
+  local tmp=$_keys_help_dump_dir/functions.tmp
+  local -a funcs=()
+  compgen -A function 2>/dev/null > "$tmp" && mapfile -t funcs < "$tmp"
+  for name in "${funcs[@]}"; do
+    [[ $name == _* || $name == */* ]] && continue
+    out+=function$'\t'$name$'\t'$'\n'
+  done
+  [[ $out == "$_keys_help_words_last" ]] && return 0
+  printf '%s' "$out" 2>/dev/null > "$_keys_help_words_file" || return 0
+  # Пустой набор слов отличается от «ещё не писали».
+  _keys_help_words_last=${out:-$'\n'}
+}
+
+# Кандидаты дополнения ble.sh: «COMPV\nкандидат\n…» при изменении.
+# Переменные COMPV, cand_count и cand_word — локальные вызывающего
+# ble/complete/candidates/generate, видны здесь по динамической области.
+function keys_help/on-cands {
+  [[ $BASHPID == "$$" ]] || return 0
+  ((${cand_count:-0} > 0)) || return 0
+  keys_help/marked || return 0
+  keys_help/ensure-dirs || return 0
+  local out
+  printf -v out '%s\n' "${COMPV-}" "${cand_word[@]}"
+  [[ $out == "$_keys_help_cands_last" ]] && return 0
+  printf '%s' "$out" 2>/dev/null > "$_keys_help_cands_file" || return 0
+  _keys_help_cands_last=$out
+}
+
 # Смена keymap: запись active, только если keymap изменился.
 function keys_help/notify {
   [[ $BASHPID == "$$" ]] || return 0
@@ -147,6 +251,7 @@ function keys_help/precmd {
   keys_help/read-env-names
   keys_help/update-env-json
   keys_help/write active
+  keys_help/marked && keys_help/write-words
 }
 
 function keys_help/preexec {
@@ -156,10 +261,26 @@ function keys_help/preexec {
 
 function keys_help/exit {
   [[ $BASHPID == "$$" ]] || return 0
-  command rm -rf -- "$_keys_help_record" "$_keys_help_dump_dir" 2>/dev/null
+  command rm -rf -- "$_keys_help_record" "$_keys_help_line_file" "$_keys_help_words_file" \
+    "$_keys_help_cands_file" "$_keys_help_dump_dir" 2>/dev/null
   # Каталог панели не удаляется: его создаёт и наблюдает просмотрщик
   # (inotify), после удаления наблюдение пропало бы.
 }
+
+# Проверка внутренних функций ble.sh, на которые ставятся обёртки: без
+# функций смены keymap и привязок модуль не пишет ничего, без отрисовки
+# и дополнения — не пишет строку и кандидатов. Предупреждение — в stderr.
+function keys_help/missing {
+  local f missing=
+  for f; do ble/is-function "$f" || missing+=" $f"; done
+  [[ $missing ]] || return 1
+  ble/util/print "keys-help: в ble.sh $BLE_VERSION нет функций:$missing" >&2
+}
+if keys_help/missing ble/decode/keymap/push ble/decode/keymap/pop \
+    ble/widget/.EDIT_COMMAND ble/widget/.SHELL_COMMAND; then
+  ble/util/print "keys-help: запись контекста отключена" >&2
+  return 0
+fi
 
 ble/function#advice after ble/decode/keymap/push 'keys_help/notify'
 ble/function#advice after ble/decode/keymap/pop 'keys_help/notify'
@@ -180,6 +301,19 @@ ble/function#advice around ble/widget/.SHELL_COMMAND '
   keys_help/write widget "${ADVICE_WORDS[1]}"
   ble/function#advice/do
   keys_help/write active'
+
+# Строка ввода: ble.sh вызывает отрисовку после каждой порции ввода.
+if ! keys_help/missing ble/textarea#render; then
+  ble/function#advice after ble/textarea#render 'keys_help/on-render'
+fi
+# Кандидаты: функция появляется с загрузкой модуля дополнения.
+function keys_help/complete-load {
+  keys_help/missing ble/complete/candidates/generate && return 0
+  ble/function#advice after ble/complete/candidates/generate 'keys_help/on-cands'
+}
+blehook complete_load!=keys_help/complete-load
+# Модуль дополнения уже загружен (повторное подключение модуля).
+ble/is-function ble/complete/candidates/generate && keys_help/complete-load
 
 blehook PRECMD!=keys_help/precmd
 blehook PREEXEC!=keys_help/preexec

@@ -29,6 +29,7 @@ import fcntl
 import json
 import os
 import pty
+import re
 import select
 import shutil
 import struct
@@ -137,6 +138,7 @@ class Harness:
         os.symlink(MODULE, os.path.join(self.home, ".config", "blesh", "keys-help.bash"))
         self.trace = os.path.join(tmp, "trace")
         self.forks = os.path.join(tmp, "forks")
+        self.forks_line = os.path.join(tmp, "forks-line")
         rc = os.path.join(tmp, "bashrc")
         with open(rc, "w") as f:
             f.write(f"""
@@ -156,7 +158,20 @@ if declare -F keys_help/write >/dev/null; then
     read -r kh_b < /proc/sys/kernel/ns_last_pid
     [[ $_keys_help_last != "$kh_prev" ]] && printf "%s\\n" "$_keys_help_last" >> {self.trace}
     printf "%d %s\\n" "$((kh_b - kh_a))" "$*" >> {self.forks}'
+  # Число fork за вызов обработчиков строки ввода, слов и кандидатов.
+  for kh_f in keys_help/on-render keys_help/on-cands keys_help/write-words; do
+    ble/function#advice around "$kh_f" '
+      local kh_a kh_b
+      read -r kh_a < /proc/sys/kernel/ns_last_pid
+      ble/function#advice/do
+      read -r kh_b < /proc/sys/kernel/ns_last_pid
+      printf "%d %s\\n" "$((kh_b - kh_a))" "${{ADVICE_WORDS[0]}}" >> {self.forks_line}'
+  done
 fi
+# Слова оболочки для .words и кандидатов дополнения.
+alias khal='ls -la'
+ble-sabbrev gst='git status'
+function kh_fake_other {{ :; }}
 # vi-режим, как в dot_bashrc
 set -o vi
 PS1='kh$ '
@@ -230,6 +245,11 @@ ble-attach
                 return rec
             return None
         return self.wait(what, check)
+
+    def plain(self):
+        """Вывод терминала без управляющих последовательностей CSI и OSC."""
+        return re.sub(rb"\x1b\[[0-9;?>=]*[ -/]*[@-~]|\x1b\][^\x07]*\x07|\x1b[()][0-9A-Za-z]|\x1b[78=>]",
+                      b"", self.shell.output)
 
     def trace_lines(self):
         try:
@@ -354,6 +374,83 @@ def test_in_herdr(tmp):
     check(os.path.isdir(h.pane_dir), "каталог панели остаётся (его наблюдает просмотрщик)")
 
 
+def read_file(path):
+    try:
+        with open(path) as f:
+            return f.read()
+    except FileNotFoundError:
+        return None
+
+
+def test_input_line(tmp):
+    print("== строка ввода, слова и кандидаты (D17)")
+    h = Harness(tmp, PANE_ID)
+    pid = h.shell.pid
+    line = os.path.join(h.pane_dir, f"ble-{pid}.line")
+    words = os.path.join(h.pane_dir, f"ble-{pid}.words")
+    cands = os.path.join(h.pane_dir, f"ble-{pid}.cands")
+    marker = os.path.join(h.pane_dir, "viewer")
+    h.wait_record("первая запись active", state="active", mode="vi_imap")
+
+    # Без отметки: отрисовка идёт, файлов строки и слов нет. Эхо в
+    # терминале выводится после обработчика отрисовки.
+    h.send_key(b"ls -l")
+    h.wait("эхо «ls -l» без отметки", lambda: b"ls -l" in h.plain())
+    check(read_file(line) is None and read_file(words) is None, "без отметки viewer .line и .words нет")
+
+    # Отметка есть: первое же изменение пишет строку и слова.
+    open(marker, "w").close()
+    h.send_key(b"\x01")  # C-a: в начало строки
+    h.wait(".line: курсор 0", lambda: read_file(line) == "0\nls -l")
+    h.send_key(b"\x05")  # C-e: в конец строки
+    h.wait(".line: курсор 5", lambda: read_file(line) == "5\nls -l")
+    w = read_file(words) or ""
+    for row in ("sabbrev\tgst\tgit status", "alias\tkhal\tls -la", "function\tkh_fake_widget\t"):
+        check(row in w.splitlines(), f".words содержит «{row.replace(chr(9), ' | ')}»")
+    check(not any(r.split("\t")[1].startswith("_") or "/" in r.split("\t")[1]
+                  for r in w.splitlines() if r.startswith("function\t")),
+          ".words: функций с / и с ведущим _ нет")
+
+    # Многострочный текст: позиция в символах, текст как есть.
+    h.send_key(b" \xd1\x8e")  # пробел и «ю»
+    h.wait(".line: символы, не байты", lambda: read_file(line) == "7\nls -l ю")
+
+    # Без отметки запись не делается: файл не меняется.
+    os.unlink(marker)
+    before = read_file(line)
+    h.send_key(b"zzz")
+    h.wait("эхо «zzz» без отметки", lambda: b"zzz" in h.plain())
+    check(read_file(line) == before, "без отметки .line не меняется")
+
+    # Новая аббревиатура: .words обновляется по PRECMD.
+    open(marker, "w").close()
+    h.send_key(b"\x15ble-sabbrev gco='git checkout'\r")
+    h.wait(".words: новая аббревиатура gco",
+           lambda: "sabbrev\tgco\tgit checkout" in (read_file(words) or "").splitlines())
+
+    # Кандидаты дополнения по TAB: COMPV первой строкой, затем кандидаты.
+    h.send_key(b"kh_fa\t")
+    c = h.wait(".cands для kh_fa", lambda: (lambda t: t if t and t.startswith("kh_fa\n") else None)(read_file(cands)))
+    check({"kh_fake_widget", "kh_fake_other"} <= set(c.splitlines()[1:]),
+          f".cands содержит kh_fake_widget и kh_fake_other ({c.splitlines()[1:]})")
+
+    # Строка о вызове дописывается после записи файла: ждать её.
+    need = {"keys_help/on-render", "keys_help/on-cands", "keys_help/write-words"}
+
+    def all_calls():
+        got = [l.split(" ", 1) for l in (read_file(h.forks_line) or "").splitlines()]
+        return got if need <= {n for _, n in got} else None
+    calls = h.wait("учёт вызовов обработчиков", all_calls)
+    check(all(n == "0" for n, _ in calls),
+          f"строка, слова и кандидаты без внешних процессов ({len(calls)} вызовов)")
+
+    h.send_key(b"\x1b")
+    h.send_key(b"S")  # vi_nmap: очистить строку, обратно в vi_imap
+    h.send_key(b"exit\r")
+    h.wait_exit()
+    check(all(read_file(p) is None for p in (line, words, cands)), "при выходе .line, .words, .cands удалены")
+
+
 def test_env_file_before_start(tmp):
     print("== файл env-vars есть до старта оболочки")
     h = Harness(tmp, PANE_ID, env_vars="KH_TEST_VAR\n", extra_env={"KH_TEST_VAR": "v"})
@@ -392,7 +489,7 @@ def main():
             print(f"нет файла {path}", file=sys.stderr)
             return 2
     failed = False
-    for test in (test_in_herdr, test_env_file_before_start, test_outside_herdr):
+    for test in (test_in_herdr, test_input_line, test_env_file_before_start, test_outside_herdr):
         tmp = tempfile.mkdtemp(prefix="kh-ble-")
         try:
             test(tmp)
