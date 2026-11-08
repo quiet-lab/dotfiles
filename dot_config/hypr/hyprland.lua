@@ -178,6 +178,15 @@ hl.config({
         -- Аппаратный курсор проверен без артефактов.
         no_hardware_cursors = false,
     },
+    render = {
+        -- Автоматический HDR для полноэкранных окон выключен: при полном
+        -- экране Chromium композитор переводил монитор DP-2 в режим HDR
+        -- («[CM] Auto HDR: changing monitor cm to 4», «Wide color gamut is
+        -- enabled but the display is not in 10bit mode»), дисплей оставался
+        -- 8-битным, и SDR-видео выглядело белёсым и пересвеченным (решение
+        -- пользователя 08.11.2026).
+        cm_auto_hdr = 0,
+    },
     misc = {
         force_default_wallpaper = 0,
         disable_hyprland_logo   = true,
