@@ -183,10 +183,15 @@ mod tests {
     fn concurrent_runs_do_not_share_output() {
         // Одновременные run_blocking одного процесса (номер задания 0).
         let hs: Vec<_> = (0..8)
-            .map(|i| std::thread::spawn(move || run_blocking(&v(&["sh", "-c", &format!("echo out{i}")]))))
+            .map(|i| {
+                std::thread::spawn(move || run_blocking(&v(&["sh", "-c", &format!("echo out{i}")])))
+            })
             .collect();
         for (i, h) in hs.into_iter().enumerate() {
-            assert_eq!(h.join().expect("thread").as_deref(), Some(format!("out{i}\n").as_str()));
+            assert_eq!(
+                h.join().expect("thread").as_deref(),
+                Some(format!("out{i}\n").as_str())
+            );
         }
     }
 
@@ -204,11 +209,15 @@ mod tests {
         std::fs::write(&script, format!("#!/bin/sh\ntouch {}\n", mark.display())).expect("script");
         {
             use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).expect("chmod");
+            std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755))
+                .expect("chmod");
         }
         assert!(!is_elf(&script));
         let argv = vec![script.display().to_string(), "--help".to_string()];
-        assert!(spawn(&argv, 9_000_001).is_none(), "сценарий с --help не запускается");
+        assert!(
+            spawn(&argv, 9_000_001).is_none(),
+            "сценарий с --help не запускается"
+        );
         assert!(!mark.exists());
         // Без --help сценарий — обычная команда источника.
         let out = run_blocking(&[script.display().to_string()]);
@@ -237,7 +246,10 @@ mod tests {
         let out = run_blocking(&v(&["sh", "-c", "env", "--help"])).unwrap_or_default();
         assert!(out.contains("TERM=dumb"), "{out}");
         for k in PROBE_ENV_REMOVE {
-            assert!(!out.lines().any(|l| l.starts_with(&format!("{k}="))), "{k} в окружении пробы");
+            assert!(
+                !out.lines().any(|l| l.starts_with(&format!("{k}="))),
+                "{k} в окружении пробы"
+            );
         }
     }
 }

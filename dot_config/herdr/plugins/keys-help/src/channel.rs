@@ -106,7 +106,10 @@ impl Records {
                     continue;
                 }
                 let p = e.path();
-                let Some(r) = std::fs::read_to_string(&p).ok().and_then(|t| parse_record(&t)) else {
+                let Some(r) = std::fs::read_to_string(&p)
+                    .ok()
+                    .and_then(|t| parse_record(&t))
+                else {
                     continue;
                 };
                 items.push((crate::extract::mtime_ns(&p).unwrap_or(0), name, r));
@@ -170,7 +173,11 @@ impl Records {
 
     /// Последняя запись программы (для подстановок при печати таблицы).
     pub fn latest_of(&self, program: &str) -> Option<&Record> {
-        self.slots.iter().rev().find(|s| s.record.program == program).map(|s| &s.record)
+        self.slots
+            .iter()
+            .rev()
+            .find(|s| s.record.program == program)
+            .map(|s| &s.record)
     }
 }
 
@@ -188,7 +195,9 @@ pub fn pidfd_open(pid: i32) -> Option<OwnedFd> {
 /// Жив ли процесс (проверка, не ожидание).
 pub fn alive(pid: i32) -> bool {
     // SAFETY: kill с сигналом 0 только проверяет существование процесса.
-    pid > 0 && (unsafe { libc::kill(pid, 0) } == 0 || std::io::Error::last_os_error().raw_os_error() == Some(libc::EPERM))
+    pid > 0
+        && (unsafe { libc::kill(pid, 0) } == 0
+            || std::io::Error::last_os_error().raw_os_error() == Some(libc::EPERM))
 }
 
 /// Переносит каталог записей при `pane.moved`: каталог переименовывается
@@ -260,7 +269,11 @@ pub fn remove_pane_dir(id: &str) {
 /// не попадает, даже если панели нет в более раннем ответе.
 pub fn pane_dir_names_in(panes: &Path) -> Vec<String> {
     std::fs::read_dir(panes)
-        .map(|rd| rd.flatten().map(|e| e.file_name().to_string_lossy().to_string()).collect())
+        .map(|rd| {
+            rd.flatten()
+                .map(|e| e.file_name().to_string_lossy().to_string())
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -268,7 +281,11 @@ pub fn pane_dir_names_in(panes: &Path) -> Vec<String> {
 /// закрытых без просмотрщика панелей. Ссылка прежнего id остаётся, пока
 /// жив каталог, на который она указывает: по ней пишет оболочка
 /// перенесённой панели.
-pub fn sweep_pane_dirs_in(panes: &Path, names: &[String], live: &std::collections::HashSet<String>) {
+pub fn sweep_pane_dirs_in(
+    panes: &Path,
+    names: &[String],
+    live: &std::collections::HashSet<String>,
+) {
     let mut links = Vec::new();
     for n in names {
         if live.contains(n) {
@@ -437,7 +454,10 @@ mod tests {
         )
         .expect("record");
         let f = r.fields();
-        assert_eq!(f.get("base_table").map(String::as_str), Some("/t/vi_imap.bind"));
+        assert_eq!(
+            f.get("base_table").map(String::as_str),
+            Some("/t/vi_imap.bind")
+        );
         assert_eq!(f.get("depth").map(String::as_str), Some("2"));
         assert_eq!(f.get("flag").map(String::as_str), Some("true"));
         assert_eq!(f.get("table").map(String::as_str), Some("/t/ac.bind"));
@@ -453,7 +473,10 @@ mod tests {
         assert_eq!(r.active(|_| true).map(|x| x.program.as_str()), Some("nvim"));
         r.remove("nvim-3.json");
         assert_eq!(r.active(|_| true).map(|x| x.program.as_str()), Some("yazi"));
-        assert_eq!(r.active(|p| p != 2).map(|x| x.program.as_str()), Some("ble"));
+        assert_eq!(
+            r.active(|p| p != 2).map(|x| x.program.as_str()),
+            Some("ble")
+        );
         r.put("ble-1.json".into(), rec("ble", 1));
         assert_eq!(r.active(|_| true).map(|x| x.program.as_str()), Some("ble"));
     }
@@ -469,10 +492,19 @@ mod tests {
         exec.command = Some("fg".into());
         r.put("ble-1.json".into(), exec);
         let fg = |p: i32| p == 3;
-        assert_eq!(r.pick(|_| true, fg).map(|s| s.name.as_str()), Some("nvim-3.json"));
+        assert_eq!(
+            r.pick(|_| true, fg).map(|s| s.name.as_str()),
+            Some("nvim-3.json")
+        );
         // nvim в фоне: передний план — оболочка, берётся самая свежая запись.
-        assert_eq!(r.pick(|_| true, |p| p == 1).map(|s| s.name.as_str()), Some("ble-1.json"));
-        assert_eq!(r.pick(|_| true, |_| false).map(|s| s.name.as_str()), Some("ble-1.json"));
+        assert_eq!(
+            r.pick(|_| true, |p| p == 1).map(|s| s.name.as_str()),
+            Some("ble-1.json")
+        );
+        assert_eq!(
+            r.pick(|_| true, |_| false).map(|s| s.name.as_str()),
+            Some("ble-1.json")
+        );
     }
 
     fn panes_tmp(name: &str) -> PathBuf {
@@ -508,7 +540,8 @@ mod tests {
         let names = pane_dir_names_in(&d);
         // Каталог, появившийся после снимка имён, уборка не трогает.
         std::fs::create_dir_all(d.join("w:p9")).expect("new");
-        let live: std::collections::HashSet<String> = ["w:p5", "w:p7"].iter().map(|s| s.to_string()).collect();
+        let live: std::collections::HashSet<String> =
+            ["w:p5", "w:p7"].iter().map(|s| s.to_string()).collect();
         sweep_pane_dirs_in(&d, &names, &live);
         assert!(d.join("w:p5").is_dir());
         assert!(d.join("w:p7").is_dir());

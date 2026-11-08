@@ -73,7 +73,13 @@ fn str_list(v: &toml::Value, what: &str, normalize: bool) -> Result<Vec<String>,
     a.iter()
         .map(|x| {
             x.as_str()
-                .map(|s| if normalize { keys::normalize(s) } else { s.to_string() })
+                .map(|s| {
+                    if normalize {
+                        keys::normalize(s)
+                    } else {
+                        s.to_string()
+                    }
+                })
                 .ok_or_else(|| format!("{what}: нужен список строк"))
         })
         .collect()
@@ -89,7 +95,10 @@ pub fn parse_level(t: &toml::Table, what: &str) -> Result<Level, String> {
             "hide_groups" => l.hide_groups = Some(str_list(v, &w, false)?),
             "pin" => l.pin = Some(str_list(v, &w, true)?),
             "only_modifiers" => {
-                l.only_modifiers = Some(v.as_bool().ok_or_else(|| format!("{w}: нужно true или false"))?)
+                l.only_modifiers = Some(
+                    v.as_bool()
+                        .ok_or_else(|| format!("{w}: нужно true или false"))?,
+                )
             }
             "show_origin" => {
                 l.show_origin = Some(match v {
@@ -359,7 +368,10 @@ pub fn apply_ext(table: &[Entry], eff: &Effective, extra: &Extra) -> Vec<Section
     let mut pinned = Vec::new();
     for p in &eff.pin {
         if let Some(i) = list.iter().position(|e| &e.key == p) {
-            pinned.push(Shown { kind: SectionKind::Pin, ..shown(list.remove(i)) });
+            pinned.push(Shown {
+                kind: SectionKind::Pin,
+                ..shown(list.remove(i))
+            });
         }
     }
     if !pinned.is_empty() {
@@ -407,7 +419,10 @@ pub fn apply_ext(table: &[Entry], eff: &Effective, extra: &Extra) -> Vec<Section
                 entries: moved
                     .into_iter()
                     .flatten()
-                    .map(|e| Shown { kind: SectionKind::Cursor, ..shown(e) })
+                    .map(|e| Shown {
+                        kind: SectionKind::Cursor,
+                        ..shown(e)
+                    })
                     .collect(),
             });
         }
@@ -419,12 +434,16 @@ pub fn apply_ext(table: &[Entry], eff: &Effective, extra: &Extra) -> Vec<Section
                 .completion
                 .iter()
                 .cloned()
-                .map(|e| Shown { kind: SectionKind::Completion, ..shown(e) })
+                .map(|e| Shown {
+                    kind: SectionKind::Completion,
+                    ..shown(e)
+                })
                 .collect(),
         });
     }
     for o in &extra.origin_order {
-        let (mut mine, rest): (Vec<Entry>, Vec<Entry>) = list.into_iter().partition(|e| &e.origin == o);
+        let (mut mine, rest): (Vec<Entry>, Vec<Entry>) =
+            list.into_iter().partition(|e| &e.origin == o);
         list = rest;
         if mine.is_empty() {
             continue;
@@ -432,10 +451,17 @@ pub fn apply_ext(table: &[Entry], eff: &Effective, extra: &Extra) -> Vec<Section
         mine.sort_by(|a, b| a.key.cmp(&b.key));
         out.push(Section {
             title: Some(o.clone()),
-            entries: mine.into_iter().map(|e| {
-                let d = dims.contains(&e.key);
-                Shown { dim: d, kind: SectionKind::Origin, ..shown(e) }
-            }).collect(),
+            entries: mine
+                .into_iter()
+                .map(|e| {
+                    let d = dims.contains(&e.key);
+                    Shown {
+                        dim: d,
+                        kind: SectionKind::Origin,
+                        ..shown(e)
+                    }
+                })
+                .collect(),
         });
     }
     let mut groups: BTreeMap<String, Vec<Entry>> = BTreeMap::new();
@@ -474,15 +500,25 @@ pub fn apply_ext(table: &[Entry], eff: &Effective, extra: &Extra) -> Vec<Section
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Edit {
     /// Дописать значение в список поля (`hide`, `hide_groups`) раздела контекста.
-    Add { ctx: String, field: String, value: String },
+    Add {
+        ctx: String,
+        field: String,
+        value: String,
+    },
     /// Убрать значение из списка поля раздела контекста.
-    Remove { ctx: String, field: String, value: String },
+    Remove {
+        ctx: String,
+        field: String,
+        value: String,
+    },
 }
 
 /// Применяет правку к тексту, сохраняя комментарии и порядок.
 pub fn edit_text(text: &str, edit: &Edit) -> Result<String, String> {
     use toml_edit::{Array, DocumentMut, Item, Table, Value};
-    let mut doc: DocumentMut = text.parse().map_err(|e: toml_edit::TomlError| e.to_string())?;
+    let mut doc: DocumentMut = text
+        .parse()
+        .map_err(|e: toml_edit::TomlError| e.to_string())?;
     let (ctx, field, value, add) = match edit {
         Edit::Add { ctx, field, value } => (ctx, field, value, true),
         Edit::Remove { ctx, field, value } => (ctx, field, value, false),
@@ -616,7 +652,10 @@ show_origin = ["readline", "ble"]
         assert_eq!(s[0].title, None);
         let pinned: Vec<&str> = s[0].entries.iter().map(|x| x.entry.key.as_str()).collect();
         assert_eq!(pinned, vec!["C-r", "M-r", "M-h"]);
-        let titles: Vec<&str> = s[1..].iter().map(|x| x.title.as_deref().unwrap_or("")).collect();
+        let titles: Vec<&str> = s[1..]
+            .iter()
+            .map(|x| x.title.as_deref().unwrap_or(""))
+            .collect();
         assert_eq!(titles, vec!["completion", "edit", "zzz"]);
     }
 
@@ -640,8 +679,9 @@ show_origin = ["readline", "ble"]
 
     #[test]
     fn entry_added() {
-        let cfg = parse("[entry.\"ble.vi_imap\".\"C-x C-k\"]\ndesc = \"проверка\"\ngroup = \"edit\"\n")
-            .expect("p");
+        let cfg =
+            parse("[entry.\"ble.vi_imap\".\"C-x C-k\"]\ndesc = \"проверка\"\ngroup = \"edit\"\n")
+                .expect("p");
         let s = apply(&[], &effective(&cfg, "ble.vi_imap"));
         assert_eq!(s[0].title.as_deref(), Some("edit"));
         assert_eq!(s[0].entries[0].entry.origin, "user");
@@ -671,6 +711,8 @@ show_origin = ["readline", "ble"]
             },
         )
         .expect("edit");
-        assert!(effective(&parse(&back).expect("p"), "ble.vi_nmap").hide.is_empty());
+        assert!(effective(&parse(&back).expect("p"), "ble.vi_nmap")
+            .hide
+            .is_empty());
     }
 }

@@ -58,7 +58,10 @@ fn normalize_token(tok: &str) -> Vec<String> {
         return vec![name];
     }
     // `ESC-v` в справке (less, more) — две клавиши подряд: ESC, затем v.
-    if let Some(rest) = tok.strip_prefix("ESC-").or_else(|| tok.strip_prefix("Esc-")) {
+    if let Some(rest) = tok
+        .strip_prefix("ESC-")
+        .or_else(|| tok.strip_prefix("Esc-"))
+    {
         if !rest.is_empty() && (rest.chars().count() == 1 || named_key(rest).is_some()) {
             let mut v = vec!["ESC".to_string()];
             v.extend(normalize_token(rest));
@@ -83,7 +86,9 @@ fn normalize_token(tok: &str) -> Vec<String> {
     // Имя через дефис или подчёркивание (`double-click` в fzf, `ac_enter` в ble.sh) —
     // одна клавиша.
     if (tok.contains('-') || tok.contains('_'))
-        && tok.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+        && tok
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
     {
         return vec![tok.to_string()];
     }

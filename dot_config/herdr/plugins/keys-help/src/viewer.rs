@@ -73,7 +73,10 @@ struct Viewer {
 }
 
 fn str_list(v: &Value, key: &str) -> Vec<Value> {
-    v.get(key).and_then(Value::as_array).cloned().unwrap_or_default()
+    v.get(key)
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default()
 }
 
 /// Split, вторым (или первым) потомком которого является панель: путь,
@@ -86,7 +89,12 @@ pub fn parent_split(layout: &Value, pane_id: &str) -> Option<(Vec<bool>, usize, 
         .get("rect")?
         .clone();
     let n = |v: &Value, k: &str| v.get(k).and_then(Value::as_u64).unwrap_or(0) as usize;
-    let (px, py, pw, ph) = (n(&rect, "x"), n(&rect, "y"), n(&rect, "width"), n(&rect, "height"));
+    let (px, py, pw, ph) = (
+        n(&rect, "x"),
+        n(&rect, "y"),
+        n(&rect, "width"),
+        n(&rect, "height"),
+    );
     let mut best: Option<(usize, Vec<bool>, usize, bool)> = None;
     for sp in str_list(layout, "splits") {
         if s(&sp, "direction") != Some("down") {
@@ -128,17 +136,27 @@ impl Viewer {
             msg.push(format!("view.toml: {e}"));
         }
         if !self.engine.errors.is_empty() {
-            msg.push(format!("ошибок манифестов: {} (журнал)", self.engine.errors.len()));
+            msg.push(format!(
+                "ошибок манифестов: {} (журнал)",
+                self.engine.errors.len()
+            ));
         }
         Header {
-            ctx: if self.ctx.is_empty() { "—".to_string() } else { self.ctx.clone() },
+            ctx: if self.ctx.is_empty() {
+                "—".to_string()
+            } else {
+                self.ctx.clone()
+            },
             target: self.target.clone(),
             message: (!msg.is_empty()).then(|| msg.join("; ")),
         }
     }
 
     fn sections(&self) -> Vec<view::Section> {
-        let manifest = self.resolution.as_ref().and_then(|r| self.engine.manifests.get(r.manifest));
+        let manifest = self
+            .resolution
+            .as_ref()
+            .and_then(|r| self.engine.manifests.get(r.manifest));
         let eff = view::effective_with(&self.view_cfg, &self.ctx, manifest.map(|m| &m.view));
         let pos = self.input.pos();
         let modes: Vec<&str> = self
@@ -157,7 +175,11 @@ impl Viewer {
         let extra = view::Extra {
             origin_order: manifest.map(|m| m.origin_order.clone()).unwrap_or_default(),
             applies: if has_rules { Some(&rule) } else { None },
-            completion: if pos.is_some() { self.completion.clone() } else { Vec::new() },
+            completion: if pos.is_some() {
+                self.completion.clone()
+            } else {
+                Vec::new()
+            },
         };
         let base = view::apply_ext(&self.table, &eff, &extra);
         let Some(p) = &self.ui.search else {
@@ -282,7 +304,9 @@ impl Viewer {
     fn update_input(&mut self) {
         let dir = paths::pane_dir(&self.target);
         let pidfds: HashSet<i32> = self.pidfds.keys().copied().collect();
-        let slot = self.records.pick(|p| pidfds.contains(&p), |p| self.fg_pids.contains(&p));
+        let slot = self
+            .records
+            .pick(|p| pidfds.contains(&p), |p| self.fg_pids.contains(&p));
         let name = slot.map(|s| s.name.clone());
         let pid = slot.map(|s| s.record.pid);
         let stem = name.and_then(|n| n.strip_suffix(".json").map(str::to_string));
@@ -317,7 +341,9 @@ impl Viewer {
 
     /// Завершилось извлечение параметров: следующий шаг или новый раздел.
     fn opt_job_done(&mut self) {
-        let Some((cmd, j)) = self.opt_job.take() else { return };
+        let Some((cmd, j)) = self.opt_job.take() else {
+            return;
+        };
         let argv = j.argv.clone();
         let out = j.finish();
         if let Some(next) = self.input.opts_done(&cmd, &argv, &out) {
@@ -383,7 +409,10 @@ impl Viewer {
             return (Vec::new(), None);
         };
         let info = r.get("process_info").cloned().unwrap_or(Value::Null);
-        let shell = info.get("shell_pid").and_then(Value::as_i64).map(|p| p as i32);
+        let shell = info
+            .get("shell_pid")
+            .and_then(Value::as_i64)
+            .map(|p| p as i32);
         let procs = str_list(&info, "foreground_processes")
             .iter()
             .map(|p| Proc {
@@ -409,7 +438,11 @@ impl Viewer {
         self.client
             .call("pane.current", json!({"caller_pane_id": self.target}))
             .ok()
-            .and_then(|r| r.get("pane").and_then(|p| s(p, "terminal_title_stripped")).map(str::to_string))
+            .and_then(|r| {
+                r.get("pane")
+                    .and_then(|p| s(p, "terminal_title_stripped"))
+                    .map(str::to_string)
+            })
             .unwrap_or_default()
     }
 
@@ -420,7 +453,10 @@ impl Viewer {
         let pidfds: HashSet<i32> = self.pidfds.keys().copied().collect();
         self.fg_pids = procs.iter().map(|p| p.pid).collect();
         let fg = &self.fg_pids;
-        let active = self.records.pick(|p| pidfds.contains(&p), |p| fg.contains(&p)).map(|s| s.record.clone());
+        let active = self
+            .records
+            .pick(|p| pidfds.contains(&p), |p| fg.contains(&p))
+            .map(|s| s.record.clone());
         let target = self.target.clone();
         let client = RefCell::new(&mut self.client);
         let cache: RefCell<ScreenCache> = RefCell::new(HashMap::new());
@@ -545,7 +581,11 @@ impl Viewer {
         let key = format!(
             "{}|{}",
             self.ctx,
-            self.table.iter().map(|e| e.key.as_str()).collect::<Vec<_>>().join(" ")
+            self.table
+                .iter()
+                .map(|e| e.key.as_str())
+                .collect::<Vec<_>>()
+                .join(" ")
         );
         if key != self.shown_key {
             self.ui.reset();
@@ -568,7 +608,10 @@ impl Viewer {
 
     /// Начальная доля и минимум строк (D4).
     fn size_initial(&mut self) {
-        if let Ok(r) = self.client.call("pane.layout", json!({"pane_id": self.self_id})) {
+        if let Ok(r) = self
+            .client
+            .call("pane.layout", json!({"pane_id": self.self_id}))
+        {
             let layout = r.get("layout").cloned().unwrap_or(Value::Null);
             if let Some((path, _, _, true)) = parent_split(&layout, &self.self_id) {
                 let _ = self.client.call(
@@ -584,7 +627,10 @@ impl Viewer {
         if rows >= MIN_ROWS {
             return;
         }
-        let Ok(r) = self.client.call("pane.layout", json!({"pane_id": self.self_id})) else {
+        let Ok(r) = self
+            .client
+            .call("pane.layout", json!({"pane_id": self.self_id}))
+        else {
             return;
         };
         let layout = r.get("layout").cloned().unwrap_or(Value::Null);
@@ -611,13 +657,21 @@ impl Viewer {
         match name.as_str() {
             "pane_focused" => {
                 let pane = s(d, "pane_id").unwrap_or("");
-                if s(d, "workspace_id") == Some(self.ws.as_str()) && pane != self.self_id && pane != self.target {
+                if s(d, "workspace_id") == Some(self.ws.as_str())
+                    && pane != self.self_id
+                    && pane != self.target
+                {
                     // Панель другого просмотрщика целью не становится.
                     let is_viewer = self
                         .client
                         .call("pane.current", json!({"caller_pane_id": pane}))
                         .ok()
-                        .and_then(|r| r.get("pane").and_then(|p| p.get("tokens")).and_then(|t| t.get(toggle::TOKEN)).cloned())
+                        .and_then(|r| {
+                            r.get("pane")
+                                .and_then(|p| p.get("tokens"))
+                                .and_then(|t| t.get(toggle::TOKEN))
+                                .cloned()
+                        })
                         .is_some();
                     if !is_viewer {
                         let p = pane.to_string();
@@ -660,7 +714,11 @@ impl Viewer {
             }
             "pane_moved" => {
                 let prev = s(d, "previous_pane_id").unwrap_or("").to_string();
-                let new = d.get("pane").and_then(|p| s(p, "pane_id")).unwrap_or("").to_string();
+                let new = d
+                    .get("pane")
+                    .and_then(|p| s(p, "pane_id"))
+                    .unwrap_or("")
+                    .to_string();
                 if prev == self.self_id && !new.is_empty() {
                     self.self_id = new.clone();
                     if let Some(p) = d.get("pane") {
@@ -713,7 +771,12 @@ impl Viewer {
             }
             if e.dir == target_dir {
                 if !e.name.ends_with(".json") {
-                    if e.mask & (libc::IN_CLOSE_WRITE | libc::IN_MOVED_TO | libc::IN_DELETE | libc::IN_MOVED_FROM) != 0
+                    if e.mask
+                        & (libc::IN_CLOSE_WRITE
+                            | libc::IN_MOVED_TO
+                            | libc::IN_DELETE
+                            | libc::IN_MOVED_FROM)
+                        != 0
                         && self.input.on_file(&e.name)
                     {
                         input_changed = true;
@@ -722,7 +785,10 @@ impl Viewer {
                 }
                 if e.mask & (libc::IN_CLOSE_WRITE | libc::IN_MOVED_TO) != 0 {
                     let p = target_dir.join(&e.name);
-                    if let Some(r) = std::fs::read_to_string(&p).ok().and_then(|t| channel::parse_record(&t)) {
+                    if let Some(r) = std::fs::read_to_string(&p)
+                        .ok()
+                        .and_then(|t| channel::parse_record(&t))
+                    {
                         let pid = r.pid;
                         self.records.put(e.name.clone(), r);
                         self.track_pid(pid);
@@ -788,7 +854,9 @@ impl Viewer {
                 self.render();
             }
             Action::Focus => {
-                let _ = self.client.call("pane.focus", json!({"pane_id": self.target}));
+                let _ = self
+                    .client
+                    .call("pane.focus", json!({"pane_id": self.target}));
             }
             Action::Hide(key) => self.edit(Edit::Add {
                 ctx: self.ctx.clone(),
@@ -959,7 +1027,11 @@ pub fn run() -> Result<(), String> {
         v.client
             .call("pane.layout", json!({"pane_id": v.self_id}))
             .ok()
-            .and_then(|r| r.get("layout").and_then(|l| s(l, "focused_pane_id")).map(str::to_string))
+            .and_then(|r| {
+                r.get("layout")
+                    .and_then(|l| s(l, "focused_pane_id"))
+                    .map(str::to_string)
+            })
             .filter(|p| p != &v.self_id)
             .unwrap_or_default()
     } else {
@@ -977,7 +1049,11 @@ fn event_loop(v: &mut Viewer) -> Result<(), String> {
         let mut fds: Vec<libc::pollfd> = Vec::new();
         let mut tags: Vec<Tag> = Vec::new();
         let mut add = |fd: RawFd, tag: Tag, fds: &mut Vec<libc::pollfd>| {
-            fds.push(libc::pollfd { fd, events: libc::POLLIN, revents: 0 });
+            fds.push(libc::pollfd {
+                fd,
+                events: libc::POLLIN,
+                revents: 0,
+            });
             tags.push(tag);
         };
         add(0, Tag::Stdin, &mut fds);
@@ -1019,7 +1095,9 @@ fn event_loop(v: &mut Viewer) -> Result<(), String> {
         for (i, rev) in ready {
             match tags[i] {
                 Tag::Stdin => {
-                    if rev & (libc::POLLHUP | libc::POLLERR | libc::POLLNVAL) != 0 && rev & libc::POLLIN == 0 {
+                    if rev & (libc::POLLHUP | libc::POLLERR | libc::POLLNVAL) != 0
+                        && rev & libc::POLLIN == 0
+                    {
                         return Ok(());
                     }
                     let mut buf = [0u8; 1024];
@@ -1029,7 +1107,8 @@ fn event_loop(v: &mut Viewer) -> Result<(), String> {
                         return Ok(());
                     }
                     let sections = v.sections();
-                    let entries_owned: Vec<view::Shown> = ui::flatten(&sections).into_iter().cloned().collect();
+                    let entries_owned: Vec<view::Shown> =
+                        ui::flatten(&sections).into_iter().cloned().collect();
                     let entries: Vec<&view::Shown> = entries_owned.iter().collect();
                     let (w, h) = term::size();
                     let lay = ui::layout_rows(&sections, w, ui::table_rows(&v.ui, h));
@@ -1096,7 +1175,9 @@ fn event_loop(v: &mut Viewer) -> Result<(), String> {
                 // задание: готовность прежнего pidfd к новому не относится,
                 // а ожидание нового процесса заблокировало бы цикл.
                 Tag::Job(n) if v.job.as_ref().is_some_and(|j| j.n == n) => v.job_done(),
-                Tag::OptJob(n) if v.opt_job.as_ref().is_some_and(|(_, j)| j.n == n) => v.opt_job_done(),
+                Tag::OptJob(n) if v.opt_job.as_ref().is_some_and(|(_, j)| j.n == n) => {
+                    v.opt_job_done()
+                }
                 Tag::Job(_) | Tag::OptJob(_) => {}
                 Tag::Pid(pid) => {
                     v.drop_pid(pid);
@@ -1120,7 +1201,11 @@ pub fn print_table(ctx: &str, pane: Option<&str>, as_json: bool) -> Result<(), S
     if let Some(p) = pane {
         let recs = Records::scan(&paths::pane_dir(p));
         let m = &engine.manifests[res.manifest];
-        let provider = m.detect.provider.clone().unwrap_or_else(|| m.program.clone());
+        let provider = m
+            .detect
+            .provider
+            .clone()
+            .unwrap_or_else(|| m.program.clone());
         if let Some(r) = recs.latest_of(&provider) {
             res.record = Some(r.clone());
             res.pid = Some(r.pid);
@@ -1137,7 +1222,11 @@ pub fn print_table(ctx: &str, pane: Option<&str>, as_json: bool) -> Result<(), S
         origin_order: m.origin_order.clone(),
         ..Default::default()
     };
-    let sections = view::apply_ext(&built.entries, &view::effective_with(&cfg, &res.ctx, Some(&m.view)), &extra);
+    let sections = view::apply_ext(
+        &built.entries,
+        &view::effective_with(&cfg, &res.ctx, Some(&m.view)),
+        &extra,
+    );
     use std::io::Write;
     let mut out = std::io::stdout().lock();
     // Закрытый канал вывода (`| head`) — не ошибка.
@@ -1159,7 +1248,10 @@ pub fn print_table(ctx: &str, pane: Option<&str>, as_json: bool) -> Result<(), S
     }
     let _ = writeln!(out, "# {}", res.ctx);
     for s in &sections {
-        let title = s.title.clone().unwrap_or_else(|| ui::PINNED_TITLE.to_string());
+        let title = s
+            .title
+            .clone()
+            .unwrap_or_else(|| ui::PINNED_TITLE.to_string());
         for e in &s.entries {
             let _ = writeln!(
                 out,

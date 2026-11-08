@@ -47,7 +47,11 @@ pub struct Applies {
 
 impl Applies {
     pub fn matches(&self, action: &str, mode: &[&str]) -> bool {
-        (self.modes.is_empty() || self.modes.iter().any(|m| m == "*" || mode.contains(&m.as_str())))
+        (self.modes.is_empty()
+            || self
+                .modes
+                .iter()
+                .any(|m| m == "*" || mode.contains(&m.as_str())))
             && self.action.is_match(action)
     }
 }
@@ -193,11 +197,7 @@ pub struct Rule {
 impl Rule {
     /// Подходит ли правило: все условия совпали (поле без значения — пустая строка).
     pub fn matches(&self, fields: &BTreeMap<String, String>, mode: &[&str]) -> bool {
-        if !self.modes.is_empty()
-            && !mode
-                .iter()
-                .any(|m| crate::glob::any(&self.modes, m))
-        {
+        if !self.modes.is_empty() && !mode.iter().any(|m| crate::glob::any(&self.modes, m)) {
             return false;
         }
         self.matchers.iter().all(|(field, re)| {
@@ -316,7 +316,10 @@ impl Manifest {
                 out.push(e.clone());
             }
             let mut texts: Vec<&str> = Vec::new();
-            for t in [&s.spec.file, &s.spec.path, &s.spec.text].into_iter().flatten() {
+            for t in [&s.spec.file, &s.spec.path, &s.spec.text]
+                .into_iter()
+                .flatten()
+            {
                 texts.push(t);
             }
             if let Some(c) = &s.spec.command {
@@ -391,11 +394,70 @@ fn rules(list: &[toml::Table], result_fields: &[&str], what: &str) -> Result<Vec
 
 /// Известные поля разделов манифеста (для предупреждений об опечатках).
 const KNOWN: &[(&str, &[&str])] = &[
-    ("", &["program", "priority", "origins", "env", "first_nonempty", "detect", "modes", "source", "key", "describe", "group", "origin", "view", "applies"]),
-    ("detect", &["provider", "process", "shell_commands", "title", "screen", "fallback"]),
+    (
+        "",
+        &[
+            "program",
+            "priority",
+            "origins",
+            "env",
+            "first_nonempty",
+            "detect",
+            "modes",
+            "source",
+            "key",
+            "describe",
+            "group",
+            "origin",
+            "view",
+            "applies",
+        ],
+    ),
+    (
+        "detect",
+        &[
+            "provider",
+            "process",
+            "shell_commands",
+            "title",
+            "screen",
+            "fallback",
+        ],
+    ),
     ("modes", &["default", "names", "from_config", "screen"]),
     ("key", &["map"]),
-    ("source", &["modes", "kind", "file", "path", "command", "env", "text", "regex", "sections", "split", "unquote", "skip", "on_conflict", "tables", "arrays", "layout", "key_field", "action_field", "desc_field", "group_field", "origin_field", "raw_fields", "replace_if", "pointer", "entries", "group", "origin"]),
+    (
+        "source",
+        &[
+            "modes",
+            "kind",
+            "file",
+            "path",
+            "command",
+            "env",
+            "text",
+            "regex",
+            "sections",
+            "split",
+            "unquote",
+            "skip",
+            "on_conflict",
+            "tables",
+            "arrays",
+            "layout",
+            "key_field",
+            "action_field",
+            "desc_field",
+            "group_field",
+            "origin_field",
+            "raw_fields",
+            "replace_if",
+            "pointer",
+            "entries",
+            "group",
+            "origin",
+        ],
+    ),
 ];
 
 /// Неизвестные поля манифеста: опечатки не ломают разбор, но попадают в журнал.
@@ -404,7 +466,13 @@ pub fn unknown_fields(text: &str) -> Vec<String> {
         return Vec::new();
     };
     let mut out = Vec::new();
-    let known = |sec: &str| KNOWN.iter().find(|(n, _)| *n == sec).map(|(_, k)| *k).unwrap_or(&[]);
+    let known = |sec: &str| {
+        KNOWN
+            .iter()
+            .find(|(n, _)| *n == sec)
+            .map(|(_, k)| *k)
+            .unwrap_or(&[])
+    };
     for k in root.keys() {
         if !known("").contains(&k.as_str()) {
             out.push(k.clone());
@@ -421,7 +489,11 @@ pub fn unknown_fields(text: &str) -> Vec<String> {
     }
     if let Some(a) = root.get("source").and_then(|v| v.as_array()) {
         for (i, t) in a.iter().enumerate() {
-            for k in t.as_table().map(|t| t.keys().cloned().collect::<Vec<_>>()).unwrap_or_default() {
+            for k in t
+                .as_table()
+                .map(|t| t.keys().cloned().collect::<Vec<_>>())
+                .unwrap_or_default()
+            {
                 if !known("source").contains(&k.as_str()) {
                     out.push(format!("source[{i}].{k}"));
                 }
@@ -498,7 +570,11 @@ pub fn parse(text: &str, path: &Path) -> Result<Manifest, String> {
     let origin_order = match view_table.remove("origin_order") {
         Some(toml::Value::Array(a)) => a
             .iter()
-            .map(|v| v.as_str().map(str::to_string).ok_or("view.origin_order: нужен список строк".to_string()))
+            .map(|v| {
+                v.as_str()
+                    .map(str::to_string)
+                    .ok_or("view.origin_order: нужен список строк".to_string())
+            })
             .collect::<Result<Vec<_>, _>>()?,
         Some(_) => return Err("view.origin_order: нужен список строк".to_string()),
         None => Vec::new(),

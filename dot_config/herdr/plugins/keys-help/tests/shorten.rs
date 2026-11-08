@@ -24,7 +24,10 @@ fn first_sentence_only() {
 #[test]
 fn parentheses_removed() {
     assert_eq!(shorten("scroll (one line) up"), "scroll up");
-    assert_eq!(shorten("move to start (home) of line"), "move to start of line");
+    assert_eq!(
+        shorten("move to start (home) of line"),
+        "move to start of line"
+    );
     assert_eq!(shorten("копировать (в буфер) строку"), "копировать строку");
 }
 
@@ -46,7 +49,10 @@ fn leading_service_words_english() {
 fn leading_service_words_russian() {
     assert_eq!(shorten("Позволяет открыть файл"), "открыть файл");
     assert_eq!(shorten("Используется для поиска"), "поиска");
-    assert_eq!(shorten("Служит для выхода из программы"), "выхода из программы");
+    assert_eq!(
+        shorten("Служит для выхода из программы"),
+        "выхода из программы"
+    );
 }
 
 #[test]
@@ -73,7 +79,10 @@ fn limit_32_with_ellipsis_on_word_boundary() {
     let body = d.trim_end_matches('…');
     // Обрезка по границе слова: тело — целые слова исходного текста.
     assert!(src.starts_with(body), "{d}");
-    assert!(src[body.len()..].starts_with(' '), "разрез внутри слова: {d}");
+    assert!(
+        src[body.len()..].starts_with(' '),
+        "разрез внутри слова: {d}"
+    );
     assert!(!body.ends_with(' '));
 }
 

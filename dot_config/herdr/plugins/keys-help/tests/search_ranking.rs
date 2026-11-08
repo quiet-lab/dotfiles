@@ -9,7 +9,11 @@ use keys_help::ui::{self, columns_for_width, flatten, layout, Action, Key, UiSta
 use keys_help::view::{self, Extra, Section, Shown};
 
 fn e(key: &str, desc: &str) -> Entry {
-    Entry { key: key.into(), desc: desc.into(), ..Default::default() }
+    Entry {
+        key: key.into(),
+        desc: desc.into(),
+        ..Default::default()
+    }
 }
 
 fn pts(en: &Entry, pat: &str) -> Option<i64> {
@@ -22,9 +26,21 @@ fn pts(en: &Entry, pat: &str) -> Option<i64> {
 fn columns_40_80_120_140_180() {
     let sections = vec![Section {
         title: Some("g".into()),
-        entries: (0..60).map(|i| Shown { entry: e(&format!("k{i}"), "действие"), ..Default::default() }).collect(),
+        entries: (0..60)
+            .map(|i| Shown {
+                entry: e(&format!("k{i}"), "действие"),
+                ..Default::default()
+            })
+            .collect(),
     }];
-    for (w, n) in [(40usize, 1usize), (80, 2), (120, 3), (140, 4), (180, 5), (260, 5)] {
+    for (w, n) in [
+        (40usize, 1usize),
+        (80, 2),
+        (120, 3),
+        (140, 4),
+        (180, 5),
+        (260, 5),
+    ] {
         assert_eq!(columns_for_width(w), n, "w={w}");
         let lay = layout(&sections, w);
         assert_eq!(lay.ncols, n, "w={w}");
@@ -72,13 +88,13 @@ fn best_step_wins_and_steps_are_ordered() {
     let mut s6 = e("Z6", "nothing");
     s6.desc_full = "contains ab inside".into();
     let table = [
-        e("q-a-b", "x"),              // 7 нечёткое (199)
-        s6,                           // 6
-        e("xxxxxxxxxab", "x"),        // 5 (позиция 9 → 498)
-        e("Z", "a b ab"),             // 4: третье слово → 680 (слово «a», «b» не совпадают)
-        e("ab-x", "x"),               // 3
-        e("AB", "x"),                 // 2
-        e("ab", "x"),                 // 1
+        e("q-a-b", "x"),       // 7 нечёткое (199)
+        s6,                    // 6
+        e("xxxxxxxxxab", "x"), // 5 (позиция 9 → 498)
+        e("Z", "a b ab"),      // 4: третье слово → 680 (слово «a», «b» не совпадают)
+        e("ab-x", "x"),        // 3
+        e("AB", "x"),          // 2
+        e("ab", "x"),          // 1
     ];
     let r = rank(table.iter(), "ab");
     let order: Vec<usize> = r.iter().map(|x| x.0).collect();
@@ -89,7 +105,12 @@ fn best_step_wins_and_steps_are_ordered() {
 
 #[test]
 fn equal_scores_keep_table_order() {
-    let table = [e("a1", "поиск"), e("b1", "поиск"), e("c1", "поиск"), e("d1", "прочее")];
+    let table = [
+        e("a1", "поиск"),
+        e("b1", "поиск"),
+        e("c1", "поиск"),
+        e("d1", "прочее"),
+    ];
     let r = rank(table.iter(), "поиск");
     assert_eq!(r.iter().map(|x| x.0).collect::<Vec<_>>(), vec![0, 1, 2]);
     assert!(r.windows(2).all(|w| w[0].1 == w[1].1));
@@ -128,7 +149,13 @@ fn search_view() -> Vec<Section> {
     ];
     vec![Section {
         title: Some("g".into()),
-        entries: items.iter().map(|(k, d)| Shown { entry: e(k, d), ..Default::default() }).collect(),
+        entries: items
+            .iter()
+            .map(|(k, d)| Shown {
+                entry: e(k, d),
+                ..Default::default()
+            })
+            .collect(),
     }]
 }
 
@@ -150,7 +177,10 @@ fn search_sections_sorted_with_highlight() {
 #[test]
 fn n_and_big_n_follow_relevance_order_circularly() {
     let base = search_view();
-    let mut st = UiState { selected: 3, ..Default::default() };
+    let mut st = UiState {
+        selected: 3,
+        ..Default::default()
+    };
     let lay0 = layout(&base, 200);
     let es0 = flatten(&base);
     st.handle(Key::Char('/'), &lay0, &es0);
@@ -183,7 +213,11 @@ fn n_and_big_n_follow_relevance_order_circularly() {
 #[test]
 fn key_equal_beats_description_matches() {
     // «C-r» точно — выше всех записей, где образец только в описании.
-    let table = [e("M-x", "C-r в тексте"), e("C-r C-x", "y"), e("C-r", "история")];
+    let table = [
+        e("M-x", "C-r в тексте"),
+        e("C-r C-x", "y"),
+        e("C-r", "история"),
+    ];
     let r = rank(table.iter(), "C-r");
     assert_eq!(r[0].0, 2);
     assert_eq!(r[1].0, 1);
@@ -192,7 +226,13 @@ fn key_equal_beats_description_matches() {
 // ---- D15: порядок по происхождению ----
 
 fn origin(key: &str, group: &str, origin: &str) -> Entry {
-    Entry { key: key.into(), desc: key.into(), group: group.into(), origin: origin.into(), ..Default::default() }
+    Entry {
+        key: key.into(),
+        desc: key.into(),
+        group: group.into(),
+        origin: origin.into(),
+        ..Default::default()
+    }
 }
 
 fn titles(s: &[Section]) -> Vec<Option<&str>> {
@@ -219,13 +259,35 @@ fn origin_sections_after_pin_in_given_order_then_groups() {
         origin("M-z", "tools", "user"),
         origin("C-b", "edit", "ble"),
     ];
-    let extra = Extra { origin_order: manifest_named("ble").origin_order, ..Default::default() };
+    let extra = Extra {
+        origin_order: manifest_named("ble").origin_order,
+        ..Default::default()
+    };
     let s = view::apply_ext(&table, &eff, &extra);
-    assert_eq!(titles(&s), vec![None, Some("atuin"), Some("tv"), Some("fzf"), Some("user"), Some("edit")]);
-    let keys = |i: usize| s[i].entries.iter().map(|x| x.entry.key.as_str()).collect::<Vec<_>>();
+    assert_eq!(
+        titles(&s),
+        vec![
+            None,
+            Some("atuin"),
+            Some("tv"),
+            Some("fzf"),
+            Some("user"),
+            Some("edit")
+        ]
+    );
+    let keys = |i: usize| {
+        s[i].entries
+            .iter()
+            .map(|x| x.entry.key.as_str())
+            .collect::<Vec<_>>()
+    };
     assert_eq!(keys(0), vec!["C-r"]);
     assert_eq!(keys(1), vec!["M-r"]);
-    assert_eq!(keys(3), vec!["M-f", "M-h"], "внутри происхождения — по клавише");
+    assert_eq!(
+        keys(3),
+        vec!["M-f", "M-h"],
+        "внутри происхождения — по клавише"
+    );
     // Происхождения вне origin_order остаются в группах.
     assert_eq!(keys(5), vec!["C-a", "C-b"]);
 }
@@ -234,7 +296,10 @@ fn origin_sections_after_pin_in_given_order_then_groups() {
 fn origin_order_with_hide_and_empty_origin() {
     let cfg = view::parse("[defaults]\nhide = [\"M-r\"]\n").unwrap();
     let table = [origin("M-r", "g", "atuin"), origin("M-t", "g", "tv")];
-    let extra = Extra { origin_order: vec!["atuin".into(), "tv".into()], ..Default::default() };
+    let extra = Extra {
+        origin_order: vec!["atuin".into(), "tv".into()],
+        ..Default::default()
+    };
     let s = view::apply_ext(&table, &view::effective(&cfg, "c"), &extra);
     // Скрытая запись раздел не создаёт.
     assert_eq!(titles(&s), vec![Some("tv")]);

@@ -19,7 +19,8 @@ pub fn runtime_dir() -> PathBuf {
     match std::env::var("XDG_RUNTIME_DIR") {
         Ok(v) if !v.is_empty() => PathBuf::from(v).join("herdr-keys-help"),
         // SAFETY: getuid не имеет побочных эффектов.
-        _ => PathBuf::from(format!("/run/user/{}", unsafe { libc::getuid() })).join("herdr-keys-help"),
+        _ => PathBuf::from(format!("/run/user/{}", unsafe { libc::getuid() }))
+            .join("herdr-keys-help"),
     }
 }
 
@@ -60,7 +61,11 @@ pub fn plugin_root() -> PathBuf {
         }
     }
     if let Ok(exe) = std::env::current_exe() {
-        if let Some(root) = exe.parent().and_then(|p| p.parent()).and_then(|p| p.parent()) {
+        if let Some(root) = exe
+            .parent()
+            .and_then(|p| p.parent())
+            .and_then(|p| p.parent())
+        {
             if root.join("herdr-plugin.toml").exists() {
                 return root.to_path_buf();
             }
@@ -73,7 +78,11 @@ pub fn plugin_root() -> PathBuf {
 pub fn manifest_dirs() -> Vec<PathBuf> {
     if let Ok(v) = std::env::var("KEYS_HELP_MANIFESTS") {
         if !v.is_empty() {
-            return v.split(':').filter(|s| !s.is_empty()).map(PathBuf::from).collect();
+            return v
+                .split(':')
+                .filter(|s| !s.is_empty())
+                .map(PathBuf::from)
+                .collect();
         }
     }
     vec![plugin_root().join("manifests")]
@@ -93,8 +102,17 @@ pub fn log(msg: &str) {
     if let Some(d) = p.parent() {
         let _ = std::fs::create_dir_all(d);
     }
-    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(&p) {
-        let _ = writeln!(f, "{} [{}] {msg}", crate::unknown::today(), std::process::id());
+    if let Ok(mut f) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&p)
+    {
+        let _ = writeln!(
+            f,
+            "{} [{}] {msg}",
+            crate::unknown::today(),
+            std::process::id()
+        );
     }
 }
 

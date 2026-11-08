@@ -49,11 +49,15 @@ pub struct OptNeed {
 /// модуль оболочки писал бы файлы для панели, которой нет. Возвращает число
 /// живых отметок.
 fn sweep_marks(dir: &Path) -> usize {
-    let Ok(rd) = std::fs::read_dir(dir) else { return 0 };
+    let Ok(rd) = std::fs::read_dir(dir) else {
+        return 0;
+    };
     let mut n = 0;
     for e in rd.flatten() {
         let name = e.file_name().to_string_lossy().to_string();
-        let Some(pid) = name.strip_prefix(VIEWER_MARK_PREFIX) else { continue };
+        let Some(pid) = name.strip_prefix(VIEWER_MARK_PREFIX) else {
+            continue;
+        };
         let alive = pid
             .parse::<i32>()
             .is_ok_and(|p| std::path::Path::new(&format!("/proc/{p}")).exists());
@@ -69,7 +73,9 @@ fn sweep_marks(dir: &Path) -> usize {
 /// Файл строки ввода; пустой файл — данных нет. Устаревшие данные модуль
 /// оболочки обнуляет сам: изменение строки без наблюдения очищает файл (D17).
 fn read(dir: &Path, name: &str) -> Option<String> {
-    std::fs::read_to_string(dir.join(name)).ok().filter(|t| !t.is_empty())
+    std::fs::read_to_string(dir.join(name))
+        .ok()
+        .filter(|t| !t.is_empty())
 }
 
 /// Создание своей отметки в каталоге цели.
@@ -137,7 +143,10 @@ impl Input {
     /// Событие inotify в каталоге цели: `true`, если изменился файл строки ввода.
     pub fn on_file(&mut self, name: &str) -> bool {
         let Some(stem) = &self.stem else { return false };
-        let Some(ext) = name.strip_prefix(stem.as_str()).and_then(|r| r.strip_prefix('.')) else {
+        let Some(ext) = name
+            .strip_prefix(stem.as_str())
+            .and_then(|r| r.strip_prefix('.'))
+        else {
             return false;
         };
         if !matches!(ext, "line" | "words" | "cands") {
@@ -163,8 +172,10 @@ impl Input {
         let path = pid
             .and_then(|p| std::fs::read(format!("/proc/{p}/environ")).ok())
             .and_then(|b| {
-                b.split(|&c| c == 0)
-                    .find_map(|i| i.strip_prefix(b"PATH=").map(|v| String::from_utf8_lossy(v).to_string()))
+                b.split(|&c| c == 0).find_map(|i| {
+                    i.strip_prefix(b"PATH=")
+                        .map(|v| String::from_utf8_lossy(v).to_string())
+                })
             })
             .unwrap_or_default();
         let mut dirs: Vec<PathBuf> = Vec::new();
@@ -186,7 +197,9 @@ impl Input {
     pub fn rebuild_path(&mut self) {
         let mut cmds = BTreeSet::new();
         for d in &self.path_dirs {
-            let Ok(rd) = std::fs::read_dir(d) else { continue };
+            let Ok(rd) = std::fs::read_dir(d) else {
+                continue;
+            };
             for e in rd.flatten() {
                 if is_exec(&e.path()) {
                     cmds.insert(e.file_name().to_string_lossy().to_string());
@@ -272,7 +285,12 @@ impl Input {
         }
         let mut out: Vec<Entry> = Vec::new();
         let mut seen: HashSet<String> = HashSet::new();
-        let mut push = |out: &mut Vec<Entry>, key: &str, desc: String, full: &str, kind: &str, source: &str| {
+        let mut push = |out: &mut Vec<Entry>,
+                        key: &str,
+                        desc: String,
+                        full: &str,
+                        kind: &str,
+                        source: &str| {
             if out.len() >= MAX_COMPLETION || !seen.insert(key.to_string()) {
                 return;
             }
@@ -288,8 +306,19 @@ impl Input {
             });
         };
         let short = |s: &str| crate::shorten::shorten(s);
-        for w in self.words.iter().filter(|w| w.kind == "sabbrev" && w.name.starts_with(&word)) {
-            push(&mut out, &w.name, format!("→ {}", short(&w.value)), &w.value, "аббревиатура", "ble-sabbrev");
+        for w in self
+            .words
+            .iter()
+            .filter(|w| w.kind == "sabbrev" && w.name.starts_with(&word))
+        {
+            push(
+                &mut out,
+                &w.name,
+                format!("→ {}", short(&w.value)),
+                &w.value,
+                "аббревиатура",
+                "ble-sabbrev",
+            );
         }
         if let Some(c) = &self.cands {
             if c.compv == word {
@@ -300,11 +329,33 @@ impl Input {
         }
         let mut need = None;
         if pos.word_index == 0 {
-            for w in self.words.iter().filter(|w| w.kind == "alias" && w.name.starts_with(&word)) {
-                push(&mut out, &w.name, format!("= {}", short(&w.value)), &w.value, "псевдоним", "alias");
+            for w in self
+                .words
+                .iter()
+                .filter(|w| w.kind == "alias" && w.name.starts_with(&word))
+            {
+                push(
+                    &mut out,
+                    &w.name,
+                    format!("= {}", short(&w.value)),
+                    &w.value,
+                    "псевдоним",
+                    "alias",
+                );
             }
-            for w in self.words.iter().filter(|w| w.kind == "function" && w.name.starts_with(&word)) {
-                push(&mut out, &w.name, "функция".to_string(), "", "функция", "function");
+            for w in self
+                .words
+                .iter()
+                .filter(|w| w.kind == "function" && w.name.starts_with(&word))
+            {
+                push(
+                    &mut out,
+                    &w.name,
+                    "функция".to_string(),
+                    "",
+                    "функция",
+                    "function",
+                );
             }
             for c in self.path_cmds.range(word.clone()..) {
                 if !c.starts_with(&word) || out.len() >= MAX_COMPLETION {
@@ -313,9 +364,18 @@ impl Input {
                 push(&mut out, c, "команда".to_string(), "", "команда", "PATH");
             }
         } else if let Some(cmd) = self.first_word() {
-            if !self.opts.contains_key(&cmd) && !self.opts_from_disk(&cmd) && self.path_cmds.contains(&cmd) && self.asked.insert(cmd.clone()) {
+            if !self.opts.contains_key(&cmd)
+                && !self.opts_from_disk(&cmd)
+                && self.path_cmds.contains(&cmd)
+                && self.asked.insert(cmd.clone())
+            {
                 need = Some(OptNeed {
-                    argv: vec!["man".to_string(), "-P".to_string(), "cat".to_string(), cmd.clone()],
+                    argv: vec![
+                        "man".to_string(),
+                        "-P".to_string(),
+                        "cat".to_string(),
+                        cmd.clone(),
+                    ],
                     command: cmd.clone(),
                 });
             }
@@ -339,7 +399,10 @@ impl Input {
             .rfind([';', '|', '&', '\n'])
             .map(|i| i + 1)
             .unwrap_or(0);
-        before[start..].split_whitespace().next().map(str::to_string)
+        before[start..]
+            .split_whitespace()
+            .next()
+            .map(str::to_string)
     }
 }
 
@@ -359,7 +422,11 @@ mod tests {
         let d = tmp("compl");
         create_mark(&d);
         std::fs::write(d.join("ble-1.line"), "2\ngs").expect("line");
-        std::fs::write(d.join("ble-1.words"), "sabbrev\tgs\tgit status\nalias\tgsw\tgit switch\nfunction\tgsx\t\n").expect("words");
+        std::fs::write(
+            d.join("ble-1.words"),
+            "sabbrev\tgs\tgit status\nalias\tgsw\tgit switch\nfunction\tgsx\t\n",
+        )
+        .expect("words");
         std::fs::write(d.join("ble-1.cands"), "gs\ngsutil\n").expect("cands");
         let mut i = Input::default();
         i.set_active(&d, Some("ble-1".into()));
@@ -391,7 +458,10 @@ mod tests {
         remove_mark(&d);
         assert!(!d.join(mark_name()).exists());
         assert!(d.join("viewer.1").exists(), "чужая отметка остаётся");
-        assert!(!d.join("viewer.999999999").exists(), "отметка мёртвого процесса снята");
+        assert!(
+            !d.join("viewer.999999999").exists(),
+            "отметка мёртвого процесса снята"
+        );
         assert!(d.join("ble-1.line").exists(), "файлы строки ввода остаются");
         // Возврат на цель: файлы читаются сразу, пустой — нет данных.
         let mut i = Input::default();
@@ -406,7 +476,10 @@ mod tests {
         use std::os::unix::fs::PermissionsExt;
         let a = tmp("path-a");
         let b = tmp("path-b");
-        let mut i = Input { path_dirs: vec![a.clone(), b.clone()], ..Default::default() };
+        let mut i = Input {
+            path_dirs: vec![a.clone(), b.clone()],
+            ..Default::default()
+        };
         i.rebuild_path();
         assert!(!i.has_command("kh-x"));
         let mk = |d: &Path| {
@@ -421,7 +494,8 @@ mod tests {
         std::fs::remove_file(a.join("kh-x")).expect("rm");
         i.on_path_entry("kh-x");
         assert!(i.has_command("kh-x"), "есть во втором каталоге");
-        std::fs::set_permissions(b.join("kh-x"), std::fs::Permissions::from_mode(0o644)).expect("chmod");
+        std::fs::set_permissions(b.join("kh-x"), std::fs::Permissions::from_mode(0o644))
+            .expect("chmod");
         i.on_path_entry("kh-x");
         assert!(!i.has_command("kh-x"), "снят бит исполнения (IN_ATTRIB)");
         let _ = std::fs::remove_dir_all(&a);

@@ -12,9 +12,8 @@ use keys_help::channel::{self, parse_record, Records};
 
 fn write(dir: &Path, program: &str, pid: i32, mode: &str, state: &str) {
     std::fs::create_dir_all(dir).unwrap();
-    let json = format!(
-        r#"{{"v":1,"program":"{program}","mode":"{mode}","pid":{pid},"state":"{state}"}}"#
-    );
+    let json =
+        format!(r#"{{"v":1,"program":"{program}","mode":"{mode}","pid":{pid},"state":"{state}"}}"#);
     // Целиком одним write: временный файл и rename, как делает поставщик.
     let tmp = dir.join(format!(".{program}-{pid}.tmp"));
     std::fs::write(&tmp, json).unwrap();
@@ -34,7 +33,11 @@ fn sleeper(pane_dir: &Path, pane_id: &str) -> Child {
 
 /// Ожидание события выхода процесса через pidfd (poll без срока).
 fn wait_pidfd(fd: &std::os::fd::OwnedFd) {
-    let mut p = libc::pollfd { fd: fd.as_raw_fd(), events: libc::POLLIN, revents: 0 };
+    let mut p = libc::pollfd {
+        fd: fd.as_raw_fd(),
+        events: libc::POLLIN,
+        revents: 0,
+    };
     loop {
         // SAFETY: poll по одному корректному pollfd, срок -1 — ожидание события.
         let r = unsafe { libc::poll(&mut p, 1, -1) };
@@ -51,14 +54,23 @@ fn parse_record_fields_and_garbage() {
         r#"{"v":1,"program":"nvim","mode":"insert","pid":12,"state":"active","server":"/s","env":{"A":"1"},"command":null,"table":"/t"}"#,
     )
     .expect("record");
-    assert_eq!((r.program.as_str(), r.mode.as_deref(), r.pid, r.state.as_str()), ("nvim", Some("insert"), 12, "active"));
+    assert_eq!(
+        (
+            r.program.as_str(),
+            r.mode.as_deref(),
+            r.pid,
+            r.state.as_str()
+        ),
+        ("nvim", Some("insert"), 12, "active")
+    );
     assert_eq!(r.server.as_deref(), Some("/s"));
     assert_eq!(r.table.as_deref(), Some("/t"));
     assert_eq!(r.env["A"], "1");
     let f = r.fields();
     assert_eq!(f.get("server").map(String::as_str), Some("/s"));
     // Mode может быть null.
-    let n = parse_record(r#"{"v":1,"program":"fzf","mode":null,"pid":1,"state":"active"}"#).unwrap();
+    let n =
+        parse_record(r#"{"v":1,"program":"fzf","mode":null,"pid":1,"state":"active"}"#).unwrap();
     assert_eq!(n.mode, None);
     // Неразобранный JSON пропускается.
     assert!(parse_record("{\"v\":1,\"prog").is_none());
@@ -75,16 +87,31 @@ fn active_is_last_changed_record_of_live_process() {
     assert_eq!(rs.active(|_| true).map(|r| r.program.as_str()), Some("ble"));
     // Порядок по событиям: новая запись последняя.
     write(&d, "yazi", me + 1, "mgr", "active");
-    let r = parse_record(&std::fs::read_to_string(d.join("yazi-".to_string() + &(me + 1).to_string() + ".json")).unwrap()).unwrap();
+    let r = parse_record(
+        &std::fs::read_to_string(d.join("yazi-".to_string() + &(me + 1).to_string() + ".json"))
+            .unwrap(),
+    )
+    .unwrap();
     rs.put(format!("yazi-{}.json", me + 1), r);
-    assert_eq!(rs.active(|_| true).map(|r| r.program.as_str()), Some("yazi"));
+    assert_eq!(
+        rs.active(|_| true).map(|r| r.program.as_str()),
+        Some("yazi")
+    );
     // Изменение прежней записи делает её последней.
-    let ble = parse_record(&std::fs::read_to_string(d.join(format!("ble-{me}.json"))).unwrap()).unwrap();
+    let ble =
+        parse_record(&std::fs::read_to_string(d.join(format!("ble-{me}.json"))).unwrap()).unwrap();
     rs.put(format!("ble-{me}.json"), ble);
     assert_eq!(rs.active(|_| true).map(|r| r.program.as_str()), Some("ble"));
-    assert_eq!(rs.slots.len(), 2, "повторная запись заменяет, а не дублирует");
+    assert_eq!(
+        rs.slots.len(),
+        2,
+        "повторная запись заменяет, а не дублирует"
+    );
     // Запись мёртвого процесса не активна.
-    assert_eq!(rs.active(|p| p == me + 1).map(|r| r.program.as_str()), Some("yazi"));
+    assert_eq!(
+        rs.active(|p| p == me + 1).map(|r| r.program.as_str()),
+        Some("yazi")
+    );
     assert!(rs.active(|_| false).is_none());
     assert_eq!(rs.latest_of("yazi").map(|r| r.pid), Some(me + 1));
 }
@@ -94,12 +121,20 @@ fn scan_orders_by_mtime() {
     let d = common::tmpdir("ch-scan");
     write(&d, "ble", 1, "vi_imap", "active");
     // Записи разной давности: mtime первой отодвигается назад.
-    let old = std::fs::File::options().write(true).open(d.join("ble-1.json")).unwrap();
-    old.set_modified(std::time::SystemTime::now() - std::time::Duration::from_secs(100)).unwrap();
+    let old = std::fs::File::options()
+        .write(true)
+        .open(d.join("ble-1.json"))
+        .unwrap();
+    old.set_modified(std::time::SystemTime::now() - std::time::Duration::from_secs(100))
+        .unwrap();
     write(&d, "yazi", 2, "mgr", "active");
     write(&d, "nvim", 3, "normal", "active");
-    let f = std::fs::File::options().write(true).open(d.join("nvim-3.json")).unwrap();
-    f.set_modified(std::time::SystemTime::now() + std::time::Duration::from_secs(100)).unwrap();
+    let f = std::fs::File::options()
+        .write(true)
+        .open(d.join("nvim-3.json"))
+        .unwrap();
+    f.set_modified(std::time::SystemTime::now() + std::time::Duration::from_secs(100))
+        .unwrap();
     // Побочные файлы не записи.
     std::fs::write(d.join("note.txt"), "x").unwrap();
     std::fs::write(d.join("broken-9.json"), "{").unwrap();
@@ -122,7 +157,10 @@ fn stack_bash_yazi_nvim() {
         let r = parse_record(&std::fs::read_to_string(pane.join(name(p, pid))).unwrap()).unwrap();
         rs.put(name(p, pid), r);
     };
-    let prog = |rs: &Records| rs.active(|_| true).map(|r| (r.program.clone(), r.mode.clone(), r.state.clone()));
+    let prog = |rs: &Records| {
+        rs.active(|_| true)
+            .map(|r| (r.program.clone(), r.mode.clone(), r.state.clone()))
+    };
 
     put(&mut rs, "ble", bash, "vi_imap", "active");
     assert_eq!(prog(&rs).unwrap().0, "ble");
@@ -132,7 +170,10 @@ fn stack_bash_yazi_nvim() {
     put(&mut rs, "nvim", nvim, "normal", "active");
     assert_eq!(prog(&rs).unwrap().0, "nvim");
     put(&mut rs, "nvim", nvim, "insert", "active");
-    assert_eq!(prog(&rs), Some(("nvim".into(), Some("insert".into()), "active".into())));
+    assert_eq!(
+        prog(&rs),
+        Some(("nvim".into(), Some("insert".into()), "active".into()))
+    );
     // nvim вышел и удалил запись — снова yazi.
     std::fs::remove_file(pane.join(name("nvim", nvim))).unwrap();
     rs.remove(&name("nvim", nvim));
@@ -141,7 +182,10 @@ fn stack_bash_yazi_nvim() {
     rs.remove(&name("yazi", yazi));
     assert_eq!(prog(&rs).unwrap().2, "exec");
     put(&mut rs, "ble", bash, "vi_imap", "active");
-    assert_eq!(prog(&rs), Some(("ble".into(), Some("vi_imap".into()), "active".into())));
+    assert_eq!(
+        prog(&rs),
+        Some(("ble".into(), Some("vi_imap".into()), "active".into()))
+    );
     assert_eq!(rs.slots.len(), 1);
 }
 
@@ -155,7 +199,10 @@ fn killed_process_record_removed_by_pidfd() {
     write(&pane, "ble", sp, "vi_imap", "active");
     write(&pane, "nvim", np, "normal", "active");
     let mut rs = Records::scan(&pane);
-    assert_eq!(rs.active(channel::alive).map(|r| r.program.as_str()), Some("nvim"));
+    assert_eq!(
+        rs.active(channel::alive).map(|r| r.program.as_str()),
+        Some("nvim")
+    );
 
     // pidfd процесса записи; завершение сигналом SIGKILL приходит событием pidfd.
     let fd = channel::pidfd_open(np).expect("pidfd_open");
@@ -167,9 +214,15 @@ fn killed_process_record_removed_by_pidfd() {
     let _ = nvim.wait();
     // Запись упавшего процесса осталась в каталоге (процесс не удалил её): её снимает
     // просмотрщик — здесь проверяем состояние набора и повторное сканирование с проверкой жизни.
-    assert_eq!(rs.active(channel::alive).map(|r| r.program.as_str()), Some("ble"));
+    assert_eq!(
+        rs.active(channel::alive).map(|r| r.program.as_str()),
+        Some("ble")
+    );
     let rescanned = Records::scan(&pane);
-    assert_eq!(rescanned.active(channel::alive).map(|r| r.program.as_str()), Some("ble"));
+    assert_eq!(
+        rescanned.active(channel::alive).map(|r| r.program.as_str()),
+        Some("ble")
+    );
     // Неизвестный pid ничего не удаляет.
     assert!(rs.remove_pid(1).is_empty());
 

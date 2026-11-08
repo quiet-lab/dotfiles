@@ -65,7 +65,10 @@ pub fn keys(t: &[Entry]) -> Vec<&str> {
 pub fn outputs(items: &[(&[&str], &str)]) -> Outputs {
     let mut o: Outputs = BTreeMap::new().into_iter().collect();
     for (argv, out) in items {
-        o.insert(argv.iter().map(|s| s.to_string()).collect(), Some(out.to_string()));
+        o.insert(
+            argv.iter().map(|s| s.to_string()).collect(),
+            Some(out.to_string()),
+        );
     }
     o
 }

@@ -246,7 +246,11 @@ fn term_keys(term: &str) -> Option<Vec<String>> {
             parts.push(t.to_string());
         }
     }
-    if parts.is_empty() || !parts.iter().all(|p| keys::looks_like_key(p) || is_key_sequence(p)) {
+    if parts.is_empty()
+        || !parts
+            .iter()
+            .all(|p| keys::looks_like_key(p) || is_key_sequence(p))
+    {
         return None;
     }
     Some(parts)
@@ -424,7 +428,8 @@ fn regex_entries(src: &Source, text: &str) -> Vec<Raw> {
                 }
             }
             if let Some(h) = &header {
-                f.entry("group".to_string()).or_insert_with(|| h.to_lowercase());
+                f.entry("group".to_string())
+                    .or_insert_with(|| h.to_lowercase());
             }
             let whole = caps.get(0).map(|m| m.as_str()).unwrap_or("");
             f.entry("raw".to_string())
@@ -542,7 +547,12 @@ fn object_raw(
 
 /// Записи TOML: таблицы `tables`, массивы `arrays` или пары «клавиша = действие».
 /// Второй элемент — встретился ли массив `replace_if`.
-fn toml_entries(src: &Source, text: &str, sub: &Subst, map: &[(String, String)]) -> (Vec<Raw>, bool) {
+fn toml_entries(
+    src: &Source,
+    text: &str,
+    sub: &Subst,
+    map: &[(String, String)],
+) -> (Vec<Raw>, bool) {
     let Ok(root) = text.parse::<toml::Table>() else {
         return (Vec::new(), false);
     };
@@ -589,7 +599,11 @@ fn toml_entries(src: &Source, text: &str, sub: &Subst, map: &[(String, String)])
                     src.spec.arrays.clone()
                 };
                 for an in arrays {
-                    let arr = if an.is_empty() { Some(node) } else { node.get(&an) };
+                    let arr = if an.is_empty() {
+                        Some(node)
+                    } else {
+                        node.get(&an)
+                    };
                     let Some(toml::Value::Array(items)) = arr else {
                         continue;
                     };
@@ -832,7 +846,13 @@ fn subst_or_skip(m: &Manifest, s: &str, sub: &Subst) -> Option<String> {
     v
 }
 
-fn source_input(m: &Manifest, src: &Source, sub: &Subst, outputs: &Outputs, files: &mut Vec<FileStamp>) -> Input {
+fn source_input(
+    m: &Manifest,
+    src: &Source,
+    sub: &Subst,
+    outputs: &Outputs,
+    files: &mut Vec<FileStamp>,
+) -> Input {
     if let Some(cmd) = &src.spec.command {
         let mut argv = Vec::new();
         for a in cmd {
@@ -896,25 +916,26 @@ pub fn build(m: &Manifest, sub: &Subst, outputs: &Outputs) -> Build {
             continue;
         }
         let mut replace = false;
-        let raws: Vec<Raw> = if src.kind == Kind::Static && src.spec.file.is_none() && src.spec.path.is_none() {
-            static_entries(&src.spec.entries, &m.key_map)
-        } else {
-            let text = match source_input(m, src, sub, outputs, &mut files) {
-                Input::Text(t) => t,
-                Input::Skip => continue,
-                Input::Need(argv) => return Build::Need(argv),
-            };
-            match src.kind {
-                Kind::Regex => regex_entries(src, &text),
-                Kind::Toml => {
-                    let (r, rep) = toml_entries(src, &text, sub, &m.key_map);
-                    replace = rep;
-                    r
+        let raws: Vec<Raw> =
+            if src.kind == Kind::Static && src.spec.file.is_none() && src.spec.path.is_none() {
+                static_entries(&src.spec.entries, &m.key_map)
+            } else {
+                let text = match source_input(m, src, sub, outputs, &mut files) {
+                    Input::Text(t) => t,
+                    Input::Skip => continue,
+                    Input::Need(argv) => return Build::Need(argv),
+                };
+                match src.kind {
+                    Kind::Regex => regex_entries(src, &text),
+                    Kind::Toml => {
+                        let (r, rep) = toml_entries(src, &text, sub, &m.key_map);
+                        replace = rep;
+                        r
+                    }
+                    Kind::Json => json_entries(src, &text, &m.key_map),
+                    Kind::Static => static_file_entries(&text, &m.key_map),
                 }
-                Kind::Json => json_entries(src, &text, &m.key_map),
-                Kind::Static => static_file_entries(&text, &m.key_map),
-            }
-        };
+            };
         if replace {
             acc.clear();
             index.clear();

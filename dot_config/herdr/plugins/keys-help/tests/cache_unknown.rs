@@ -31,7 +31,10 @@ fn counter_date_one_table_per_command() {
     assert_eq!(text.matches("[program.kh-unknown]").count(), 1, "{text}");
     let l = unknown::list(&p);
     assert_eq!(l.len(), 1);
-    assert_eq!((l[0].command.as_str(), l[0].count, l[0].last.as_str()), ("kh-unknown", 2, date.as_str()));
+    assert_eq!(
+        (l[0].command.as_str(), l[0].count, l[0].last.as_str()),
+        ("kh-unknown", 2, date.as_str())
+    );
     // Строка в файле — `count = 2` и сегодняшняя дата `last`.
     let t: toml::Table = text.parse().unwrap();
     let prog = &t["program"]["kh-unknown"];
@@ -50,7 +53,10 @@ fn list_sorted_by_count_desc_then_name() {
         }
         s
     };
-    let order: Vec<String> = unknown::list_text(&t).into_iter().map(|u| u.command).collect();
+    let order: Vec<String> = unknown::list_text(&t)
+        .into_iter()
+        .map(|u| u.command)
+        .collect();
     assert_eq!(order, vec!["z", "m", "a", "b"]);
 }
 
@@ -72,7 +78,14 @@ fn forget_removes_command_when_table_appears() {
     assert_eq!(unknown::list(&p).len(), 1);
     // Новое появление после удаления начинает счёт заново.
     unknown::record(&p, "kh-a", "2026-11-09").unwrap();
-    assert_eq!(unknown::list(&p).iter().find(|u| u.command == "kh-a").unwrap().count, 1);
+    assert_eq!(
+        unknown::list(&p)
+            .iter()
+            .find(|u| u.command == "kh-a")
+            .unwrap()
+            .count,
+        1
+    );
 }
 
 #[test]
@@ -126,7 +139,10 @@ struct Env {
 impl Env {
     fn set(vars: &[(&'static str, String)]) -> Env {
         let g = ENV.lock().unwrap_or_else(|e| e.into_inner());
-        let old = vars.iter().map(|(k, _)| (*k, std::env::var(k).ok())).collect();
+        let old = vars
+            .iter()
+            .map(|(k, _)| (*k, std::env::var(k).ok()))
+            .collect();
         for (k, v) in vars {
             std::env::set_var(k, v);
         }
@@ -161,7 +177,11 @@ fn generic_cache_does_not_rerun_commands_on_same_inputs() {
     let exe = bin.join("kh-cache");
     std::fs::write(&exe, "#!/bin/sh\nexit 0\n").unwrap();
     std::fs::write(man.join("kh-cache.1"), ".TH X 1\n").unwrap();
-    let path = format!("{}:{}", bin.display(), std::env::var("PATH").unwrap_or_default());
+    let path = format!(
+        "{}:{}",
+        bin.display(),
+        std::env::var("PATH").unwrap_or_default()
+    );
     let _env = Env::set(&[
         ("XDG_CACHE_HOME", d.join("cache").display().to_string()),
         ("PATH", path),
@@ -200,7 +220,10 @@ fn generic_cache_does_not_rerun_commands_on_same_inputs() {
     std::fs::write(&exe, "#!/bin/sh\n# изменён\nexit 0\n").unwrap();
     let mut e3 = Engine::load(&dirs);
     let res3 = resolution(&e3, "kh-cache");
-    assert!(matches!(e3.step(&res3), Build::Need(_)), "кеш не сброшен после изменения файла");
+    assert!(
+        matches!(e3.step(&res3), Build::Need(_)),
+        "кеш не сброшен после изменения файла"
+    );
 }
 
 #[test]
@@ -213,7 +236,11 @@ fn generic_cache_invalidated_by_man_page_mtime() {
     std::fs::write(bin.join("kh-cm"), "#!/bin/sh\nexit 0\n").unwrap();
     let page = man.join("kh-cm.1");
     std::fs::write(&page, ".TH X 1\n").unwrap();
-    let path = format!("{}:{}", bin.display(), std::env::var("PATH").unwrap_or_default());
+    let path = format!(
+        "{}:{}",
+        bin.display(),
+        std::env::var("PATH").unwrap_or_default()
+    );
     let _env = Env::set(&[
         ("XDG_CACHE_HOME", d.join("cache").display().to_string()),
         ("PATH", path),
@@ -223,7 +250,8 @@ fn generic_cache_invalidated_by_man_page_mtime() {
     let k1 = disk_key("kh-cm", None);
     assert_eq!(k1, disk_key("kh-cm", None), "ключ входов детерминирован");
     let f = std::fs::File::options().write(true).open(&page).unwrap();
-    f.set_modified(std::time::SystemTime::now() + std::time::Duration::from_secs(3600)).unwrap();
+    f.set_modified(std::time::SystemTime::now() + std::time::Duration::from_secs(3600))
+        .unwrap();
     assert_ne!(k1, disk_key("kh-cm", None), "mtime man-страницы не учтён");
     // Другой путь исполняемого файла — другой ключ.
     assert!(k1.contains("kh-cm"));
@@ -241,7 +269,10 @@ fn manifest_program_tables_are_not_written_to_disk_cache() {
     let res = context::from_ctx(&e.manifests, "kh-fake").unwrap();
     let t = e.build_blocking(&res);
     assert_eq!(t.entries.len(), 3);
-    assert!(!d.join("cache").exists(), "кеш программы с манифестом записан на диск");
+    assert!(
+        !d.join("cache").exists(),
+        "кеш программы с манифестом записан на диск"
+    );
 }
 
 // ---- кеш таблиц с командными источниками по записи (D6) ----

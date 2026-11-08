@@ -81,7 +81,13 @@ fn decision_6_example_ble_vi_nmap() {
     assert_eq!(s[0].title, None);
     assert_eq!(
         titles(&s),
-        vec![None, Some("history"), Some("completion"), Some("edit"), Some("other")]
+        vec![
+            None,
+            Some("history"),
+            Some("completion"),
+            Some("edit"),
+            Some("other")
+        ]
     );
     assert!(!titles(&s).contains(&Some("motion")));
 }
@@ -194,11 +200,17 @@ fn entry_section_and_errors() {
     let eff = view::effective(&cfg, "ble.vi_imap");
     let table = vec![e("C-r", "history", "ble")];
     let s = view::apply(&table, &eff);
-    let all: Vec<&Entry> = s.iter().flat_map(|x| x.entries.iter().map(|e| &e.entry)).collect();
+    let all: Vec<&Entry> = s
+        .iter()
+        .flat_map(|x| x.entries.iter().map(|e| &e.entry))
+        .collect();
     let cr = all.iter().find(|x| x.key == "C-r").expect("C-r");
     assert_eq!(cr.desc, "мой поиск");
     assert_eq!(cr.group, "history");
-    let added = all.iter().find(|x| x.key == "C-x C-k").expect("добавленная");
+    let added = all
+        .iter()
+        .find(|x| x.key == "C-x C-k")
+        .expect("добавленная");
     assert_eq!(added.desc, "проверка");
     assert_eq!(added.group, "edit");
     assert_eq!(added.origin, "user");
@@ -215,7 +227,8 @@ fn entry_section_and_errors() {
 
 #[test]
 fn hide_and_hide_groups() {
-    let cfg = view::parse("[context.\"c\"]\nhide = [\"<C-a>\", \"x\"]\nhide_groups = [\"g2\"]\n").expect("p");
+    let cfg = view::parse("[context.\"c\"]\nhide = [\"<C-a>\", \"x\"]\nhide_groups = [\"g2\"]\n")
+        .expect("p");
     let t = vec![
         e("C-a", "g1", ""),
         e("x", "g1", ""),
@@ -248,7 +261,10 @@ fn order_then_alphabetical() {
         e("4", "history", ""),
     ];
     let s = view::apply(&t, &view::effective(&cfg, "c"));
-    assert_eq!(titles(&s), vec![Some("history"), Some("edit"), Some("alpha"), Some("zeta")]);
+    assert_eq!(
+        titles(&s),
+        vec![Some("history"), Some("edit"), Some("alpha"), Some("zeta")]
+    );
 }
 
 #[test]
@@ -288,17 +304,30 @@ fn show_origin_variants() {
 const WITH_COMMENTS: &str = "# шапка файла\n[defaults]\norder = [\"a\"] # хвост строки\n\n# про контекст\n[context.\"ble.vi_nmap\"]\nhide = [\"h\"] # скрыто\n";
 
 fn add(ctx: &str, field: &str, v: &str) -> Edit {
-    Edit::Add { ctx: ctx.into(), field: field.into(), value: v.into() }
+    Edit::Add {
+        ctx: ctx.into(),
+        field: field.into(),
+        value: v.into(),
+    }
 }
 
 fn remove(ctx: &str, field: &str, v: &str) -> Edit {
-    Edit::Remove { ctx: ctx.into(), field: field.into(), value: v.into() }
+    Edit::Remove {
+        ctx: ctx.into(),
+        field: field.into(),
+        value: v.into(),
+    }
 }
 
 #[test]
 fn edit_keeps_comments_and_order() {
     let out = view::edit_text(WITH_COMMENTS, &add("ble.vi_nmap", "hide", "x")).expect("edit");
-    for c in ["# шапка файла", "# хвост строки", "# про контекст", "# скрыто"] {
+    for c in [
+        "# шапка файла",
+        "# хвост строки",
+        "# про контекст",
+        "# скрыто",
+    ] {
         assert!(out.contains(c), "потерян комментарий {c}:\n{out}");
     }
     assert!(out.find("[defaults]").unwrap() < out.find("[context").unwrap());
@@ -306,19 +335,29 @@ fn edit_keeps_comments_and_order() {
     assert_eq!(eff.hide, vec!["h", "x"]);
     // Повторное добавление не дублирует.
     let again = view::edit_text(&out, &add("ble.vi_nmap", "hide", "x")).expect("edit");
-    assert_eq!(view::effective(&view::parse(&again).unwrap(), "ble.vi_nmap").hide, vec!["h", "x"]);
+    assert_eq!(
+        view::effective(&view::parse(&again).unwrap(), "ble.vi_nmap").hide,
+        vec!["h", "x"]
+    );
 }
 
 #[test]
 fn edit_creates_missing_section_and_hide_groups() {
-    let out = view::edit_text("# только комментарий\n", &add("yazi.manager", "hide_groups", "tabs")).expect("e");
+    let out = view::edit_text(
+        "# только комментарий\n",
+        &add("yazi.manager", "hide_groups", "tabs"),
+    )
+    .expect("e");
     assert!(out.contains("# только комментарий"));
     assert!(out.contains("[context.\"yazi.manager\"]"));
     let eff = view::effective(&view::parse(&out).expect("p"), "yazi.manager");
     assert_eq!(eff.hide_groups, vec!["tabs"]);
 
     let out2 = view::edit_text("", &add("c", "hide", "x")).expect("e");
-    assert_eq!(view::effective(&view::parse(&out2).expect("p"), "c").hide, vec!["x"]);
+    assert_eq!(
+        view::effective(&view::parse(&out2).expect("p"), "c").hide,
+        vec!["x"]
+    );
 
     // Новый раздел рядом с существующим другого контекста.
     let out3 = view::edit_text(WITH_COMMENTS, &add("nvim.normal", "hide", "q")).expect("e");
@@ -332,7 +371,10 @@ fn edit_undo_removes_and_keeps_rest() {
     let out = view::edit_text(WITH_COMMENTS, &add("ble.vi_nmap", "hide", "x")).expect("e");
     let back = view::edit_text(&out, &remove("ble.vi_nmap", "hide", "x")).expect("e");
     assert!(back.contains("# скрыто"));
-    assert_eq!(view::effective(&view::parse(&back).unwrap(), "ble.vi_nmap").hide, vec!["h"]);
+    assert_eq!(
+        view::effective(&view::parse(&back).unwrap(), "ble.vi_nmap").hide,
+        vec!["h"]
+    );
     // Отмена того, чего нет, ничего не портит.
     let same = view::edit_text(WITH_COMMENTS, &remove("zzz", "hide", "x")).expect("e");
     assert_eq!(same, WITH_COMMENTS);
@@ -348,7 +390,10 @@ fn write_edit_creates_file_and_dirs() {
     let d = common::tmpdir("view-new");
     let p = d.join("sub/view.toml");
     view::write_edit(&p, &add("c", "hide", "x")).expect("write");
-    let eff = view::effective(&view::parse(&std::fs::read_to_string(&p).unwrap()).unwrap(), "c");
+    let eff = view::effective(
+        &view::parse(&std::fs::read_to_string(&p).unwrap()).unwrap(),
+        "c",
+    );
     assert_eq!(eff.hide, vec!["x"]);
 }
 
@@ -372,7 +417,10 @@ fn write_edit_keeps_symlink() {
     assert_eq!(std::fs::read_link(&link).unwrap(), real);
     let text = std::fs::read_to_string(&real).unwrap();
     assert!(text.contains("# шапка файла") && text.contains("# хвост строки"));
-    assert_eq!(view::effective(&view::parse(&text).unwrap(), "ble.vi_nmap").hide, vec!["h", "x"]);
+    assert_eq!(
+        view::effective(&view::parse(&text).unwrap(), "ble.vi_nmap").hide,
+        vec!["h", "x"]
+    );
     // Временных файлов не осталось.
     let left: Vec<_> = std::fs::read_dir(&real_dir).unwrap().flatten().collect();
     assert_eq!(left.len(), 1, "{left:?}");
@@ -386,6 +434,11 @@ fn write_edit_keeps_relative_symlink() {
     std::fs::write(d.join("a/real.toml"), "# c\n").unwrap();
     symlink("a/real.toml", d.join("view.toml")).unwrap();
     view::write_edit(&d.join("view.toml"), &add("c", "hide", "x")).expect("write");
-    assert!(std::fs::symlink_metadata(d.join("view.toml")).unwrap().file_type().is_symlink());
-    assert!(std::fs::read_to_string(d.join("a/real.toml")).unwrap().contains("# c"));
+    assert!(std::fs::symlink_metadata(d.join("view.toml"))
+        .unwrap()
+        .file_type()
+        .is_symlink());
+    assert!(std::fs::read_to_string(d.join("a/real.toml"))
+        .unwrap()
+        .contains("# c"));
 }

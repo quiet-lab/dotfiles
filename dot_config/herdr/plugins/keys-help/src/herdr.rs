@@ -75,8 +75,14 @@ impl Client {
             }
             if let Some(err) = v.get("error") {
                 return Err(Error::Api(
-                    err.get("code").and_then(Value::as_str).unwrap_or("").to_string(),
-                    err.get("message").and_then(Value::as_str).unwrap_or("").to_string(),
+                    err.get("code")
+                        .and_then(Value::as_str)
+                        .unwrap_or("")
+                        .to_string(),
+                    err.get("message")
+                        .and_then(Value::as_str)
+                        .unwrap_or("")
+                        .to_string(),
                 ));
             }
             return Ok(v.get("result").cloned().unwrap_or(Value::Null));
@@ -128,8 +134,14 @@ impl Subscription {
             .map_err(|e| Error::Protocol(format!("ответ подписки не JSON: {e}")))?;
         if let Some(err) = v.get("error") {
             return Err(Error::Api(
-                err.get("code").and_then(Value::as_str).unwrap_or("").to_string(),
-                err.get("message").and_then(Value::as_str).unwrap_or("").to_string(),
+                err.get("code")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_string(),
+                err.get("message")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_string(),
             ));
         }
         stream.set_nonblocking(true)?;
@@ -193,7 +205,11 @@ impl Subscription {
 pub fn event_name(ev: &Value) -> String {
     ev.get("event")
         .and_then(Value::as_str)
-        .or_else(|| ev.get("data").and_then(|d| d.get("type")).and_then(Value::as_str))
+        .or_else(|| {
+            ev.get("data")
+                .and_then(|d| d.get("type"))
+                .and_then(Value::as_str)
+        })
         .unwrap_or("")
         .replace('.', "_")
 }

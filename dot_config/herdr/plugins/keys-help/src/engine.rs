@@ -84,11 +84,16 @@ fn man_mtime(command: &str) -> Option<i128> {
         .filter(|s| !s.is_empty())
         .map(str::to_string)
         .collect();
-    roots.extend(["/usr/share/man".to_string(), "/usr/local/share/man".to_string()]);
+    roots.extend([
+        "/usr/share/man".to_string(),
+        "/usr/local/share/man".to_string(),
+    ]);
     for r in roots {
         for sec in ["man1", "man6", "man8"] {
             let dir = Path::new(&r).join(sec);
-            let Ok(rd) = std::fs::read_dir(&dir) else { continue };
+            let Ok(rd) = std::fs::read_dir(&dir) else {
+                continue;
+            };
             for e in rd.flatten() {
                 let n = e.file_name().to_string_lossy().to_string();
                 if n.starts_with(&format!("{command}.")) {
@@ -107,7 +112,12 @@ pub fn disk_key(command: &str, pid: Option<i32>) -> String {
     let (mt, size) = exe
         .as_ref()
         .and_then(|p| std::fs::metadata(p).ok())
-        .map(|m| (m.mtime() as i128 * 1_000_000_000 + m.mtime_nsec() as i128, m.size()))
+        .map(|m| {
+            (
+                m.mtime() as i128 * 1_000_000_000 + m.mtime_nsec() as i128,
+                m.size(),
+            )
+        })
         .unwrap_or((0, 0));
     format!(
         "{}|{mt}|{size}|{:?}",
@@ -198,18 +208,42 @@ impl Engine {
         } else {
             0
         };
-        (format!("{}|{}|{rev}", m.path.display(), sub.cache_key()), base)
+        (
+            format!("{}|{}|{rev}", m.path.display(), sub.cache_key()),
+            base,
+        )
     }
 
-    fn cache_put(&mut self, key: String, base: String, pid: Option<i32>, files: Vec<FileStamp>, entries: Vec<Entry>) {
+    fn cache_put(
+        &mut self,
+        key: String,
+        base: String,
+        pid: Option<i32>,
+        files: Vec<FileStamp>,
+        entries: Vec<Entry>,
+    ) {
         // Прежние таблицы того же манифеста, команды и процесса больше
         // не нужны: ключ сменился вместе с ревизией записи или подстановками.
         self.cache.retain(|k, v| v.base != base || *k == key);
         self.seq += 1;
         let seq = self.seq;
-        self.cache.insert(key, CacheItem { files, entries, base, pid, seq });
+        self.cache.insert(
+            key,
+            CacheItem {
+                files,
+                entries,
+                base,
+                pid,
+                seq,
+            },
+        );
         while self.cache.len() > CACHE_MAX {
-            let Some(old) = self.cache.iter().min_by_key(|(_, v)| v.seq).map(|(k, _)| k.clone()) else {
+            let Some(old) = self
+                .cache
+                .iter()
+                .min_by_key(|(_, v)| v.seq)
+                .map(|(k, _)| k.clone())
+            else {
                 break;
             };
             self.cache.remove(&old);

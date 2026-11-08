@@ -119,7 +119,9 @@ pub fn truncate_words(s: &str, max: usize) -> String {
     } else {
         prefix
     };
-    let cut = cut.trim_end_matches([',', ';', ':', '.', '-', ' ']).to_string();
+    let cut = cut
+        .trim_end_matches([',', ';', ':', '.', '-', ' '])
+        .to_string();
     format!("{cut}…")
 }
 
@@ -147,7 +149,8 @@ mod tests {
 
     #[test]
     fn long_text() {
-        let d = shorten("Move the cursor to the beginning of the current logical line in the buffer");
+        let d =
+            shorten("Move the cursor to the beginning of the current logical line in the buffer");
         assert!(d.chars().count() <= MAX_DESC, "{d}");
         assert!(d.ends_with('…'));
         assert!(!d.contains("  "));

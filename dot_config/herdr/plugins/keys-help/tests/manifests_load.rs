@@ -37,14 +37,21 @@ fn shipped_manifests_have_unique_programs_and_labels() {
     programs.dedup();
     assert_eq!(programs.len(), n, "повтор program");
     for m in &ms {
-        let want = if m.detect.fallback { m.stem.clone() } else { format!("manifest:{}.toml", m.stem) };
+        let want = if m.detect.fallback {
+            m.stem.clone()
+        } else {
+            format!("manifest:{}.toml", m.stem)
+        };
         assert_eq!(m.source_label(), want);
     }
     // Универсальный — единственный с fallback и самым низким приоритетом.
     let fb: Vec<_> = ms.iter().filter(|m| m.detect.fallback).collect();
     assert_eq!(fb.len(), 1);
     assert_eq!(fb[0].stem, "generic");
-    assert!(ms.iter().filter(|m| !m.detect.fallback).all(|m| m.priority > fb[0].priority));
+    assert!(ms
+        .iter()
+        .filter(|m| !m.detect.fallback)
+        .all(|m| m.priority > fb[0].priority));
 }
 
 #[test]
@@ -53,15 +60,26 @@ fn broken_manifest_is_skipped_with_message_others_work() {
     std::fs::copy(root().join("manifests/tv.toml"), d.join("tv.toml")).unwrap();
     std::fs::write(d.join("bad.toml"), "program = \"bad\"\n[[source]\nkind = ").unwrap();
     std::fs::write(d.join("noprog.toml"), "priority = 1\n").unwrap();
-    std::fs::write(d.join("badkind.toml"), "program = \"x\"\n[[source]]\nkind = \"nope\"\n").unwrap();
-    std::fs::write(d.join("badre.toml"), "program = \"y\"\n[[source]]\nkind = \"regex\"\nregex = \"(\"\n").unwrap();
+    std::fs::write(
+        d.join("badkind.toml"),
+        "program = \"x\"\n[[source]]\nkind = \"nope\"\n",
+    )
+    .unwrap();
+    std::fs::write(
+        d.join("badre.toml"),
+        "program = \"y\"\n[[source]]\nkind = \"regex\"\nregex = \"(\"\n",
+    )
+    .unwrap();
     std::fs::write(d.join("readme.txt"), "не манифест").unwrap();
     let (ms, errors) = manifest::load_dirs(std::slice::from_ref(&d));
     assert_eq!(ms.len(), 1);
     assert_eq!(ms[0].program, "tv");
     assert_eq!(errors.len(), 4, "{errors:#?}");
     for name in ["bad.toml", "noprog.toml", "badkind.toml", "badre.toml"] {
-        assert!(errors.iter().any(|e| e.contains(name)), "нет сообщения о {name}: {errors:?}");
+        assert!(
+            errors.iter().any(|e| e.contains(name)),
+            "нет сообщения о {name}: {errors:?}"
+        );
     }
     // Через Engine: те же сообщения доступны вызывающему, остальные манифесты действуют.
     let e = Engine::load(&[d]);
@@ -72,10 +90,17 @@ fn broken_manifest_is_skipped_with_message_others_work() {
 #[test]
 fn unknown_fields_are_reported_not_fatal() {
     let d = tmpdir("mf-unknown-field");
-    std::fs::write(d.join("a.toml"), "program = \"a\"\ntypo_field = 1\n[detect]\nprocess = [\"a\"]\n").unwrap();
+    std::fs::write(
+        d.join("a.toml"),
+        "program = \"a\"\ntypo_field = 1\n[detect]\nprocess = [\"a\"]\n",
+    )
+    .unwrap();
     let (ms, errors) = manifest::load_dirs(&[d]);
     assert_eq!(ms.len(), 1, "манифест с опечаткой действует");
-    assert!(errors.iter().any(|e| e.contains("typo_field")), "{errors:?}");
+    assert!(
+        errors.iter().any(|e| e.contains("typo_field")),
+        "{errors:?}"
+    );
 }
 
 #[test]
@@ -84,12 +109,26 @@ fn missing_dir_is_ignored() {
     assert!(ms.is_empty() && errors.is_empty());
 }
 
-fn facts<'a>(procs: &'a [Proc], active: Option<&'a Record>, screen: &'a dyn Fn(&str, Option<u32>) -> Option<String>) -> Facts<'a> {
-    Facts { active, procs, shell_pid: None, title: "", screen }
+fn facts<'a>(
+    procs: &'a [Proc],
+    active: Option<&'a Record>,
+    screen: &'a dyn Fn(&str, Option<u32>) -> Option<String>,
+) -> Facts<'a> {
+    Facts {
+        active,
+        procs,
+        shell_pid: None,
+        title: "",
+        screen,
+    }
 }
 
 fn proc(pid: i32, name: &str) -> Proc {
-    Proc { pid, name: name.into(), argv0: name.into() }
+    Proc {
+        pid,
+        name: name.into(),
+        argv0: name.into(),
+    }
 }
 
 #[test]
@@ -98,7 +137,11 @@ fn kh_fake_is_recognised_without_core_changes() {
     assert!(e.errors.is_empty(), "{:?}", e.errors);
     let procs = [proc(4242, "kh-fake")];
     let no_screen = |_: &str, _: Option<u32>| None;
-    let res = match context::resolve(&e.manifests, &facts(&procs, None, &no_screen), "/nonexistent") {
+    let res = match context::resolve(
+        &e.manifests,
+        &facts(&procs, None, &no_screen),
+        "/nonexistent",
+    ) {
         Resolved::Manifest(r) => *r,
         other => panic!("{other:?}"),
     };
@@ -110,7 +153,11 @@ fn kh_fake_is_recognised_without_core_changes() {
     assert_eq!(find(&t, "q").unwrap().group, "general");
     let save = find(&t, "C-x C-s").unwrap();
     assert_eq!(save.desc_full, "Save the current document to disk.");
-    assert!(!save.desc.is_empty() && save.desc.chars().count() <= 32, "{}", save.desc);
+    assert!(
+        !save.desc.is_empty() && save.desc.chars().count() <= 32,
+        "{}",
+        save.desc
+    );
     assert!(t.iter().all(|x| x.source == "manifest:kh-fake.toml"));
     // Та же программа по строке контекста (`table kh-fake`).
     let by_ctx = context::from_ctx(&e.manifests, "kh-fake").expect("from_ctx");
@@ -122,7 +169,11 @@ fn manifest_beats_generic_extractor() {
     let e = Engine::load(&[root().join("manifests")]);
     let no_screen = |_: &str, _: Option<u32>| None;
     let procs = [proc(10, "fzf")];
-    match context::resolve(&e.manifests, &facts(&procs, None, &no_screen), "/nonexistent") {
+    match context::resolve(
+        &e.manifests,
+        &facts(&procs, None, &no_screen),
+        "/nonexistent",
+    ) {
         Resolved::Manifest(r) => assert_eq!(r.ctx, "fzf"),
         other => panic!("{other:?}"),
     }
@@ -133,7 +184,11 @@ fn program_without_manifest_goes_to_generic_then_nothing() {
     let e = Engine::load(&[root().join("manifests")]);
     let no_screen = |_: &str, _: Option<u32>| None;
     let procs = [proc(10, "htop")];
-    match context::resolve(&e.manifests, &facts(&procs, None, &no_screen), "/nonexistent") {
+    match context::resolve(
+        &e.manifests,
+        &facts(&procs, None, &no_screen),
+        "/nonexistent",
+    ) {
         Resolved::Manifest(r) => {
             assert_eq!(r.ctx, "htop.generic");
             assert_eq!(r.command, "htop");
@@ -141,12 +196,25 @@ fn program_without_manifest_goes_to_generic_then_nothing() {
         other => panic!("{other:?}"),
     }
     // Без извлекателя (только манифесты программ) — «ничего» с именем команды.
-    let only_programs: Vec<_> = e.manifests.iter().filter(|m| !m.detect.fallback).cloned().collect();
-    match context::resolve(&only_programs, &facts(&procs, None, &no_screen), "/nonexistent") {
+    let only_programs: Vec<_> = e
+        .manifests
+        .iter()
+        .filter(|m| !m.detect.fallback)
+        .cloned()
+        .collect();
+    match context::resolve(
+        &only_programs,
+        &facts(&procs, None, &no_screen),
+        "/nonexistent",
+    ) {
         Resolved::Nothing(Some(c)) => assert_eq!(c, "htop"),
         other => panic!("{other:?}"),
     }
-    match context::resolve(&only_programs, &facts(&[], None, &no_screen), "/nonexistent") {
+    match context::resolve(
+        &only_programs,
+        &facts(&[], None, &no_screen),
+        "/nonexistent",
+    ) {
         Resolved::Nothing(None) => {}
         other => panic!("{other:?}"),
     }
@@ -167,30 +235,40 @@ fn provider_records_choose_context() {
         other => panic!("{other:?}"),
     }
     // exec: оболочка запустила fzf — контекст fzf.
-    let exec = rec(r#"{"v":1,"program":"ble","mode":"vi_imap","pid":77,"state":"exec","command":"fzf --height 40%"}"#);
+    let exec = rec(
+        r#"{"v":1,"program":"ble","mode":"vi_imap","pid":77,"state":"exec","command":"fzf --height 40%"}"#,
+    );
     match context::resolve(&e.manifests, &facts(&[], Some(&exec), &no_screen), "/x") {
         Resolved::Manifest(r) => assert_eq!(r.ctx, "fzf"),
         other => panic!("{other:?}"),
     }
     // widget: привязка запускает __fzf_* — тоже fzf.
-    let widget = rec(r#"{"v":1,"program":"ble","mode":"vi_imap","pid":77,"state":"widget","command":"fzf-file-widget"}"#);
+    let widget = rec(
+        r#"{"v":1,"program":"ble","mode":"vi_imap","pid":77,"state":"widget","command":"fzf-file-widget"}"#,
+    );
     match context::resolve(&e.manifests, &facts(&[], Some(&widget), &no_screen), "/x") {
         Resolved::Manifest(r) => assert_eq!(r.ctx, "fzf"),
         other => panic!("{other:?}"),
     }
     // Команда tv из строки.
-    let tv = rec(r#"{"v":1,"program":"ble","mode":"vi_imap","pid":77,"state":"exec","command":"tv"}"#);
+    let tv =
+        rec(r#"{"v":1,"program":"ble","mode":"vi_imap","pid":77,"state":"exec","command":"tv"}"#);
     match context::resolve(&e.manifests, &facts(&[], Some(&tv), &no_screen), "/x") {
         Resolved::Manifest(r) => assert_eq!(r.ctx, "tv"),
         other => panic!("{other:?}"),
     }
     // Запись nvim с режимом.
-    let nvim = rec(r#"{"v":1,"program":"nvim","mode":"insert","pid":78,"state":"active","server":"/tmp/s"}"#);
+    let nvim = rec(
+        r#"{"v":1,"program":"nvim","mode":"insert","pid":78,"state":"active","server":"/tmp/s"}"#,
+    );
     let procs = [proc(78, "nvim")];
     match context::resolve(&e.manifests, &facts(&procs, Some(&nvim), &no_screen), "/x") {
         Resolved::Manifest(r) => {
             assert_eq!(r.ctx, "nvim.insert");
-            assert_eq!(r.record.as_ref().and_then(|x| x.server.as_deref()), Some("/tmp/s"));
+            assert_eq!(
+                r.record.as_ref().and_then(|x| x.server.as_deref()),
+                Some("/tmp/s")
+            );
         }
         other => panic!("{other:?}"),
     }
@@ -201,7 +279,11 @@ fn yazi_layer_renamed_manager_and_atuin_mode_from_config() {
     let e = Engine::load(&[root().join("manifests")]);
     let no_screen = |_: &str, _: Option<u32>| None;
     let yazi = rec(r#"{"v":1,"program":"yazi","mode":"mgr","pid":5,"state":"active"}"#);
-    match context::resolve(&e.manifests, &facts(&[proc(5, "yazi")], Some(&yazi), &no_screen), "/x") {
+    match context::resolve(
+        &e.manifests,
+        &facts(&[proc(5, "yazi")], Some(&yazi), &no_screen),
+        "/x",
+    ) {
         Resolved::Manifest(r) => {
             assert_eq!(r.ctx, "yazi.manager");
             assert_eq!(r.mode_native, "mgr");
@@ -211,14 +293,22 @@ fn yazi_layer_renamed_manager_and_atuin_mode_from_config() {
     // atuin: keymap_mode не задан — search; vim-normal — normal.
     let home = tmpdir("atuin-home");
     let procs = [proc(9, "atuin")];
-    match context::resolve(&e.manifests, &facts(&procs, None, &no_screen), home.to_str().unwrap()) {
+    match context::resolve(
+        &e.manifests,
+        &facts(&procs, None, &no_screen),
+        home.to_str().unwrap(),
+    ) {
         Resolved::Manifest(r) => assert_eq!(r.ctx, "atuin.search"),
         other => panic!("{other:?}"),
     }
     let cfg = home.join(".config/atuin");
     std::fs::create_dir_all(&cfg).unwrap();
     std::fs::write(cfg.join("config.toml"), "keymap_mode = \"vim-normal\"\n").unwrap();
-    match context::resolve(&e.manifests, &facts(&procs, None, &no_screen), home.to_str().unwrap()) {
+    match context::resolve(
+        &e.manifests,
+        &facts(&procs, None, &no_screen),
+        home.to_str().unwrap(),
+    ) {
         Resolved::Manifest(r) => assert_eq!(r.ctx, "atuin.normal"),
         other => panic!("{other:?}"),
     }

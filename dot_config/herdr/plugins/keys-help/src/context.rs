@@ -25,7 +25,13 @@ impl Proc {
 pub fn fork_parent_in(proc_root: &std::path::Path, pid: i32) -> Option<i32> {
     let stat = std::fs::read_to_string(proc_root.join(pid.to_string()).join("stat")).ok()?;
     // Поле 4 после имени в скобках: «pid (comm) state ppid …».
-    let ppid: i32 = stat.rsplit_once(')')?.1.split_whitespace().nth(1)?.parse().ok()?;
+    let ppid: i32 = stat
+        .rsplit_once(')')?
+        .1
+        .split_whitespace()
+        .nth(1)?
+        .parse()
+        .ok()?;
     let cmd = |p: i32| std::fs::read(proc_root.join(p.to_string()).join("cmdline")).ok();
     let mine = cmd(pid)?;
     (!mine.is_empty() && cmd(ppid).as_deref() == Some(mine.as_slice())).then_some(ppid)
@@ -80,7 +86,10 @@ pub fn command_word(cmdline: &str) -> Option<String> {
         if w.contains('=') && !w.starts_with('=') && !w.starts_with('-') {
             continue;
         }
-        if matches!(w, "sudo" | "env" | "exec" | "command" | "nohup" | "time" | "builtin" | "doas") {
+        if matches!(
+            w,
+            "sudo" | "env" | "exec" | "command" | "nohup" | "time" | "builtin" | "doas"
+        ) {
             // Ключи обёртки (`sudo -E`) пропускаются.
             while words.peek().is_some_and(|n| n.starts_with('-')) {
                 words.next();
@@ -93,9 +102,9 @@ pub fn command_word(cmdline: &str) -> Option<String> {
 }
 
 fn screen_hit(rules: &[ScreenRule], facts: &Facts) -> Option<usize> {
-    rules.iter().position(|r| {
-        (facts.screen)(&r.source, r.lines).is_some_and(|t| r.regex.is_match(&t))
-    })
+    rules
+        .iter()
+        .position(|r| (facts.screen)(&r.source, r.lines).is_some_and(|t| r.regex.is_match(&t)))
 }
 
 fn config_mode(m: &Manifest, home: &str) -> Option<String> {
@@ -124,7 +133,11 @@ fn config_mode(m: &Manifest, home: &str) -> Option<String> {
 }
 
 fn ctx_of(m: &Manifest, command: &str, mode: &str) -> String {
-    let program = if m.program == "*" { command } else { m.program.as_str() };
+    let program = if m.program == "*" {
+        command
+    } else {
+        m.program.as_str()
+    };
     if mode.is_empty() {
         program.to_string()
     } else {
@@ -196,7 +209,10 @@ pub fn resolve(manifests: &[Manifest], facts: &Facts, home: &str) -> Resolved {
         }
         if hit.is_none() {
             for p in facts.procs {
-                if p.names().iter().any(|n| crate::glob::any(&m.detect.process, n)) {
+                if p.names()
+                    .iter()
+                    .any(|n| crate::glob::any(&m.detect.process, n))
+                {
                     hit = Some((Some(p.pid), p.name.clone()));
                     break;
                 }
@@ -314,7 +330,8 @@ mod tests {
         let mk = |pid: i32, ppid: i32, cmd: &[u8]| {
             let d = root.join(pid.to_string());
             std::fs::create_dir_all(&d).expect("dir");
-            std::fs::write(d.join("stat"), format!("{pid} (bash) S {ppid} {pid} 1 0")).expect("stat");
+            std::fs::write(d.join("stat"), format!("{pid} (bash) S {ppid} {pid} 1 0"))
+                .expect("stat");
             std::fs::write(d.join("cmdline"), cmd).expect("cmdline");
         };
         mk(10, 1, b"bash\0-i\0");
@@ -348,15 +365,36 @@ mod tests {
     #[test]
     fn record_and_widget() {
         let m = ms();
-        let r = parse_record(r#"{"program":"ble","mode":"vi_nmap","pid":10,"state":"active"}"#).expect("r");
-        let procs = vec![Proc { pid: 10, name: "bash".into(), argv0: "bash".into() }];
-        let f = Facts { active: Some(&r), procs: &procs, shell_pid: Some(10), title: "", screen: &no_screen };
-        let Resolved::Manifest(res) = resolve(&m, &f, "/h") else { panic!() };
+        let r = parse_record(r#"{"program":"ble","mode":"vi_nmap","pid":10,"state":"active"}"#)
+            .expect("r");
+        let procs = vec![Proc {
+            pid: 10,
+            name: "bash".into(),
+            argv0: "bash".into(),
+        }];
+        let f = Facts {
+            active: Some(&r),
+            procs: &procs,
+            shell_pid: Some(10),
+            title: "",
+            screen: &no_screen,
+        };
+        let Resolved::Manifest(res) = resolve(&m, &f, "/h") else {
+            panic!()
+        };
         assert_eq!(res.ctx, "ble.vi_nmap");
 
         let w = parse_record(r#"{"program":"ble","mode":"vi_imap","pid":10,"state":"widget","command":"fzf-file-widget"}"#).expect("r");
-        let f = Facts { active: Some(&w), procs: &procs, shell_pid: Some(10), title: "", screen: &no_screen };
-        let Resolved::Manifest(res) = resolve(&m, &f, "/h") else { panic!() };
+        let f = Facts {
+            active: Some(&w),
+            procs: &procs,
+            shell_pid: Some(10),
+            title: "",
+            screen: &no_screen,
+        };
+        let Resolved::Manifest(res) = resolve(&m, &f, "/h") else {
+            panic!()
+        };
         assert_eq!(res.ctx, "fzf");
     }
 
@@ -364,21 +402,52 @@ mod tests {
     fn generic_and_manifest_priority() {
         let m = ms();
         let procs = vec![
-            Proc { pid: 10, name: "bash".into(), argv0: "bash".into() },
-            Proc { pid: 11, name: "htop".into(), argv0: "/usr/bin/htop".into() },
+            Proc {
+                pid: 10,
+                name: "bash".into(),
+                argv0: "bash".into(),
+            },
+            Proc {
+                pid: 11,
+                name: "htop".into(),
+                argv0: "/usr/bin/htop".into(),
+            },
         ];
-        let f = Facts { active: None, procs: &procs, shell_pid: Some(10), title: "", screen: &no_screen };
-        let Resolved::Manifest(res) = resolve(&m, &f, "/h") else { panic!() };
+        let f = Facts {
+            active: None,
+            procs: &procs,
+            shell_pid: Some(10),
+            title: "",
+            screen: &no_screen,
+        };
+        let Resolved::Manifest(res) = resolve(&m, &f, "/h") else {
+            panic!()
+        };
         assert_eq!(res.ctx, "htop.generic");
-        let procs = vec![Proc { pid: 12, name: "fzf".into(), argv0: "fzf".into() }];
-        let f = Facts { active: None, procs: &procs, shell_pid: Some(10), title: "", screen: &no_screen };
-        let Resolved::Manifest(res) = resolve(&m, &f, "/h") else { panic!() };
+        let procs = vec![Proc {
+            pid: 12,
+            name: "fzf".into(),
+            argv0: "fzf".into(),
+        }];
+        let f = Facts {
+            active: None,
+            procs: &procs,
+            shell_pid: Some(10),
+            title: "",
+            screen: &no_screen,
+        };
+        let Resolved::Manifest(res) = resolve(&m, &f, "/h") else {
+            panic!()
+        };
         assert_eq!(res.ctx, "fzf");
     }
 
     #[test]
     fn words() {
-        assert_eq!(command_word("FOO=1 sudo -E /usr/bin/htop -d 1").as_deref(), Some("htop"));
+        assert_eq!(
+            command_word("FOO=1 sudo -E /usr/bin/htop -d 1").as_deref(),
+            Some("htop")
+        );
         assert_eq!(command_word("tv").as_deref(), Some("tv"));
     }
 }

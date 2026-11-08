@@ -362,9 +362,11 @@ impl UiState {
         let new_sel = match key {
             Key::Char('j') | Key::Down => Some((sel + 1).min(n - 1)),
             Key::Char('k') | Key::Up => Some(sel.saturating_sub(1)),
-            Key::Char('h') | Key::Left => {
-                Some(if col == 0 { sel } else { lay.nearest_in(col - 1, row).unwrap_or(sel) })
-            }
+            Key::Char('h') | Key::Left => Some(if col == 0 {
+                sel
+            } else {
+                lay.nearest_in(col - 1, row).unwrap_or(sel)
+            }),
             Key::Char('l') | Key::Right => Some(lay.nearest_in(col + 1, row).unwrap_or(sel)),
             Key::Char('g') => Some(0),
             Key::Char('G') => Some(n - 1),
@@ -407,9 +409,10 @@ impl UiState {
             // Скрыть группу можно только из раздела группы: у разделов
             // закреплённых записей, курсора, дополнения и происхождения
             // своего поля скрытия в view.toml нет (D15).
-            Key::Char('D') if entries[sel].kind != SectionKind::Group => {
-                Action::Message(format!("группу скрыть нельзя: {}", entries[sel].kind.label()))
-            }
+            Key::Char('D') if entries[sel].kind != SectionKind::Group => Action::Message(format!(
+                "группу скрыть нельзя: {}",
+                entries[sel].kind.label()
+            )),
             Key::Char('D') => Action::HideGroup(entries[sel].entry.group.clone()),
             Key::Char('u') => Action::Undo,
             _ => Action::None,
@@ -507,7 +510,11 @@ fn render_cell(e: &Shown, key_w: usize, cw: usize, selected: bool) -> String {
         (false, true) => DIM.to_string(),
         (false, false) => String::new(),
     };
-    let key_style = if e.dim && !selected { DIM.to_string() } else { format!("{base}{BOLD}") };
+    let key_style = if e.dim && !selected {
+        DIM.to_string()
+    } else {
+        format!("{base}{BOLD}")
+    };
     let mut s = String::new();
     s.push_str(&highlight(&key, &e.hl.key, &key_style));
     s.push_str(RESET);
@@ -571,7 +578,11 @@ fn wrap(s: &str, width: usize) -> Vec<String> {
     let mut out = Vec::new();
     let mut cur = String::new();
     for word in s.split(' ') {
-        let add = if cur.is_empty() { word.width() } else { cur.width() + 1 + word.width() };
+        let add = if cur.is_empty() {
+            word.width()
+        } else {
+            cur.width() + 1 + word.width()
+        };
         if add > width && !cur.is_empty() {
             out.push(std::mem::take(&mut cur));
         }
@@ -607,7 +618,10 @@ pub fn render(
     let mut head = format!("{BOLD}{}{RESET} · {}", header.ctx, header.target);
     let mut head_w = header.ctx.width() + 3 + header.target.width();
     if let Some(m) = &header.message {
-        head.push_str(&format!("  {HL}{}{RESET}", truncate(m, width.saturating_sub(head_w + 2))));
+        head.push_str(&format!(
+            "  {HL}{}{RESET}",
+            truncate(m, width.saturating_sub(head_w + 2))
+        ));
         head_w += 2 + m.width();
     }
     // Последний столбец не занимается: запись в него переносит строку в части терминалов.
@@ -620,8 +634,16 @@ pub fn render(
         lines.push(format!("/{inp}\x1b[7m \x1b[0m"));
     } else if let Some(p) = &st.search {
         let total = entries.len();
-        let pos = if total == 0 { 0 } else { st.selected.min(total - 1) + 1 };
-        let tail = if total == 0 { "  нет совпадений, Esc — назад" } else { "" };
+        let pos = if total == 0 {
+            0
+        } else {
+            st.selected.min(total - 1) + 1
+        };
+        let tail = if total == 0 {
+            "  нет совпадений, Esc — назад"
+        } else {
+            ""
+        };
         lines.push(format!("{DIM}/{p}  [{pos}/{total}]{tail}{RESET}"));
     }
     let avail = height.saturating_sub(lines.len());
@@ -722,13 +744,18 @@ mod tests {
 
     #[test]
     fn nav_columns() {
-        let s = vec![sec("a", &["1", "2", "3", "4", "5"]), sec("b", &["6", "7", "8"])];
+        let s = vec![
+            sec("a", &["1", "2", "3", "4", "5"]),
+            sec("b", &["6", "7", "8"]),
+        ];
         let lay = layout(&s, 120);
         assert!(lay.columns.len() <= 3);
         let entries = flatten(&s);
         let mut st = UiState::default();
         // Первая запись второй колонки.
-        let second = (0..entries.len()).find(|&i| lay.pos[i].0 == 1).expect("col1");
+        let second = (0..entries.len())
+            .find(|&i| lay.pos[i].0 == 1)
+            .expect("col1");
         st.selected = second;
         assert_eq!(st.handle(Key::Char('h'), &lay, &entries), Action::Redraw);
         assert_eq!(lay.pos[st.selected].0, 0);
@@ -744,7 +771,10 @@ mod tests {
         let s = vec![sec("a", &["x", "y", "xx"])];
         let lay = layout(&s, 120);
         let entries = flatten(&s);
-        let mut st = UiState { selected: 2, ..Default::default() };
+        let mut st = UiState {
+            selected: 2,
+            ..Default::default()
+        };
         st.handle(Key::Char('/'), &lay, &entries);
         st.handle(Key::Char('X'), &lay, &entries);
         st.handle(Key::Enter, &lay, &entries);
@@ -760,7 +790,10 @@ mod tests {
         st.handle(Key::Esc, &lay, &entries);
         assert!(st.search.is_none());
         assert_eq!(st.selected, 2);
-        assert_eq!(st.handle(Key::Char('d'), &lay, &entries), Action::Hide("xx".into()));
+        assert_eq!(
+            st.handle(Key::Char('d'), &lay, &entries),
+            Action::Hide("xx".into())
+        );
         assert_eq!(st.handle(Key::Char('q'), &lay, &entries), Action::Focus);
     }
 
@@ -776,9 +809,15 @@ mod tests {
             st.handle(Key::Char('d'), &lay, &entries),
             Action::Message("кандидата дополнения скрыть нельзя".into())
         );
-        assert!(matches!(st.handle(Key::Char('D'), &lay, &entries), Action::Message(_)));
+        assert!(matches!(
+            st.handle(Key::Char('D'), &lay, &entries),
+            Action::Message(_)
+        ));
         st.selected = 1;
-        assert_eq!(st.handle(Key::Char('d'), &lay, &entries), Action::Hide("k2".into()));
+        assert_eq!(
+            st.handle(Key::Char('d'), &lay, &entries),
+            Action::Hide("k2".into())
+        );
         assert_eq!(
             st.handle(Key::Char('D'), &lay, &entries),
             Action::Message("группу скрыть нельзя: раздел по происхождению".into())
@@ -796,7 +835,10 @@ mod tests {
         assert!(lay.columns.len() > 3);
         // Второй раздел начинается на первом экране.
         assert!(lay.pos[4].0 < 3);
-        let mut st = UiState { selected: 29, ..Default::default() };
+        let mut st = UiState {
+            selected: 29,
+            ..Default::default()
+        };
         let lines = render(&mut st, &Header::default(), &s, 110, 7);
         assert_eq!(lines.len(), 7);
         assert!(st.left > 0, "экран сдвинут к выбранной колонке");
@@ -811,7 +853,10 @@ mod tests {
     fn keys_parse() {
         assert_eq!(parse_input(b"\x1b"), vec![Key::Esc]);
         assert_eq!(parse_input(b"\x1b[A"), vec![Key::Up]);
-        assert_eq!(parse_input(b"jK\r"), vec![Key::Char('j'), Key::Char('K'), Key::Enter]);
+        assert_eq!(
+            parse_input(b"jK\r"),
+            vec![Key::Char('j'), Key::Char('K'), Key::Enter]
+        );
     }
 
     #[test]

@@ -19,7 +19,10 @@ use keys_help::view::{self, Extra, Section, COMPLETION_TITLE, CURSOR_TITLE};
 static ENV: Mutex<()> = Mutex::new(());
 
 fn pos(point: usize, text: &str) -> Pos {
-    Pos::of(&Line { point, text: text.to_string() })
+    Pos::of(&Line {
+        point,
+        text: text.to_string(),
+    })
 }
 
 fn fx(name: &str) -> String {
@@ -32,7 +35,17 @@ fn fx(name: &str) -> String {
 fn position_start_end_middle() {
     let t = "echo abc";
     let start = pos(0, t);
-    assert_eq!((start.point, start.len, start.row, start.rows, start.col, start.line_len), (0, 8, 0, 1, 0, 8));
+    assert_eq!(
+        (
+            start.point,
+            start.len,
+            start.row,
+            start.rows,
+            start.col,
+            start.line_len
+        ),
+        (0, 8, 0, 1, 0, 8)
+    );
     assert_eq!(start.word, "");
     assert_eq!(start.word_index, 0);
     let end = pos(8, t);
@@ -56,7 +69,10 @@ fn position_multiline() {
     let first = pos(1, t);
     assert_eq!((first.row, first.var("rows_below")), (0, Some(2)));
     let last = pos(8, t);
-    assert_eq!((last.row, last.var("rows_below"), last.col), (2, Some(0), 2));
+    assert_eq!(
+        (last.row, last.var("rows_below"), last.col),
+        (2, Some(0), 2)
+    );
     // Курсор в самом начале строки после перевода.
     let b = pos(3, t);
     assert_eq!((b.row, b.col), (1, 0));
@@ -69,7 +85,10 @@ fn position_multiline() {
 fn position_empty_and_blank() {
     let e = pos(0, "");
     assert!(e.blank);
-    assert_eq!((e.len, e.rows, e.row, e.col, e.line_len, e.word_index), (0, 1, 0, 0, 0, 0));
+    assert_eq!(
+        (e.len, e.rows, e.row, e.col, e.line_len, e.word_index),
+        (0, 1, 0, 0, 0, 0)
+    );
     assert_eq!(e.var("blank"), Some(1));
     assert!(pos(2, "  ").blank);
     assert!(pos(1, "\n\n").blank);
@@ -93,7 +112,11 @@ fn word_index_resets_after_command_separator() {
     assert_eq!(pos(12, "ls -l; git s").word_index, 1);
     assert_eq!(pos(7, "ls | gr").word_index, 0);
     assert_eq!(pos(6, "a && b").word_index, 0);
-    assert_eq!(pos(5, "ls\ngi").word_index, 0, "перевод строки начинает команду");
+    assert_eq!(
+        pos(5, "ls\ngi").word_index,
+        0,
+        "перевод строки начинает команду"
+    );
 }
 
 #[test]
@@ -107,7 +130,13 @@ fn parse_line_format() {
     assert_eq!(e.text, "");
     assert_eq!(cursor::parse_line("0\n").unwrap().text, "");
     assert_eq!(cursor::parse_line("1\nab\n").unwrap().text, "ab\n");
-    assert_eq!(cursor::parse_line("3").unwrap(), Line { point: 3, text: String::new() });
+    assert_eq!(
+        cursor::parse_line("3").unwrap(),
+        Line {
+            point: 3,
+            text: String::new()
+        }
+    );
     assert!(cursor::parse_line("не число\nтекст").is_none());
     assert!(cursor::parse_line("").is_none());
 }
@@ -116,7 +145,10 @@ fn parse_line_format() {
 fn parse_words_and_cands() {
     let w = cursor::parse_words(&fx("shell.words"));
     assert_eq!(w.len(), 5);
-    assert_eq!((w[0].kind.as_str(), w[0].name.as_str(), w[0].value.as_str()), ("sabbrev", "gs", "git status --short"));
+    assert_eq!(
+        (w[0].kind.as_str(), w[0].name.as_str(), w[0].value.as_str()),
+        ("sabbrev", "gs", "git status --short")
+    );
     assert_eq!(w[3].kind, "function");
     assert_eq!(w[3].value, "");
     assert!(cursor::parse_words("мусор без табуляций\n\t\tx\n").is_empty());
@@ -170,7 +202,13 @@ fn when_on_start_end_and_empty() {
 
 #[test]
 fn when_unknown_variable_is_error() {
-    for bad in ["cursor > 0", "col > nope", "foo == bar", "col > 0 && zzz < 1", "word == 1"] {
+    for bad in [
+        "cursor > 0",
+        "col > nope",
+        "foo == bar",
+        "col > 0 && zzz < 1",
+        "word == 1",
+    ] {
         let e = When::parse(bad, "applies[0].when").unwrap_err();
         assert!(e.contains("applies[0].when"), "{e}");
         assert!(e.contains("неизвестная переменная"), "{bad}: {e}");
@@ -182,7 +220,18 @@ fn when_unknown_variable_is_error() {
 
 #[test]
 fn all_documented_variables_are_known() {
-    for v in ["point", "len", "row", "rows", "rows_below", "col", "line_len", "word_len", "word_index", "blank"] {
+    for v in [
+        "point",
+        "len",
+        "row",
+        "rows",
+        "rows_below",
+        "col",
+        "line_len",
+        "word_len",
+        "word_index",
+        "blank",
+    ] {
         assert!(When::parse(&format!("{v} >= 0"), "t").is_ok(), "{v}");
         assert!(pos(1, "ab").var(v).is_some(), "{v}");
     }
@@ -194,8 +243,16 @@ fn manifest_with_unknown_when_variable_is_rejected() {
     let text = "program = \"x\"\n[[applies]]\naction = \"^a$\"\nwhen = \"unknown_var > 0\"\n";
     let e = keys_help::manifest::parse(text, Path::new("/x/x.toml")).unwrap_err();
     assert!(e.contains("unknown_var"), "{e}");
-    assert!(keys_help::manifest::parse("program = \"x\"\n[[applies]]\naction = \"^a$\"\n", Path::new("/x/x.toml")).is_err());
-    assert!(keys_help::manifest::parse("program = \"x\"\n[[applies]]\nwhen = \"col > 0\"\n", Path::new("/x/x.toml")).is_err());
+    assert!(keys_help::manifest::parse(
+        "program = \"x\"\n[[applies]]\naction = \"^a$\"\n",
+        Path::new("/x/x.toml")
+    )
+    .is_err());
+    assert!(keys_help::manifest::parse(
+        "program = \"x\"\n[[applies]]\nwhen = \"col > 0\"\n",
+        Path::new("/x/x.toml")
+    )
+    .is_err());
     // Через load_dirs ошибочный манифест пропускается с сообщением.
     let d = tmpdir("when-bad");
     std::fs::write(d.join("x.toml"), text).unwrap();
@@ -207,7 +264,14 @@ fn manifest_with_unknown_when_variable_is_rejected() {
 // ---- раздел «по позиции курсора» (правила ble.toml) ----
 
 fn ble_entry(key: &str, action: &str, group: &str) -> Entry {
-    Entry { key: key.into(), desc: key.into(), action: action.into(), group: group.into(), origin: "ble".into(), ..Default::default() }
+    Entry {
+        key: key.into(),
+        desc: key.into(),
+        action: action.into(),
+        group: group.into(),
+        origin: "ble".into(),
+        ..Default::default()
+    }
 }
 
 fn ble_table() -> Vec<Entry> {
@@ -230,9 +294,16 @@ fn sections_at(point: usize, text: &str, mode: &str) -> Vec<Section> {
     let m = manifest_named("ble");
     let p = pos(point, text);
     let rule = |e: &Entry| {
-        m.applies.iter().position(|a| a.matches(&e.action, &[mode, mode])).map(|i| (i, m.applies[i].when.eval(&p)))
+        m.applies
+            .iter()
+            .position(|a| a.matches(&e.action, &[mode, mode]))
+            .map(|i| (i, m.applies[i].when.eval(&p)))
     };
-    let extra = Extra { origin_order: vec![], applies: Some(&rule), completion: vec![] };
+    let extra = Extra {
+        origin_order: vec![],
+        applies: Some(&rule),
+        completion: vec![],
+    };
     let eff = view::effective(&view::parse("").unwrap(), "ble.vi_imap");
     view::apply_ext(&ble_table(), &eff, &extra)
 }
@@ -246,7 +317,11 @@ fn keys_in(s: &Section) -> Vec<&str> {
 }
 
 fn dimmed(s: &[Section]) -> Vec<&str> {
-    s.iter().flat_map(|x| x.entries.iter()).filter(|e| e.dim).map(|e| e.entry.key.as_str()).collect()
+    s.iter()
+        .flat_map(|x| x.entries.iter())
+        .filter(|e| e.dim)
+        .map(|e| e.entry.key.as_str())
+        .collect()
 }
 
 #[test]
@@ -255,7 +330,10 @@ fn cursor_section_at_start_of_line() {
     let c = section(&s, CURSOR_TITLE).expect("раздел по позиции курсора");
     let k = keys_in(c);
     // В начале строки применимы движения вперёд; назад — приглушены на месте.
-    assert!(k.contains(&"C-f") && k.contains(&"C-e") && k.contains(&"C-k"), "{k:?}");
+    assert!(
+        k.contains(&"C-f") && k.contains(&"C-e") && k.contains(&"C-k"),
+        "{k:?}"
+    );
     assert!(!k.contains(&"C-b") && !k.contains(&"C-a"), "{k:?}");
     let d = dimmed(&s);
     assert!(d.contains(&"C-b") && d.contains(&"C-a"), "{d:?}");
@@ -270,7 +348,10 @@ fn cursor_section_at_end_of_line() {
     let s = sections_at(8, "echo abc", "vi_imap");
     let k = keys_in(section(&s, CURSOR_TITLE).unwrap());
     assert!(k.contains(&"C-b") && k.contains(&"C-a"), "{k:?}");
-    assert!(!k.contains(&"C-f") && !k.contains(&"C-e") && !k.contains(&"C-k"), "{k:?}");
+    assert!(
+        !k.contains(&"C-f") && !k.contains(&"C-e") && !k.contains(&"C-k"),
+        "{k:?}"
+    );
     let d = dimmed(&s);
     assert!(d.contains(&"C-f") && d.contains(&"C-k"), "{d:?}");
 }
@@ -293,12 +374,18 @@ fn cursor_section_multiline_history_rows() {
     // Первая строка многострочного ввода: history-prev (row > 0) неприменима, history-next — да.
     let first = sections_at(1, "ab\ncd\nef", "vi_imap");
     let k = keys_in(section(&first, CURSOR_TITLE).unwrap());
-    assert!(k.contains(&"C-n") && !k.contains(&"C-p") && !k.contains(&"M-<"), "{k:?}");
+    assert!(
+        k.contains(&"C-n") && !k.contains(&"C-p") && !k.contains(&"M-<"),
+        "{k:?}"
+    );
     assert!(dimmed(&first).contains(&"C-p"));
     // Средняя — обе; последняя — history-prev и beginning-of-text, но не history-next.
     let mid = sections_at(4, "ab\ncd\nef", "vi_imap");
     let k = keys_in(section(&mid, CURSOR_TITLE).unwrap());
-    assert!(k.contains(&"C-n") && k.contains(&"C-p") && k.contains(&"M-<"), "{k:?}");
+    assert!(
+        k.contains(&"C-n") && k.contains(&"C-p") && k.contains(&"M-<"),
+        "{k:?}"
+    );
     let last = sections_at(8, "ab\ncd\nef", "vi_imap");
     let k = keys_in(section(&last, CURSOR_TITLE).unwrap());
     assert!(k.contains(&"C-p") && !k.contains(&"C-n"), "{k:?}");
@@ -374,7 +461,10 @@ fn files_read_by_events_and_other_records_ignored() {
     mark(&d);
     let mut i = Input::default();
     assert!(i.set_active(&d, Some("ble-1".into())));
-    assert!(!i.set_active(&d, Some("ble-1".into())), "повторный выбор той же записи — без изменений");
+    assert!(
+        !i.set_active(&d, Some("ble-1".into())),
+        "повторный выбор той же записи — без изменений"
+    );
     put(&d, "ble-1.line", "multi.line");
     assert!(i.on_file("ble-1.line"));
     put(&d, "ble-1.words", "shell.words");
@@ -400,16 +490,29 @@ fn files_read_by_events_and_other_records_ignored() {
 fn remove_mark_removes_only_own_mark() {
     let d = tmpdir("in-rm");
     mark(&d);
-    for (n, f) in [("ble-1.line", "kh.line"), ("ble-1.words", "shell.words"), ("ble-1.cands", "kh.cands")] {
+    for (n, f) in [
+        ("ble-1.line", "kh.line"),
+        ("ble-1.words", "shell.words"),
+        ("ble-1.cands", "kh.cands"),
+    ] {
         put(&d, n, f);
     }
     std::fs::write(d.join("ble-1.json"), "{}").unwrap();
     std::fs::write(d.join("viewer"), "").unwrap();
     std::fs::write(d.join("viewer.1"), "").unwrap();
     input::remove_mark(&d);
-    assert!(!d.join(input::mark_name()).exists(), "своя отметка осталась");
-    assert!(!d.join("viewer").exists(), "отметка прежнего формата осталась");
-    assert!(d.join("viewer.1").exists(), "отметка другого просмотрщика снята");
+    assert!(
+        !d.join(input::mark_name()).exists(),
+        "своя отметка осталась"
+    );
+    assert!(
+        !d.join("viewer").exists(),
+        "отметка прежнего формата осталась"
+    );
+    assert!(
+        d.join("viewer.1").exists(),
+        "отметка другого просмотрщика снята"
+    );
     for n in ["ble-1.line", "ble-1.words", "ble-1.cands", "ble-1.json"] {
         assert!(d.join(n).exists(), "{n} удалён");
     }
@@ -425,7 +528,10 @@ struct Env {
 impl Env {
     fn set(vars: &[(&'static str, String)]) -> Env {
         let g = ENV.lock().unwrap_or_else(|e| e.into_inner());
-        let old = vars.iter().map(|(k, _)| (*k, std::env::var(k).ok())).collect();
+        let old = vars
+            .iter()
+            .map(|(k, _)| (*k, std::env::var(k).ok()))
+            .collect();
         for (k, v) in vars {
             std::env::set_var(k, v);
         }
@@ -467,7 +573,9 @@ fn completion_input(d: &Path, line_fixture: &str, bin: &Path, shell: &Child) -> 
     put(d, "ble-1.cands", "kh.cands");
     let mut i = Input::default();
     i.set_active(d, Some("ble-1".into()));
-    let (_, new) = i.refresh_path(Some(shell.id() as i32)).expect("PATH процесса оболочки");
+    let (_, new) = i
+        .refresh_path(Some(shell.id() as i32))
+        .expect("PATH процесса оболочки");
     assert!(new.contains(&bin.to_path_buf()), "{new:?}");
     assert!(i.is_path_dir(bin));
     i
@@ -491,12 +599,24 @@ fn completion_for_command_word_order_and_sources() {
     let (c, need) = i.completion();
     assert!(need.is_none());
     // Кандидаты ble.sh (COMPV = kh), затем псевдонимы, функции, команды PATH; без повторов.
-    assert_eq!(names(&c), vec!["kh-tool", "kh-other", "khal", "kh_func", "kh-bin"], "{c:?}");
+    assert_eq!(
+        names(&c),
+        vec!["kh-tool", "kh-other", "khal", "kh_func", "kh-bin"],
+        "{c:?}"
+    );
     assert!(c.iter().all(|e| e.group == COMPLETION_TITLE));
     assert_eq!(c[0].origin, "кандидат");
-    assert!(c.iter().find(|e| e.key == "khal").unwrap().desc.starts_with("= "));
+    assert!(c
+        .iter()
+        .find(|e| e.key == "khal")
+        .unwrap()
+        .desc
+        .starts_with("= "));
     assert_eq!(c.iter().find(|e| e.key == "kh-bin").unwrap().source, "PATH");
-    assert!(c.iter().all(|e| e.key != "kh-data"), "неисполняемый файл — не команда");
+    assert!(
+        c.iter().all(|e| e.key != "kh-data"),
+        "неисполняемый файл — не команда"
+    );
     drop(shell.stdin.take());
     let _ = shell.wait();
 }
@@ -572,7 +692,13 @@ fn completion_of_options_of_first_word() {
     // Повторный запрос ту же команду не просит.
     assert!(i.completion().1.is_none());
     // man без параметров — следующий шаг: --help.
-    let next = i.opts_done("kh-tool", &need.argv, "KH-TOOL(1)\n\nNAME\n       kh-tool\n").expect("--help");
+    let next = i
+        .opts_done(
+            "kh-tool",
+            &need.argv,
+            "KH-TOOL(1)\n\nNAME\n       kh-tool\n",
+        )
+        .expect("--help");
     assert_eq!(next, vec!["kh-tool", "--help"]);
     let help = "Usage: kh-tool [OPTIONS]\n\nOptions:\n  -c, --color      Colorize the output when printing\n  -v, --verbose    Be verbose\n      --colors-off  Disable colors\n";
     assert!(i.opts_done("kh-tool", &next, help).is_none());
@@ -617,7 +743,6 @@ fn path_commands_follow_directory_changes() {
     let _ = shell.wait();
 }
 
-
 // ---- 12.12: не больше 8 записей, одна на правило ----
 
 fn full_table() -> Vec<Entry> {
@@ -632,7 +757,11 @@ fn full_table() -> Vec<Entry> {
         ble_entry("M-b", "backward-cword", "motion"),
         ble_entry("M-f", "forward-cword", "motion"),
         ble_entry("BS", "delete-region-or delete-backward-char", "edit"),
-        ble_entry("C-d", "delete-region-or delete-forward-char-or-exit", "edit"),
+        ble_entry(
+            "C-d",
+            "delete-region-or delete-forward-char-or-exit",
+            "edit",
+        ),
         ble_entry("C-w", "kill-region-or kill-backward-uword", "edit"),
         ble_entry("M-d", "kill-forward-cword", "edit"),
         ble_entry("C-u", "kill-backward-line", "edit"),
@@ -644,8 +773,17 @@ fn full_table() -> Vec<Entry> {
 fn full_sections_at(point: usize, text: &str) -> Vec<Section> {
     let m = manifest_named("ble");
     let p = pos(point, text);
-    let rule = |e: &Entry| m.applies.iter().position(|a| a.matches(&e.action, &["emacs"])).map(|i| (i, m.applies[i].when.eval(&p)));
-    let extra = Extra { origin_order: vec![], applies: Some(&rule), completion: vec![] };
+    let rule = |e: &Entry| {
+        m.applies
+            .iter()
+            .position(|a| a.matches(&e.action, &["emacs"]))
+            .map(|i| (i, m.applies[i].when.eval(&p)))
+    };
+    let extra = Extra {
+        origin_order: vec![],
+        applies: Some(&rule),
+        completion: vec![],
+    };
     let eff = view::effective(&view::parse("").unwrap(), "ble.emacs");
     view::apply_ext(&full_table(), &eff, &extra)
 }
@@ -656,24 +794,43 @@ fn cursor_section_at_most_8_one_per_rule_shortest_key() {
     let c = section(&s, CURSOR_TITLE).expect("раздел");
     // Порядок правил ble.toml: начало/конец строки, символ, слово, удалить символ,
     // вырезать слово, вырезать до начала/конца строки, прочие.
-    assert_eq!(keys_in(c), vec!["C-a", "C-e", "C-b", "C-f", "M-b", "M-f", "BS", "C-d"]);
+    assert_eq!(
+        keys_in(c),
+        vec!["C-a", "C-e", "C-b", "C-f", "M-b", "M-f", "BS", "C-d"]
+    );
     assert_eq!(c.entries.len(), view::MAX_CURSOR);
     // Вторая клавиша того же действия и применимые сверх предела — в группах, не приглушены.
     let motion = keys_in(section(&s, "motion").unwrap());
-    assert!(motion.contains(&"home") && motion.contains(&"left") && motion.contains(&"end"), "{motion:?}");
+    assert!(
+        motion.contains(&"home") && motion.contains(&"left") && motion.contains(&"end"),
+        "{motion:?}"
+    );
     let edit = keys_in(section(&s, "edit").unwrap());
-    assert!(edit.contains(&"C-w") && edit.contains(&"C-k") && edit.contains(&"C-t"), "{edit:?}");
+    assert!(
+        edit.contains(&"C-w") && edit.contains(&"C-k") && edit.contains(&"C-t"),
+        "{edit:?}"
+    );
     assert!(dimmed(&s).is_empty(), "{:?}", dimmed(&s));
     // Вид раздела у записей: от него зависит, можно ли скрыть группу (`D`).
-    assert!(c.entries.iter().all(|e| e.kind == view::SectionKind::Cursor));
-    assert!(section(&s, "motion").unwrap().entries.iter().all(|e| e.kind == view::SectionKind::Group));
+    assert!(c
+        .entries
+        .iter()
+        .all(|e| e.kind == view::SectionKind::Cursor));
+    assert!(section(&s, "motion")
+        .unwrap()
+        .entries
+        .iter()
+        .all(|e| e.kind == view::SectionKind::Group));
 }
 
 #[test]
 fn cursor_section_end_of_line_backward_commands() {
     let s = full_sections_at(8, "echo abc");
     let c = section(&s, CURSOR_TITLE).unwrap();
-    assert_eq!(keys_in(c), vec!["C-a", "C-b", "M-b", "BS", "C-w", "C-u", "C-t"]);
+    assert_eq!(
+        keys_in(c),
+        vec!["C-a", "C-b", "M-b", "BS", "C-w", "C-u", "C-t"]
+    );
     let mut d = dimmed(&s);
     d.sort();
     assert_eq!(d, vec!["C-d", "C-e", "C-f", "C-k", "M-d", "M-f", "end"]);

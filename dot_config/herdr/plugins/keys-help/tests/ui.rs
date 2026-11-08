@@ -35,8 +35,13 @@ fn sec(title: Option<&str>, items: &[(&str, &str)]) -> Section {
 
 /// `n` записей `k0..` в одной группе.
 fn numbered(n: usize) -> Vec<Section> {
-    let items: Vec<(String, String)> = (0..n).map(|i| (format!("k{i}"), format!("действие {i}"))).collect();
-    let refs: Vec<(&str, &str)> = items.iter().map(|(a, b)| (a.as_str(), b.as_str())).collect();
+    let items: Vec<(String, String)> = (0..n)
+        .map(|i| (format!("k{i}"), format!("действие {i}")))
+        .collect();
+    let refs: Vec<(&str, &str)> = items
+        .iter()
+        .map(|(a, b)| (a.as_str(), b.as_str()))
+        .collect();
     vec![sec(Some("группа"), &refs)]
 }
 
@@ -103,12 +108,20 @@ fn entries_flow_top_to_bottom_then_next_column() {
         let mut prev = (0usize, 0usize);
         for (i, p) in lay.pos.iter().enumerate() {
             if i > 0 {
-                assert!(*p > prev, "w={w}: порядок записей {i} нарушен {prev:?} -> {p:?}");
+                assert!(
+                    *p > prev,
+                    "w={w}: порядок записей {i} нарушен {prev:?} -> {p:?}"
+                );
             }
             prev = *p;
         }
         // Все записи на месте ровно по разу.
-        let n = lay.columns.iter().flatten().filter(|c| matches!(c, Cell::Entry(_))).count();
+        let n = lay
+            .columns
+            .iter()
+            .flatten()
+            .filter(|c| matches!(c, Cell::Entry(_)))
+            .count();
         assert_eq!(n, 30);
     }
 }
@@ -148,7 +161,12 @@ fn group_headers_present_and_pinned_title() {
 fn empty_sections_skipped() {
     let s = vec![sec(Some("пусто"), &[]), sec(Some("g"), &[("a", "x")])];
     let lay = layout(&s, 90);
-    let n = lay.columns.iter().flatten().filter(|c| matches!(c, Cell::Header(_))).count();
+    let n = lay
+        .columns
+        .iter()
+        .flatten()
+        .filter(|c| matches!(c, Cell::Header(_)))
+        .count();
     assert_eq!(n, 1);
     assert_eq!(flatten(&s).len(), 1);
 }
@@ -158,10 +176,17 @@ fn render_truncates_long_description_with_ellipsis() {
     let long = "очень длинное описание действия которое не помещается в ячейку";
     let s = vec![sec(Some("g"), &[("C-x", long), ("q", "выйти")])];
     let mut st = UiState::default();
-    let hd = Header { ctx: "demo.main".into(), target: "1-2".into(), message: None };
+    let hd = Header {
+        ctx: "demo.main".into(),
+        target: "1-2".into(),
+        message: None,
+    };
     let lines = ui::render(&mut st, &hd, &s, 150, 20);
     let plain: Vec<String> = lines.iter().map(|l| strip_ansi(l)).collect();
-    let row = plain.iter().find(|l| l.contains("C-x")).expect("строка клавиши");
+    let row = plain
+        .iter()
+        .find(|l| l.contains("C-x"))
+        .expect("строка клавиши");
     assert!(row.contains('…'), "{row:?}");
     assert!(!row.contains("ячейку"), "описание не обрезано: {row:?}");
     assert!(row.contains("выйти"), "короткое описание обрезано: {row:?}");
@@ -174,10 +199,17 @@ fn render_truncates_long_description_with_ellipsis() {
 fn render_header_has_context_and_target() {
     let s = numbered(3);
     let mut st = UiState::default();
-    let hd = Header { ctx: "ble.vi_nmap".into(), target: "w1-3".into(), message: Some("ошибка конфигурации".into()) };
+    let hd = Header {
+        ctx: "ble.vi_nmap".into(),
+        target: "w1-3".into(),
+        message: Some("ошибка конфигурации".into()),
+    };
     let lines = ui::render(&mut st, &hd, &s, 120, 10);
     let head = strip_ansi(&lines[0]);
-    assert!(head.contains("ble.vi_nmap") && head.contains("w1-3"), "{head}");
+    assert!(
+        head.contains("ble.vi_nmap") && head.contains("w1-3"),
+        "{head}"
+    );
     assert!(head.contains("ошибка конфигурации"), "{head}");
 }
 
@@ -203,8 +235,14 @@ fn render_column_count_matches_width() {
 fn parse_input_keys() {
     assert_eq!(parse_input(b"\x1b"), vec![Key::Esc]);
     assert_eq!(parse_input(b"\x1b[27u"), vec![Key::Esc]);
-    assert_eq!(parse_input(b"\x1b[A\x1b[B\x1b[C\x1b[D"), vec![Key::Up, Key::Down, Key::Right, Key::Left]);
-    assert_eq!(parse_input(b"jK\r"), vec![Key::Char('j'), Key::Char('K'), Key::Enter]);
+    assert_eq!(
+        parse_input(b"\x1b[A\x1b[B\x1b[C\x1b[D"),
+        vec![Key::Up, Key::Down, Key::Right, Key::Left]
+    );
+    assert_eq!(
+        parse_input(b"jK\r"),
+        vec![Key::Char('j'), Key::Char('K'), Key::Enter]
+    );
     assert_eq!(parse_input(b"\x7f"), vec![Key::Backspace]);
     assert_eq!(parse_input("и".as_bytes()), vec![Key::Char('и')]);
 }
@@ -226,14 +264,20 @@ fn hjkl_on_layouts_3_4_5() {
         // h/l: ячейка той же строки в соседней колонке.
         for i in 0..es.len() {
             let (c, r) = lay.pos[i];
-            let mut st = UiState { selected: i, ..Default::default() };
+            let mut st = UiState {
+                selected: i,
+                ..Default::default()
+            };
             st.handle(Key::Char('l'), &lay, &es);
             if c + 1 < lay.columns.len() && lay.columns[c + 1].len() > r {
                 // Соседняя колонка имеет строку r — запись или заголовок.
                 if let Some(Cell::Entry(j)) = lay.columns[c + 1].get(r) {
                     assert_eq!(st.selected, *j, "w={w} i={i}");
                     assert_eq!(lay.pos[st.selected], (c + 1, r));
-                    let mut back = UiState { selected: *j, ..Default::default() };
+                    let mut back = UiState {
+                        selected: *j,
+                        ..Default::default()
+                    };
                     back.handle(Key::Char('h'), &lay, &es);
                     assert_eq!(lay.pos[back.selected].0, c, "w={w}: h не вернул колонку");
                     assert_eq!(back.selected, i, "w={w}: h не вернул ту же строку");
@@ -246,7 +290,10 @@ fn hjkl_on_layouts_3_4_5() {
         assert_eq!(st.selected, 0);
         // l из последней колонки остаётся на месте.
         let last = es.len() - 1;
-        let mut st = UiState { selected: last, ..Default::default() };
+        let mut st = UiState {
+            selected: last,
+            ..Default::default()
+        };
         st.handle(Key::Char('l'), &lay, &es);
         assert_eq!(lay.pos[st.selected].0, lay.pos[last].0, "w={w}");
 
@@ -269,9 +316,14 @@ fn spec_scenario_h_from_first_of_second_column() {
     for w in [150usize, 200, 250] {
         let (s, lay) = setup(30, w);
         let es = flatten(&s);
-        let first_of_col1 = (0..es.len()).find(|&i| lay.pos[i].0 == 1).expect("вторая колонка");
+        let first_of_col1 = (0..es.len())
+            .find(|&i| lay.pos[i].0 == 1)
+            .expect("вторая колонка");
         let first_of_col0 = (0..es.len()).find(|&i| lay.pos[i].0 == 0).unwrap();
-        let mut st = UiState { selected: first_of_col1, ..Default::default() };
+        let mut st = UiState {
+            selected: first_of_col1,
+            ..Default::default()
+        };
         st.handle(Key::Char('h'), &lay, &es);
         assert_eq!(st.selected, first_of_col0, "w={w}");
     }
@@ -292,7 +344,10 @@ fn g_and_big_g() {
 fn q_returns_focus() {
     let (s, lay) = setup(3, 90);
     let es = flatten(&s);
-    assert_eq!(UiState::default().handle(Key::Char('q'), &lay, &es), Action::Focus);
+    assert_eq!(
+        UiState::default().handle(Key::Char('q'), &lay, &es),
+        Action::Focus
+    );
 }
 
 #[test]
@@ -301,7 +356,13 @@ fn arrows_work_like_hjkl() {
     let es = flatten(&s);
     let mut a = UiState::default();
     let mut b = UiState::default();
-    for (k1, k2) in [(Key::Down, 'j'), (Key::Down, 'j'), (Key::Right, 'l'), (Key::Up, 'k'), (Key::Left, 'h')] {
+    for (k1, k2) in [
+        (Key::Down, 'j'),
+        (Key::Down, 'j'),
+        (Key::Right, 'l'),
+        (Key::Up, 'k'),
+        (Key::Left, 'h'),
+    ] {
         a.handle(k1, &lay, &es);
         b.handle(Key::Char(k2), &lay, &es);
         assert_eq!(a.selected, b.selected);
@@ -316,8 +377,22 @@ fn type_text(st: &mut UiState, text: &str, lay: &ui::Layout, es: &[&Shown]) {
 
 fn history_table() -> Vec<Section> {
     vec![
-        sec(Some("history"), &[("C-r", "поиск по истории назад"), ("M-h", "история (fzf)"), ("C-p", "запись выше")]),
-        sec(Some("edit"), &[("C-k", "вырезать до конца"), ("x", "удалить символ"), ("h", "влево")]),
+        sec(
+            Some("history"),
+            &[
+                ("C-r", "поиск по истории назад"),
+                ("M-h", "история (fzf)"),
+                ("C-p", "запись выше"),
+            ],
+        ),
+        sec(
+            Some("edit"),
+            &[
+                ("C-k", "вырезать до конца"),
+                ("x", "удалить символ"),
+                ("h", "влево"),
+            ],
+        ),
     ]
 }
 
@@ -338,7 +413,10 @@ fn keys_of(s: &[Section]) -> Vec<String> {
 #[test]
 fn search_by_description_case_insensitive_selects_first() {
     let s = history_table();
-    let mut st = UiState { selected: 5, ..Default::default() };
+    let mut st = UiState {
+        selected: 5,
+        ..Default::default()
+    };
     let ss = search(&mut st, &s, "ИСТОР");
     assert_eq!(st.input, None);
     assert_eq!(st.search.as_deref(), Some("ИСТОР"));
@@ -381,7 +459,10 @@ fn n_and_big_n_cycle() {
 #[test]
 fn esc_resets_search_and_highlight() {
     let s = history_table();
-    let mut st = UiState { selected: 4, ..Default::default() };
+    let mut st = UiState {
+        selected: 4,
+        ..Default::default()
+    };
     let ss = search(&mut st, &s, "истор");
     let hd = Header::default();
     let with = ui::render(&mut st, &hd, &ss, 200, 20).join("\n");
@@ -432,7 +513,11 @@ fn search_status_line_shows_position() {
     let mut st = UiState::default();
     let ss = search(&mut st, &s, "истор");
     let lines = ui::render(&mut st, &Header::default(), &ss, 200, 20);
-    assert!(strip_ansi(&lines[1]).contains("[1/2]"), "{:?}", strip_ansi(&lines[1]));
+    assert!(
+        strip_ansi(&lines[1]).contains("[1/2]"),
+        "{:?}",
+        strip_ansi(&lines[1])
+    );
 }
 
 // ---- подробности ----
@@ -465,7 +550,11 @@ fn details_window_shows_all_fields_and_closes() {
     let mut st = UiState::default();
     assert_eq!(st.handle(Key::Char('K'), &lay, &es), Action::Redraw);
     assert!(st.details.is_some());
-    let hd = Header { ctx: "ble.vi_imap".into(), target: "1-1".into(), message: None };
+    let hd = Header {
+        ctx: "ble.vi_imap".into(),
+        target: "1-1".into(),
+        message: None,
+    };
     let text = ui::render(&mut st, &hd, &s, 120, 20)
         .iter()
         .map(|l| strip_ansi(l))
@@ -489,7 +578,10 @@ fn details_window_shows_all_fields_and_closes() {
     assert_eq!(st.handle(Key::Esc, &lay, &es), Action::Redraw);
     assert!(st.details.is_none());
     let table = ui::render(&mut st, &hd, &s, 120, 20).join("\n");
-    assert!(!strip_ansi(&table).contains("ble-bind -m"), "видна не таблица");
+    assert!(
+        !strip_ansi(&table).contains("ble-bind -m"),
+        "видна не таблица"
+    );
 }
 
 #[test]
@@ -497,7 +589,10 @@ fn details_lines_wrap_to_width() {
     let s = detailed();
     let es = flatten(&s);
     let lines = ui::details_lines(es[0], "ble.vi_imap", 30);
-    assert!(lines.iter().all(|l| width_of(&strip_ansi(l)) <= 30), "{lines:?}");
+    assert!(
+        lines.iter().all(|l| width_of(&strip_ansi(l)) <= 30),
+        "{lines:?}"
+    );
 }
 
 // ---- клавиши навигации и скрытия не пересекаются ----
@@ -516,11 +611,23 @@ fn nav_and_hide_keys_disjoint() {
             "{c} вызвала скрытие"
         );
     }
-    let mut st = UiState { selected: 1, ..Default::default() };
-    assert_eq!(st.handle(Key::Char('d'), &lay, &es), Action::Hide("b".into()));
-    assert_eq!(st.handle(Key::Char('D'), &lay, &es), Action::HideGroup("grp".into()));
+    let mut st = UiState {
+        selected: 1,
+        ..Default::default()
+    };
+    assert_eq!(
+        st.handle(Key::Char('d'), &lay, &es),
+        Action::Hide("b".into())
+    );
+    assert_eq!(
+        st.handle(Key::Char('D'), &lay, &es),
+        Action::HideGroup("grp".into())
+    );
     assert_eq!(st.handle(Key::Char('u'), &lay, &es), Action::Undo);
     // Клавиши скрытия не двигают выбор.
     assert_eq!(st.selected, 1);
-    assert_eq!(UiState::default().handle(Key::Esc, &lay, &es), Action::Redraw);
+    assert_eq!(
+        UiState::default().handle(Key::Esc, &lay, &es),
+        Action::Redraw
+    );
 }

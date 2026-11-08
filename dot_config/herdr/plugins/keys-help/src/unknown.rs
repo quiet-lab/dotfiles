@@ -15,7 +15,9 @@ pub struct Unknown {
 
 /// Увеличивает счётчик команды и ставит дату (`ГГГГ-ММ-ДД`).
 pub fn bump_text(text: &str, command: &str, date: &str) -> Result<String, String> {
-    let mut doc: DocumentMut = text.parse().map_err(|e: toml_edit::TomlError| e.to_string())?;
+    let mut doc: DocumentMut = text
+        .parse()
+        .map_err(|e: toml_edit::TomlError| e.to_string())?;
     if !doc.contains_key("program") {
         let mut t = Table::new();
         t.set_implicit(true);
@@ -38,7 +40,9 @@ pub fn bump_text(text: &str, command: &str, date: &str) -> Result<String, String
 
 /// Удаляет команду; второй элемент — была ли она в файле.
 pub fn remove_text(text: &str, command: &str) -> Result<(String, bool), String> {
-    let mut doc: DocumentMut = text.parse().map_err(|e: toml_edit::TomlError| e.to_string())?;
+    let mut doc: DocumentMut = text
+        .parse()
+        .map_err(|e: toml_edit::TomlError| e.to_string())?;
     let removed = doc
         .get_mut("program")
         .and_then(|p| p.as_table_mut())
@@ -135,7 +139,9 @@ pub fn record(path: &Path, command: &str, date: &str) -> Result<(), String> {
 
 /// Удаляет команду, получившую таблицу.
 pub fn forget(path: &Path, command: &str) -> Result<(), String> {
-    if !std::fs::read_to_string(path).is_ok_and(|t| list_text(&t).iter().any(|u| u.command == command)) {
+    if !std::fs::read_to_string(path)
+        .is_ok_and(|t| list_text(&t).iter().any(|u| u.command == command))
+    {
         return Ok(());
     }
     locked_update(path, |t| {

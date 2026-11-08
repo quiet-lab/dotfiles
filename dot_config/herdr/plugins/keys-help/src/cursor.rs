@@ -60,7 +60,11 @@ impl Pos {
         let before = &chars[..point];
         let row = before.iter().filter(|&&c| c == '\n').count();
         let rows = chars.iter().filter(|&&c| c == '\n').count() + 1;
-        let line_start = before.iter().rposition(|&c| c == '\n').map(|i| i + 1).unwrap_or(0);
+        let line_start = before
+            .iter()
+            .rposition(|&c| c == '\n')
+            .map(|i| i + 1)
+            .unwrap_or(0);
         let line_end = chars[point..]
             .iter()
             .position(|&c| c == '\n')
@@ -149,8 +153,17 @@ impl When {
         let mut terms = Vec::new();
         for part in text.split("&&") {
             let p = part.trim();
-            let ops = [("<=", Op::Le), (">=", Op::Ge), ("==", Op::Eq), ("!=", Op::Ne), ("<", Op::Lt), (">", Op::Gt)];
-            let found = ops.iter().find_map(|(t, op)| p.find(t).map(|i| (i, *t, *op)));
+            let ops = [
+                ("<=", Op::Le),
+                (">=", Op::Ge),
+                ("==", Op::Eq),
+                ("!=", Op::Ne),
+                ("<", Op::Lt),
+                (">", Op::Gt),
+            ];
+            let found = ops
+                .iter()
+                .find_map(|(t, op)| p.find(t).map(|i| (i, *t, *op)));
             let Some((i, t, op)) = found else {
                 return Err(format!("{what}: нет сравнения в «{p}»"));
             };
@@ -252,7 +265,13 @@ pub fn parse_options(text: &str) -> Vec<Opt> {
                 .chars()
                 .take_while(|c| c.is_alphanumeric() || *c == '-' || *c == '_')
                 .collect();
-            if name.len() >= 2 && name.chars().nth(1).is_some_and(|c| c.is_alphanumeric() || c == '-') && name != "--" {
+            if name.len() >= 2
+                && name
+                    .chars()
+                    .nth(1)
+                    .is_some_and(|c| c.is_alphanumeric() || c == '-')
+                && name != "--"
+            {
                 names.push(name);
             }
         }
@@ -295,7 +314,13 @@ mod tests {
 
     #[test]
     fn line_file() {
-        assert_eq!(parse_line("3\nls -l"), Some(Line { point: 3, text: "ls -l".into() }));
+        assert_eq!(
+            parse_line("3\nls -l"),
+            Some(Line {
+                point: 3,
+                text: "ls -l".into()
+            })
+        );
         assert_eq!(parse_line("0\na\nb").map(|l| l.text), Some("a\nb".into()));
         assert_eq!(parse_line("x\n"), None);
     }
@@ -303,13 +328,19 @@ mod tests {
     #[test]
     fn position_vars() {
         let p = pos(4, "git sta");
-        assert_eq!((p.col, p.line_len, p.word.as_str(), p.word_index), (4, 7, "", 1));
+        assert_eq!(
+            (p.col, p.line_len, p.word.as_str(), p.word_index),
+            (4, 7, "", 1)
+        );
         let p = pos(7, "git sta");
         assert_eq!((p.word.as_str(), p.word_index, p.blank), ("sta", 1, false));
         let p = pos(2, "gs");
         assert_eq!((p.word.as_str(), p.word_index), ("gs", 0));
         let p = pos(6, "ab\ncdef\ng");
-        assert_eq!((p.row, p.rows, p.col, p.line_len, p.var("rows_below")), (1, 3, 3, 4, Some(1)));
+        assert_eq!(
+            (p.row, p.rows, p.col, p.line_len, p.var("rows_below")),
+            (1, 3, 3, 4, Some(1))
+        );
         let p = pos(0, "  ");
         assert!(p.blank);
         let p = pos(9, "ls | gre");
@@ -322,7 +353,9 @@ mod tests {
         assert!(w.eval(&pos(1, "ab")));
         assert!(!w.eval(&pos(0, "ab")));
         assert!(!w.eval(&pos(2, "ab")));
-        assert!(When::parse("rows_below > 0", "t").expect("w").eval(&pos(0, "a\nb")));
+        assert!(When::parse("rows_below > 0", "t")
+            .expect("w")
+            .eval(&pos(0, "a\nb")));
         assert!(When::parse("colx > 0", "t").is_err());
         assert!(When::parse("col", "t").is_err());
     }
