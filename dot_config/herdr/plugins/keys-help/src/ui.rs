@@ -72,6 +72,14 @@ fn fill(sections: &[Section], rows: usize) -> Vec<Vec<Cell>> {
 
 /// Раскладка: записи сверху вниз по колонкам, колонки равной высоты.
 pub fn layout(sections: &[Section], width: usize) -> Layout {
+    layout_rows(sections, width, usize::MAX)
+}
+
+/// Раскладка с высотой колонки не больше `max_rows` (видимые строки таблицы):
+/// если записи не помещаются в `ncols` колонок этой высоты, колонок становится
+/// больше, и экран сдвигается по колонкам вслед за выбором. Так первые
+/// разделы (курсор, дополнение, происхождения) видны на первом экране.
+pub fn layout_rows(sections: &[Section], width: usize, max_rows: usize) -> Layout {
     let ncols = columns_for_width(width);
     let col_width = (width / ncols).max(1);
     let total: usize = sections
@@ -79,10 +87,11 @@ pub fn layout(sections: &[Section], width: usize) -> Layout {
         .filter(|s| !s.entries.is_empty())
         .map(|s| s.entries.len() + 1)
         .sum();
-    let mut rows = total.div_ceil(ncols).max(1);
+    let max_rows = max_rows.max(2);
+    let mut rows = total.div_ceil(ncols).max(1).min(max_rows);
     let columns = loop {
         let c = fill(sections, rows);
-        if c.len() <= ncols {
+        if c.len() <= ncols || rows >= max_rows {
             break c;
         }
         rows += 1;
@@ -235,6 +244,14 @@ pub struct UiState {
     pub details: Option<usize>,
     /// Выбор до поиска: Esc возвращает его вместе с прежним видом.
     pub saved: Option<usize>,
+    /// Первая видимая колонка (колонок больше, чем помещается на экран).
+    pub left: usize,
+}
+
+/// Строк таблицы на экране высотой `height`: без шапки и строки поиска.
+pub fn table_rows(st: &UiState, height: usize) -> usize {
+    let extra = usize::from(st.input.is_some() || st.search.is_some());
+    height.saturating_sub(1 + extra)
 }
 
 /// Поиск (D16): вместо таблицы — один раздел совпадений по убыванию
@@ -572,7 +589,7 @@ pub fn render(
     height: usize,
 ) -> Vec<String> {
     let entries = flatten(sections);
-    let lay = layout(sections, width);
+    let lay = layout_rows(sections, width, table_rows(st, height));
     let mut lines = Vec::new();
     let hint = "/ поиск  K подробно  d/D скрыть  u вернуть  q назад";
     let mut head = format!("{BOLD}{}{RESET} · {}", header.ctx, header.target);
@@ -610,7 +627,13 @@ pub fn render(
         }
         return lines;
     }
-    let (_, srow) = lay.pos[st.selected];
+    let (scol, srow) = lay.pos[st.selected];
+    if scol < st.left {
+        st.left = scol;
+    } else if scol >= st.left + lay.ncols {
+        st.left = scol + 1 - lay.ncols;
+    }
+    st.left = st.left.min(lay.columns.len().saturating_sub(lay.ncols));
     if srow < st.top {
         st.top = srow;
     } else if avail > 0 && srow >= st.top + avail {
@@ -634,7 +657,7 @@ pub fn render(
         .collect();
     for row in st.top..(st.top + avail).min(lay.rows) {
         let mut line = String::new();
-        for (ci, col) in lay.columns.iter().enumerate() {
+        for (ci, col) in lay.columns.iter().enumerate().skip(st.left).take(lay.ncols) {
             let cw = lay.col_width;
             match col.get(row) {
                 Some(Cell::Entry(i)) => {
@@ -726,6 +749,28 @@ mod tests {
         assert_eq!(st.selected, 2);
         assert_eq!(st.handle(Key::Char('d'), &lay, &entries), Action::Hide("xx".into()));
         assert_eq!(st.handle(Key::Char('q'), &lay, &entries), Action::Focus);
+    }
+
+    #[test]
+    fn short_panel_pages_columns() {
+        // 30 записей, 3 колонки, 6 видимых строк: колонки высотой 6, их больше трёх.
+        let keys: Vec<String> = (0..30).map(|i| format!("k{i}")).collect();
+        let refs: Vec<&str> = keys.iter().map(String::as_str).collect();
+        let s = vec![sec("a", &refs[..4]), sec("b", &refs[4..])];
+        let lay = layout_rows(&s, 150, 6);
+        assert_eq!((lay.ncols, lay.rows), (3, 6));
+        assert!(lay.columns.len() > 3);
+        // Второй раздел начинается на первом экране.
+        assert!(lay.pos[4].0 < 3);
+        let mut st = UiState { selected: 29, ..Default::default() };
+        let lines = render(&mut st, &Header::default(), &s, 150, 7);
+        assert_eq!(lines.len(), 7);
+        assert!(st.left > 0, "экран сдвинут к выбранной колонке");
+        assert!(lines.iter().any(|l| l.contains("k29")));
+        st.selected = 0;
+        let lines = render(&mut st, &Header::default(), &s, 150, 7);
+        assert_eq!(st.left, 0);
+        assert!(lines.iter().any(|l| l.contains("k0\x1b")), "{lines:?}");
     }
 
     #[test]

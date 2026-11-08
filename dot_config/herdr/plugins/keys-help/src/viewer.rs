@@ -1007,8 +1007,8 @@ fn event_loop(v: &mut Viewer) -> Result<(), String> {
                     let sections = v.sections();
                     let entries_owned: Vec<view::Shown> = ui::flatten(&sections).into_iter().cloned().collect();
                     let entries: Vec<&view::Shown> = entries_owned.iter().collect();
-                    let (w, _) = term::size();
-                    let lay = ui::layout(&sections, w);
+                    let (w, h) = term::size();
+                    let lay = ui::layout_rows(&sections, w, ui::table_rows(&v.ui, h));
                     for k in ui::parse_input(&buf[..r as usize]) {
                         let a = v.ui.handle(k, &lay, &entries);
                         v.handle_action(a);
