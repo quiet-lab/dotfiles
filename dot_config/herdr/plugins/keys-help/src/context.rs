@@ -18,6 +18,19 @@ impl Proc {
     }
 }
 
+/// Родитель процесса, если процесс — его копия после `fork` без `exec`
+/// (подоболочка: тот же родитель по `/proc/<pid>/stat` и та же командная
+/// строка). Подоболочка ble.sh, ненадолго занявшая передний план (отрисовка
+/// после изменения размера панели), считается своей оболочкой.
+pub fn fork_parent_in(proc_root: &std::path::Path, pid: i32) -> Option<i32> {
+    let stat = std::fs::read_to_string(proc_root.join(pid.to_string()).join("stat")).ok()?;
+    // Поле 4 после имени в скобках: «pid (comm) state ppid …».
+    let ppid: i32 = stat.rsplit_once(')')?.1.split_whitespace().nth(1)?.parse().ok()?;
+    let cmd = |p: i32| std::fs::read(proc_root.join(p.to_string()).join("cmdline")).ok();
+    let mine = cmd(pid)?;
+    (!mine.is_empty() && cmd(ppid).as_deref() == Some(mine.as_slice())).then_some(ppid)
+}
+
 /// Признаки цели.
 pub struct Facts<'a> {
     pub active: Option<&'a Record>,
@@ -293,6 +306,27 @@ pub fn from_ctx(manifests: &[Manifest], ctx: &str) -> Option<Resolution> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn fork_parent_by_same_cmdline() {
+        let root = std::env::temp_dir().join(format!("kh-proc-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let mk = |pid: i32, ppid: i32, cmd: &[u8]| {
+            let d = root.join(pid.to_string());
+            std::fs::create_dir_all(&d).expect("dir");
+            std::fs::write(d.join("stat"), format!("{pid} (bash) S {ppid} {pid} 1 0")).expect("stat");
+            std::fs::write(d.join("cmdline"), cmd).expect("cmdline");
+        };
+        mk(10, 1, b"bash\0-i\0");
+        mk(11, 10, b"bash\0-i\0");
+        mk(12, 10, b"bash\0script.sh\0");
+        mk(13, 10, b"nvim\0");
+        assert_eq!(fork_parent_in(&root, 11), Some(10), "подоболочка");
+        assert_eq!(fork_parent_in(&root, 12), None, "сценарий — свой процесс");
+        assert_eq!(fork_parent_in(&root, 13), None);
+        assert_eq!(fork_parent_in(&root, 99), None);
+        let _ = std::fs::remove_dir_all(&root);
+    }
     use crate::channel::parse_record;
     use std::path::Path;
 

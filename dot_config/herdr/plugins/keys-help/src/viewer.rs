@@ -387,7 +387,11 @@ impl Viewer {
         let procs = str_list(&info, "foreground_processes")
             .iter()
             .map(|p| Proc {
-                pid: p.get("pid").and_then(Value::as_i64).unwrap_or(0) as i32,
+                // Подоболочка (fork без exec) считается своей оболочкой.
+                pid: {
+                    let pid = p.get("pid").and_then(Value::as_i64).unwrap_or(0) as i32;
+                    context::fork_parent_in(std::path::Path::new("/proc"), pid).unwrap_or(pid)
+                },
                 name: s(p, "name").unwrap_or("").to_string(),
                 argv0: p
                     .get("argv")
