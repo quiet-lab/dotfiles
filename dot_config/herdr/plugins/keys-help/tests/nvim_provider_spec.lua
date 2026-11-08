@@ -69,6 +69,39 @@ check(
   "dump: файл определения"
 )
 
+-- Случай --embed: pid записи — родитель (клиент TUI), файл удаляется на VimLeavePre.
+do
+  local lua_dir = vim.fn.fnamemodify(debug.getinfo(kh.setup, "S").source:sub(2), ":h")
+  local pane = "w2:p2"
+  local child = vim.fn.jobstart({ "nvim", "--embed", "--headless", "--clean", "-u", "NONE" }, {
+    rpc = true,
+    env = { HERDR_PANE_ID = pane },
+  })
+  check(child > 0, "embed: не запустился")
+  if child > 0 then
+    local code = [[package.path = ... .. "/?.lua;" .. package.path
+      require("keys_help").setup()
+      return vim.uv.os_getpid()]]
+    local child_pid = vim.rpcrequest(child, "nvim_exec_lua", code, { lua_dir })
+    local epath = vim.env.XDG_RUNTIME_DIR
+      .. "/herdr-keys-help/panes/"
+      .. pane
+      .. "/nvim-"
+      .. vim.uv.os_getpid()
+      .. ".json"
+    local f = io.open(epath, "r")
+    check(f ~= nil, "embed: нет записи с pid родителя")
+    if f then
+      local erec = vim.json.decode(f:read("*a"))
+      f:close()
+      check(erec.pid == vim.uv.os_getpid() and erec.pid ~= child_pid, "embed: pid записи не родитель")
+    end
+    pcall(vim.rpcrequest, child, "nvim_exec_autocmds", "VimLeavePre", {})
+    check(io.open(epath, "r") == nil, "embed: запись не удалена")
+    vim.fn.jobstop(child)
+  end
+end
+
 -- Выход: запись удаляется.
 vim.api.nvim_exec_autocmds("VimLeavePre", {})
 check(read() == nil, "запись не удалена на VimLeavePre")

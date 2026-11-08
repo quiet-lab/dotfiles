@@ -17,6 +17,15 @@ local MODE_NAMES = {
   t = "terminal",
 }
 
+-- Pid процесса переднего плана панели. В TUI Lua работает в дочернем `nvim --embed`
+-- (сервер), а передний план панели занимает клиент — его родитель; ядро следит за этим pid.
+function M.foreground_pid()
+  if vim.tbl_contains(vim.v.argv or {}, "--embed") then
+    return vim.uv.os_getppid()
+  end
+  return vim.uv.os_getpid()
+end
+
 local last_mode = nil
 local record_path = nil
 
@@ -50,7 +59,7 @@ local function write_record(mode)
     v = 1,
     program = "nvim",
     mode = mode,
-    pid = vim.uv.os_getpid(),
+    pid = M.foreground_pid(),
     state = "active",
     command = vim.NIL,
     table = vim.NIL,
@@ -143,7 +152,7 @@ function M.setup()
     return
   end
   vim.fn.mkdir(dir, "p")
-  record_path = dir .. "/nvim-" .. vim.uv.os_getpid() .. ".json"
+  record_path = dir .. "/nvim-" .. M.foreground_pid() .. ".json"
   local group = vim.api.nvim_create_augroup("keys_help", { clear = true })
   vim.api.nvim_create_autocmd({ "VimEnter", "ModeChanged" }, {
     group = group,
