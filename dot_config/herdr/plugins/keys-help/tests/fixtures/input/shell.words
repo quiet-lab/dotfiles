@@ -1,0 +1,5 @@
+sabbrev	gs	git status --short
+sabbrev	gco	git checkout
+alias	ll	ls -l
+function	kh_func	
+alias	khal	kh-tool --x
