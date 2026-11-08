@@ -25,3 +25,7 @@ ble-bind -m vi_nmap -x 'M-up' '__atuin_history --shell-up-key-binding'
 # television: функции даёт tv init в .bashrc, клавиши свои
 ble-bind -m vi_imap -x 'M-t' tv_shell_history
 ble-bind -m vi_imap -x 'C-M-t' tv_smart_autocomplete
+
+# keys-help: запись контекста ble.sh для подсказки клавиш в панели herdr
+# (вне herdr модуль ничего не делает)
+[[ -f ~/.config/blesh/keys-help.bash ]] && source -- ~/.config/blesh/keys-help.bash
