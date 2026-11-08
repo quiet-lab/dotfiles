@@ -1,0 +1,1336 @@
+# Манифест ble.sh (D6 изменения herdr-keys-help): таблица клавиш каждого keymap строится
+# из живого дампа `ble-bind -m <keymap> -P`, который пишет модуль keys-help.bash оболочки
+# (поле `table` записи панели). Описания виджетов — короткие, по-русски (не длиннее
+# 32 символов); имя виджета остаётся в поле `action`, строка дампа — в `raw`.
+# Порядок правил `[[describe]]`, `[[group]]`, `[[origin]]` — порядок проверки: побеждает
+# первое совпавшее правило.
+
+program = "ble"
+priority = 100
+origins = ["readline", "ble", "fzf", "atuin", "tv", "user"]
+
+[detect]
+provider = "ble"
+
+[modes]
+default = "vi_imap"
+
+[[source]]
+modes = ["*"]
+kind = "regex"
+file = "{record.table}"
+# Строка дампа: ble-bind -m 'vi_imap' -f C-a beginning-of-line. Клавиша — слово shell
+# (кавычки, обратная косая черта), действие — остаток строки; пустые макросы (-s без
+# текста) не совпадают.
+regex = '''^ble-bind -m \S+ -(?P<type>[fxcs]) (?P<key>(?:'[^']*'|\\.|[^\s'\\])+) (?P<action>.+)$'''
+unquote = ["key", "action"]
+# Служебные виджеты (__attach__, __default__ и подобные), ввод символов, цифровые
+# аргументы, звонок и пустые действия, внутренние макросы atuin (C-x C-_ …).
+skip = { key = '^C-x C-_ ', action = '^(bell|nop|self-insert|batch-insert|bracketed-paste|(\S+/)?append-arg|(\S+/)?__\w+__|\S+/bell|\S+/self-insert|\S+/bracketed-paste|__atuin_widget_run \d+|\\C-x\\C-_.*)$' }
+on_conflict = "override"
+
+
+[[describe]]
+action = '^fzf-file-widget$'
+desc = "поиск файла (fzf)"
+
+[[describe]]
+action = '^fzf-history-widget$'
+desc = "история (fzf)"
+
+[[describe]]
+action = '^ble/util/eval-stdout "__fzf_cd__"$'
+desc = "переход в каталог (fzf)"
+
+[[describe]]
+action = '^__atuin_history --shell-up-key-binding$'
+desc = "история вверх (atuin)"
+
+[[describe]]
+action = '^__atuin_history$'
+desc = "история (atuin)"
+
+[[describe]]
+action = '^tv_shell_history$'
+desc = "история (television)"
+
+[[describe]]
+action = '^tv_smart_autocomplete$'
+desc = "умный выбор (television)"
+
+[[describe]]
+action = '^i\\eh$'
+desc = "история (fzf)"
+
+[[describe]]
+action = '^fg$'
+desc = "вернуть задание из фона"
+
+[[describe]]
+action = '^history-isearch-backward$'
+desc = "поиск по истории назад"
+
+[[describe]]
+action = '^history-isearch-forward$'
+desc = "поиск по истории вперёд"
+
+[[describe]]
+action = '^history-nsearch-backward-again$'
+desc = "повторить поиск назад"
+
+[[describe]]
+action = '^history-nsearch-backward$'
+desc = "поиск по началу назад"
+
+[[describe]]
+action = '^history-nsearch-forward-again$'
+desc = "повторить поиск вперёд"
+
+[[describe]]
+action = '^history-nsearch-forward$'
+desc = "поиск по началу вперёд"
+
+[[describe]]
+action = '^history-substring-search-backward$'
+desc = "поиск подстроки назад"
+
+[[describe]]
+action = '^history-substring-search-forward$'
+desc = "поиск подстроки вперёд"
+
+[[describe]]
+action = '^history-search-backward$'
+desc = "предыдущая по префиксу"
+
+[[describe]]
+action = '^history-search-forward$'
+desc = "следующая по префиксу"
+
+[[describe]]
+action = '^history-prev$'
+desc = "предыдущая команда"
+
+[[describe]]
+action = '^history-next$'
+desc = "следующая команда"
+
+[[describe]]
+action = '^(vi-command/)?history-beginning$'
+desc = "первая команда истории"
+
+[[describe]]
+action = '^(vi-command/)?history-end$'
+desc = "последняя команда истории"
+
+[[describe]]
+action = '^history-expand-line$'
+desc = "раскрыть подстановки истории"
+
+[[describe]]
+action = '^backward-line history$'
+desc = "предыдущая команда"
+
+[[describe]]
+action = '^forward-line history$'
+desc = "следующая команда"
+
+[[describe]]
+action = '^insert-last-argument$'
+desc = "последний аргумент"
+
+[[describe]]
+action = '^insert-nth-argument$'
+desc = "аргумент по номеру"
+
+[[describe]]
+action = '^dabbrev-expand$'
+desc = "дополнить из истории"
+
+[[describe]]
+action = '^magic-space$'
+desc = "пробел с подстановкой истории"
+
+[[describe]]
+action = '^magic-slash$'
+desc = "слэш с подстановкой"
+
+[[describe]]
+action = '^vi-command/commandline$'
+desc = "командная строка vi"
+
+[[describe]]
+action = '^vi-command/search-backward$'
+desc = "поиск в истории назад"
+
+[[describe]]
+action = '^vi-command/search-forward$'
+desc = "поиск в истории вперёд"
+
+[[describe]]
+action = '^vi-command/search-repeat$'
+desc = "повторить поиск"
+
+[[describe]]
+action = '^vi-command/search-reverse-repeat$'
+desc = "повторить поиск обратно"
+
+[[describe]]
+action = '^vi-command/search-word-backward$'
+desc = "искать слово назад"
+
+[[describe]]
+action = '^vi-command/search-word-forward$'
+desc = "искать слово вперёд"
+
+[[describe]]
+action = '^isearch/prev$'
+desc = "предыдущее совпадение"
+
+[[describe]]
+action = '^isearch/backward$'
+desc = "искать назад"
+
+[[describe]]
+action = '^isearch/forward$'
+desc = "искать вперёд"
+
+[[describe]]
+action = '^isearch/accept-line$'
+desc = "выполнить найденное"
+
+[[describe]]
+action = '^isearch/(cancel|exit-default)$'
+desc = "отменить поиск"
+
+[[describe]]
+action = '^isearch/exit$'
+desc = "выйти из поиска"
+
+[[describe]]
+action = '^isearch/self-insert$'
+desc = "ввести символ"
+
+[[describe]]
+action = '^nsearch/backward$'
+desc = "искать назад"
+
+[[describe]]
+action = '^nsearch/forward$'
+desc = "искать вперёд"
+
+[[describe]]
+action = '^nsearch/accept-line$'
+desc = "выполнить найденное"
+
+[[describe]]
+action = '^nsearch/(cancel|exit-default)$'
+desc = "отменить поиск"
+
+[[describe]]
+action = '^nsearch/exit$'
+desc = "выйти из поиска"
+
+[[describe]]
+action = '^complete insert_all'
+desc = "вставить все варианты"
+
+[[describe]]
+action = '^complete show_menu:context=filename$'
+desc = "меню файлов"
+
+[[describe]]
+action = '^complete show_menu:context=command$'
+desc = "меню команд"
+
+[[describe]]
+action = '^complete show_menu:context=variable$'
+desc = "меню переменных"
+
+[[describe]]
+action = '^complete show_menu:context=hostname$'
+desc = "меню хостов"
+
+[[describe]]
+action = '^complete show_menu:context=username$'
+desc = "меню пользователей"
+
+[[describe]]
+action = '^complete show_menu:context=glob$'
+desc = "меню по шаблону"
+
+[[describe]]
+action = '^complete show_menu$'
+desc = "показать меню вариантов"
+
+[[describe]]
+action = '^complete insert_braces$'
+desc = "вставить в фигурных скобках"
+
+[[describe]]
+action = '^complete context=filename$'
+desc = "дополнить файл"
+
+[[describe]]
+action = '^complete context=command$'
+desc = "дополнить команду"
+
+[[describe]]
+action = '^complete context=variable$'
+desc = "дополнить переменную"
+
+[[describe]]
+action = '^complete context=hostname$'
+desc = "дополнить хост"
+
+[[describe]]
+action = '^complete context=username$'
+desc = "дополнить пользователя"
+
+[[describe]]
+action = '^complete context=glob$'
+desc = "дополнить по шаблону"
+
+[[describe]]
+action = '^complete context=dynamic-history$'
+desc = "дополнить из истории"
+
+[[describe]]
+action = '^(vi_imap/)?complete$'
+desc = "дополнить"
+
+[[describe]]
+action = '^vi_imap/complete (insert_all|show_menu):context=glob$'
+desc = "дополнение по шаблону"
+
+[[describe]]
+action = '^(vi_imap/)?menu-complete context=filename$'
+desc = "меню файлов по кругу"
+
+[[describe]]
+action = '^(vi_imap/)?menu-complete context=command$'
+desc = "меню команд по кругу"
+
+[[describe]]
+action = '^(vi_imap/)?menu-complete context=variable$'
+desc = "меню переменных по кругу"
+
+[[describe]]
+action = '^(vi_imap/)?menu-complete context=hostname$'
+desc = "меню хостов по кругу"
+
+[[describe]]
+action = '^(vi_imap/)?menu-complete context=username$'
+desc = "меню пользователей по кругу"
+
+[[describe]]
+action = '^(vi_imap/)?menu-complete backward$'
+desc = "вариант назад по кругу"
+
+[[describe]]
+action = '^(vi_imap/)?menu-complete$'
+desc = "вариант вперёд по кругу"
+
+[[describe]]
+action = '^sabbrev-expand$'
+desc = "раскрыть сокращение"
+
+[[describe]]
+action = '^menu_complete/accept$'
+desc = "принять вариант"
+
+[[describe]]
+action = '^menu_complete/(cancel|exit-default)$'
+desc = "закрыть меню"
+
+[[describe]]
+action = '^menu_complete/switch-style \+$'
+desc = "следующий вид меню"
+
+[[describe]]
+action = '^menu_complete/switch-style -$'
+desc = "предыдущий вид меню"
+
+[[describe]]
+action = '^menu_complete/switch-style desc$'
+desc = "меню с описаниями"
+
+[[describe]]
+action = '^menu_complete/switch-style linewise$'
+desc = "меню по строкам"
+
+[[describe]]
+action = '^menu_complete/switch-style align-nowrap$'
+desc = "меню без переноса"
+
+[[describe]]
+action = '^menu_complete/switch-style dense-nowrap$'
+desc = "плотное меню"
+
+[[describe]]
+action = '^menu_complete/toggle-hidden$'
+desc = "скрытые варианты"
+
+[[describe]]
+action = '^menu/forward cyclic$'
+desc = "следующий вариант"
+
+[[describe]]
+action = '^menu/backward cyclic$'
+desc = "предыдущий вариант"
+
+[[describe]]
+action = '^menu/forward-line$'
+desc = "вариант ниже"
+
+[[describe]]
+action = '^menu/backward-line$'
+desc = "вариант выше"
+
+[[describe]]
+action = '^menu/forward-column$'
+desc = "вариант правее"
+
+[[describe]]
+action = '^menu/backward-column$'
+desc = "вариант левее"
+
+[[describe]]
+action = '^menu/forward-page$'
+desc = "страница вариантов вниз"
+
+[[describe]]
+action = '^menu/backward-page$'
+desc = "страница вариантов вверх"
+
+[[describe]]
+action = '^menu/beginning-of-page$'
+desc = "начало страницы"
+
+[[describe]]
+action = '^menu/end-of-page$'
+desc = "конец страницы"
+
+[[describe]]
+action = '^auto_complete/accept-line$'
+desc = "принять и выполнить"
+
+[[describe]]
+action = '^auto_complete/cancel(-default)?$'
+desc = "скрыть подсказку"
+
+[[describe]]
+action = '^auto_complete/@end insert$'
+desc = "принять подсказку"
+
+[[describe]]
+action = '^auto_complete/@end insert-cword$'
+desc = "принять часть подсказки"
+
+[[describe]]
+action = '^auto_complete/@end insert-word$'
+desc = "принять слово подсказки"
+
+[[describe]]
+action = '^auto_complete/insert$'
+desc = "принять подсказку"
+
+[[describe]]
+action = '^auto_complete/self-insert$'
+desc = "ввести символ"
+
+[[describe]]
+action = '^auto_complete/notify-enter$'
+desc = "показать подсказку"
+
+[[describe]]
+action = '^auto-complete-enter$'
+desc = "показать подсказку"
+
+[[describe]]
+action = '^(@marked )?backward-char$'
+desc = "символ влево"
+
+[[describe]]
+action = '^(@marked )?forward-char$'
+desc = "символ вправо"
+
+[[describe]]
+action = '^(@marked )?backward-cword$'
+desc = "слово влево"
+
+[[describe]]
+action = '^(@marked )?forward-cword$'
+desc = "слово вправо"
+
+[[describe]]
+action = '^(@marked )?backward-sword$'
+desc = "слово влево (по пробелам)"
+
+[[describe]]
+action = '^(@marked )?forward-sword$'
+desc = "слово вправо (по пробелам)"
+
+[[describe]]
+action = '^(@marked )?beginning-of-line$'
+desc = "в начало строки"
+
+[[describe]]
+action = '^(@marked )?end-of-line$'
+desc = "в конец строки"
+
+[[describe]]
+action = '^(@marked )?beginning-of-text$'
+desc = "в начало текста"
+
+[[describe]]
+action = '^(@marked )?end-of-text$'
+desc = "в конец текста"
+
+[[describe]]
+action = '^(@marked )?backward-line$'
+desc = "строка выше"
+
+[[describe]]
+action = '^(@marked )?forward-line$'
+desc = "строка ниже"
+
+[[describe]]
+action = '^(@marked )?non-space-beginning-of-line$'
+desc = "к первому непробелу"
+
+[[describe]]
+action = '^non-space-beginning-of-line$'
+desc = "к первому непробелу"
+
+[[describe]]
+action = '^character-search-forward$'
+desc = "к символу вперёд"
+
+[[describe]]
+action = '^character-search-backward$'
+desc = "к символу назад"
+
+[[describe]]
+action = '^exchange-point-and-mark$'
+desc = "поменять курсор и метку"
+
+[[describe]]
+action = '^(vi_smap/@nomarked )?vi-command/backward-char( wrap)?$'
+desc = "символ влево"
+
+[[describe]]
+action = '^(vi_smap/@nomarked )?vi-command/forward-char( wrap)?$'
+desc = "символ вправо"
+
+[[describe]]
+action = '^(vi_smap/@nomarked )?vi-command/backward-line$'
+desc = "строка выше"
+
+[[describe]]
+action = '^(vi_smap/@nomarked )?vi-command/forward-line$'
+desc = "строка ниже"
+
+[[describe]]
+action = '^(vi_smap/@nomarked )?vi-command/(backward-vword|backward-uword)$'
+desc = "слово назад"
+
+[[describe]]
+action = '^(vi_smap/@nomarked )?vi-command/(forward-vword|forward-uword)$'
+desc = "слово вперёд"
+
+[[describe]]
+action = '^vi-command/(backward-vword-end|backward-uword-end)$'
+desc = "конец слова назад"
+
+[[describe]]
+action = '^vi-command/(forward-vword-end|forward-uword-end)$'
+desc = "конец слова вперёд"
+
+[[describe]]
+action = '^(vi_smap/@nomarked )?vi-command/beginning-of-line$'
+desc = "в начало строки"
+
+[[describe]]
+action = '^vi-command/beginning-of-graphical-line$'
+desc = "в начало видимой строки"
+
+[[describe]]
+action = '^(vi_smap/@nomarked )?vi-command/forward-eol$'
+desc = "в конец строки"
+
+[[describe]]
+action = '^vi-command/graphical-forward-eol$'
+desc = "в конец видимой строки"
+
+[[describe]]
+action = '^(vi_smap/@nomarked )?vi-command/last-eol$'
+desc = "в конец текста"
+
+[[describe]]
+action = '^(vi_smap/@nomarked )?vi-command/first-nol$'
+desc = "в начало текста"
+
+[[describe]]
+action = '^(vi_smap/@nomarked )?vi-command/forward-first-non-space$'
+desc = "вниз к первому непробелу"
+
+[[describe]]
+action = '^accept-single-line-or vi-command/forward-first-non-space$'
+desc = "вниз или выполнить"
+
+[[describe]]
+action = '^vi-command/backward-first-non-space$'
+desc = "вверх к первому непробелу"
+
+[[describe]]
+action = '^vi-command/first-non-space(-forward)?$'
+desc = "к первому непробелу"
+
+[[describe]]
+action = '^vi-command/graphical-first-non-space$'
+desc = "к первому непробелу строки"
+
+[[describe]]
+action = '^vi-command/graphical-backward-line$'
+desc = "видимая строка выше"
+
+[[describe]]
+action = '^vi-command/graphical-forward-line$'
+desc = "видимая строка ниже"
+
+[[describe]]
+action = '^vi-command/last-non-space$'
+desc = "к последнему непробелу"
+
+[[describe]]
+action = '^vi-command/middle-of-graphical-line$'
+desc = "в середину строки"
+
+[[describe]]
+action = '^vi-command/nth-byte$'
+desc = "к байту по номеру"
+
+[[describe]]
+action = '^vi-command/nth-column$'
+desc = "к столбцу по номеру"
+
+[[describe]]
+action = '^vi-command/nth-line$'
+desc = "к строке по номеру"
+
+[[describe]]
+action = '^vi-command/nth-last-line$'
+desc = "к строке с конца"
+
+[[describe]]
+action = '^vi-command/goto-mark line$'
+desc = "к строке метки"
+
+[[describe]]
+action = '^vi-command/goto-mark$'
+desc = "к метке"
+
+[[describe]]
+action = '^vi-command/set-mark$'
+desc = "поставить метку"
+
+[[describe]]
+action = '^vi-command/search-backward-char(-prev)?$'
+desc = "к символу назад"
+
+[[describe]]
+action = '^vi-command/search-forward-char(-prev)?$'
+desc = "к символу вперёд"
+
+[[describe]]
+action = '^vi-command/search-char-repeat$'
+desc = "повторить поиск символа"
+
+[[describe]]
+action = '^vi-command/search-char-reverse-repeat$'
+desc = "повторить поиск обратно"
+
+[[describe]]
+action = '^vi-command/search-matchpair-or vi-command/percentage-line$'
+desc = "к парной скобке"
+
+[[describe]]
+action = '^vi-command/text-object-inner$'
+desc = "внутренний объект"
+
+[[describe]]
+action = '^vi-command/text-object-outer$'
+desc = "внешний объект"
+
+[[describe]]
+action = '^vi-command/previous-visual-area$'
+desc = "прежняя область выбора"
+
+[[describe]]
+action = '^vi-command/register$'
+desc = "выбрать регистр"
+
+[[describe]]
+action = '^vi-command/show-line-info$'
+desc = "сведения о строке"
+
+[[describe]]
+action = '^vi-command/decompose-meta$'
+desc = "Meta как Esc и клавиша"
+
+[[describe]]
+action = '^vi-command/exit-on-empty-line$'
+desc = "выйти на пустой строке"
+
+[[describe]]
+action = '^vi-command/cancel$'
+desc = "отменить"
+
+[[describe]]
+action = '^vi-command:q$'
+desc = "команда :q"
+
+[[describe]]
+action = '^vi-command/first-non-space$'
+desc = "к первому непробелу"
+
+[[describe]]
+action = '^vi_nmap/(forward|backward)-line-scroll$'
+desc = "прокрутить на строку"
+
+[[describe]]
+action = '^vi_nmap/forward-scroll$'
+desc = "прокрутить вперёд"
+
+[[describe]]
+action = '^vi_nmap/backward-scroll$'
+desc = "прокрутить назад"
+
+[[describe]]
+action = '^vi_nmap/pagedown$'
+desc = "страница вниз"
+
+[[describe]]
+action = '^vi_nmap/pageup$'
+desc = "страница вверх"
+
+[[describe]]
+action = '^vi_nmap/scroll-or-pagedown-and-redraw$'
+desc = "страница вниз"
+
+[[describe]]
+action = '^vi_nmap/scroll-to-top(-non-space)?-and-redraw$'
+desc = "строку наверх экрана"
+
+[[describe]]
+action = '^vi_nmap/scroll-to-center(-non-space)?-and-redraw$'
+desc = "строку в середину экрана"
+
+[[describe]]
+action = '^vi_nmap/scroll-to-bottom(-non-space)?-and-redraw$'
+desc = "строку вниз экрана"
+
+[[describe]]
+action = '^vi_imap/normal-mode(-without-insert-leave)?$'
+desc = "обычный режим"
+
+[[describe]]
+action = '^vi_imap/single-command-mode$'
+desc = "одна команда обычного режима"
+
+[[describe]]
+action = '^vi_imap/overwrite-mode$'
+desc = "режим замены"
+
+[[describe]]
+action = '^overwrite-mode$'
+desc = "режим замены"
+
+[[describe]]
+action = '^vi_nmap/insert-mode$'
+desc = "режим ввода"
+
+[[describe]]
+action = '^vi_nmap/insert-mode-at-beginning-of-line$'
+desc = "ввод в начале строки"
+
+[[describe]]
+action = '^vi_nmap/insert-mode-at-first-non-space$'
+desc = "ввод у первого непробела"
+
+[[describe]]
+action = '^vi_nmap/insert-mode-at-previous-point$'
+desc = "ввод там, где вышли"
+
+[[describe]]
+action = '^vi_nmap/insert-mode-at-(backward|forward)-line$'
+desc = "ввод в новой строке"
+
+[[describe]]
+action = '^vi_nmap/append-mode$'
+desc = "ввод после курсора"
+
+[[describe]]
+action = '^vi_nmap/append-mode-at-end-of-line$'
+desc = "ввод в конце строки"
+
+[[describe]]
+action = '^vi_nmap/replace-mode$'
+desc = "режим замены"
+
+[[describe]]
+action = '^vi_nmap/virtual-replace-mode$'
+desc = "виртуальная замена"
+
+[[describe]]
+action = '^vi_nmap/charwise-visual-mode$'
+desc = "выделение по символам"
+
+[[describe]]
+action = '^vi_nmap/linewise-visual-mode$'
+desc = "выделение по строкам"
+
+[[describe]]
+action = '^vi_nmap/blockwise-visual-mode$'
+desc = "выделение блоком"
+
+[[describe]]
+action = '^vi_nmap/charwise-select-mode$'
+desc = "выбор по символам"
+
+[[describe]]
+action = '^vi_nmap/linewise-select-mode$'
+desc = "выбор по строкам"
+
+[[describe]]
+action = '^vi_nmap/blockwise-select-mode$'
+desc = "выбор блоком"
+
+[[describe]]
+action = '^vi_(x|o)map/switch-to-(charwise|visual)$'
+desc = "по символам"
+
+[[describe]]
+action = '^vi_(x|o)map/switch-to-linewise$'
+desc = "по строкам"
+
+[[describe]]
+action = '^vi_(x|o)map/switch-to-(blockwise|visual-blockwise)$'
+desc = "блоком"
+
+[[describe]]
+action = '^vi_xmap/switch-to-select$'
+desc = "перейти к выбору"
+
+[[describe]]
+action = '^vi_xmap/(cancel|exit)$'
+desc = "выйти из выделения"
+
+[[describe]]
+action = '^vi_omap/cancel$'
+desc = "отменить оператор"
+
+[[describe]]
+action = '^vi_xmap/append-mode$'
+desc = "ввод в конце выделения"
+
+[[describe]]
+action = '^vi_xmap/insert-mode$'
+desc = "ввод в начале выделения"
+
+[[describe]]
+action = '^vi_xmap/exchange-boundaries$'
+desc = "поменять границы"
+
+[[describe]]
+action = '^vi_xmap/exchange-points$'
+desc = "поменять концы выделения"
+
+[[describe]]
+action = '^vi_xmap/command-help$'
+desc = "справка по команде"
+
+[[describe]]
+action = '^vi_nmap/command-help$'
+desc = "справка по команде"
+
+[[describe]]
+action = '^command-help$'
+desc = "справка по команде"
+
+[[describe]]
+action = '^vi_nmap/undo$'
+desc = "отменить правку"
+
+[[describe]]
+action = '^vi_nmap/redo$'
+desc = "вернуть правку"
+
+[[describe]]
+action = '^vi_nmap/revert$'
+desc = "откатить все правки"
+
+[[describe]]
+action = '^vi_nmap/repeat$'
+desc = "повторить правку"
+
+[[describe]]
+action = '^(emacs/)?undo$'
+desc = "отменить правку"
+
+[[describe]]
+action = '^emacs/undo$'
+desc = "отменить правку"
+
+[[describe]]
+action = '^emacs/redo$'
+desc = "вернуть правку"
+
+[[describe]]
+action = '^emacs/revert$'
+desc = "откатить все правки"
+
+[[describe]]
+action = '^vi_nmap/paste-after$'
+desc = "вставить после курсора"
+
+[[describe]]
+action = '^vi_nmap/paste-before$'
+desc = "вставить перед курсором"
+
+[[describe]]
+action = '^vi_xmap/paste-after$'
+desc = "вставить вместо выделения"
+
+[[describe]]
+action = '^vi_xmap/paste-before$'
+desc = "вставить перед выделением"
+
+[[describe]]
+action = '^vi_nmap/copy-current-line$'
+desc = "копировать строку"
+
+[[describe]]
+action = '^vi_xmap/copy-block-or-lines$'
+desc = "копировать выделение"
+
+[[describe]]
+action = '^vi_xmap/delete-lines$'
+desc = "удалить строки"
+
+[[describe]]
+action = '^vi_xmap/delete-block-lines$'
+desc = "удалить блок"
+
+[[describe]]
+action = '^vi_xmap/replace-block-lines$'
+desc = "заменить блок"
+
+[[describe]]
+action = '^vi_xmap/visual-replace-char$'
+desc = "заменить символы"
+
+[[describe]]
+action = '^vi_xmap/(progressive-)?increment$'
+desc = "увеличить число"
+
+[[describe]]
+action = '^vi_xmap/(progressive-)?decrement$'
+desc = "уменьшить число"
+
+[[describe]]
+action = '^vi_nmap/increment$'
+desc = "увеличить число"
+
+[[describe]]
+action = '^vi_nmap/decrement$'
+desc = "уменьшить число"
+
+[[describe]]
+action = '^vi_(x|n)map/connect-line$'
+desc = "соединить строки"
+
+[[describe]]
+action = '^vi_(x|n)map/connect-line-with-space$'
+desc = "соединить через пробел"
+
+[[describe]]
+action = '^vi_nmap/kill-forward-char$'
+desc = "удалить символ под курсором"
+
+[[describe]]
+action = '^vi_nmap/kill-backward-char$'
+desc = "удалить символ слева"
+
+[[describe]]
+action = '^vi_nmap/kill-forward-char-and-insert$'
+desc = "заменить символ"
+
+[[describe]]
+action = '^vi_nmap/kill-forward-line$'
+desc = "удалить до конца строки"
+
+[[describe]]
+action = '^vi_nmap/kill-forward-line-and-insert$'
+desc = "заменить до конца строки"
+
+[[describe]]
+action = '^vi_nmap/kill-current-line-and-insert$'
+desc = "заменить строку"
+
+[[describe]]
+action = '^vi_nmap/forward-char-toggle-case$'
+desc = "сменить регистр символа"
+
+[[describe]]
+action = '^vi_nmap/replace-char$'
+desc = "заменить символ"
+
+[[describe]]
+action = '^vi_nmap/virtual-replace-char$'
+desc = "заменить символ виртуально"
+
+[[describe]]
+action = '^vi_nmap/play-register$'
+desc = "выполнить регистр"
+
+[[describe]]
+action = '^vi_nmap/record-register$'
+desc = "записать в регистр"
+
+[[describe]]
+action = '^vi_nmap/@edit tilde-expand$'
+desc = "раскрыть тильду"
+
+[[describe]]
+action = '^vi-command/operator d$'
+desc = "оператор: удалить"
+
+[[describe]]
+action = '^vi-command/operator c$'
+desc = "оператор: заменить"
+
+[[describe]]
+action = '^vi-command/operator y$'
+desc = "оператор: копировать"
+
+[[describe]]
+action = '^vi-command/operator u$'
+desc = "оператор: в нижний регистр"
+
+[[describe]]
+action = '^vi-command/operator U$'
+desc = "оператор: в верхний регистр"
+
+[[describe]]
+action = '^vi-command/operator toggle_case$'
+desc = "оператор: сменить регистр"
+
+[[describe]]
+action = '^vi-command/operator indent-left$'
+desc = "оператор: сдвиг влево"
+
+[[describe]]
+action = '^vi-command/operator indent-right$'
+desc = "оператор: сдвиг вправо"
+
+[[describe]]
+action = '^vi-command/operator filter$'
+desc = "оператор: фильтр"
+
+[[describe]]
+action = '^vi-command/operator fold(-preserve-point)?$'
+desc = "оператор: переносить строки"
+
+[[describe]]
+action = '^vi-command/operator map$'
+desc = "оператор: преобразовать"
+
+[[describe]]
+action = '^vi-command/operator rot13$'
+desc = "оператор: rot13"
+
+[[describe]]
+action = '^vi_omap/operator-rot13-or-search-backward$'
+desc = "rot13 или поиск назад"
+
+[[describe]]
+action = '^(vi-rlfunc/)?insert-comment$'
+desc = "закомментировать строку"
+
+[[describe]]
+action = '^vi-rlfunc/kill-word$'
+desc = "удалить слово"
+
+[[describe]]
+action = '^kill-forward-cword$'
+desc = "вырезать слово вперёд"
+
+[[describe]]
+action = '^kill-backward-cword$'
+desc = "вырезать слово назад"
+
+[[describe]]
+action = '^kill-backward-line$'
+desc = "вырезать до начала строки"
+
+[[describe]]
+action = '^kill-forward-line$'
+desc = "вырезать до конца строки"
+
+[[describe]]
+action = '^kill-region-or kill-backward-uword$'
+desc = "вырезать слово назад"
+
+[[describe]]
+action = '^vi_imap/kill-backward-word$'
+desc = "вырезать слово назад"
+
+[[describe]]
+action = '^delete-horizontal-space$'
+desc = "убрать пробелы вокруг"
+
+[[describe]]
+action = '^delete-backward-cword$'
+desc = "удалить слово назад"
+
+[[describe]]
+action = '^delete-forward-cword$'
+desc = "удалить слово вперёд"
+
+[[describe]]
+action = '^delete-region-or delete-backward-char$'
+desc = "удалить символ слева"
+
+[[describe]]
+action = '^delete-region-or delete-forward-char$'
+desc = "удалить символ справа"
+
+[[describe]]
+action = '^delete-region-or delete-forward-char-or-exit$'
+desc = "удалить символ или выйти"
+
+[[describe]]
+action = '^vi_imap/delete-region-or vi_imap/delete-backward-indent-or delete-backward-char$'
+desc = "удалить символ слева"
+
+[[describe]]
+action = '^copy-backward-sword$'
+desc = "копировать слово назад"
+
+[[describe]]
+action = '^copy-forward-sword$'
+desc = "копировать слово вперёд"
+
+[[describe]]
+action = '^copy-region-or copy-backward-uword$'
+desc = "копировать слово назад"
+
+[[describe]]
+action = '^yank-pop backward$'
+desc = "прежняя вставка назад"
+
+[[describe]]
+action = '^yank-pop$'
+desc = "прежняя вставка"
+
+[[describe]]
+action = '^yank$'
+desc = "вставить вырезанное"
+
+[[describe]]
+action = '^zap-to-char$'
+desc = "вырезать до символа"
+
+[[describe]]
+action = '^transpose-chars$'
+desc = "поменять символы"
+
+[[describe]]
+action = '^transpose-ewords$'
+desc = "поменять слова"
+
+[[describe]]
+action = '^capitalize-eword$'
+desc = "слово с заглавной"
+
+[[describe]]
+action = '^upcase-eword$'
+desc = "слово в верхний регистр"
+
+[[describe]]
+action = '^downcase-eword$'
+desc = "слово в нижний регистр"
+
+[[describe]]
+action = '^(emacs/|vi_imap/)?quoted-insert$'
+desc = "ввести символ как есть"
+
+[[describe]]
+action = '^(emacs/|vi_imap/)?bracketed-paste$'
+desc = "вставка из буфера"
+
+[[describe]]
+action = '^set-mark$'
+desc = "поставить метку"
+
+[[describe]]
+action = '^tilde-expand$'
+desc = "раскрыть тильду"
+
+[[describe]]
+action = '^shell-expand-line$'
+desc = "раскрыть строку как shell"
+
+[[describe]]
+action = '^edit-and-execute-command$'
+desc = "править в редакторе"
+
+[[describe]]
+action = '^universal-arg$'
+desc = "числовой аргумент"
+
+[[describe]]
+action = '^start-keyboard-macro$'
+desc = "начать запись макроса"
+
+[[describe]]
+action = '^end-keyboard-macro$'
+desc = "закончить запись макроса"
+
+[[describe]]
+action = '^call-keyboard-macro$'
+desc = "выполнить макрос"
+
+[[describe]]
+action = '^print-keyboard-macro$'
+desc = "показать макрос"
+
+[[describe]]
+action = '^emacs/execute-named-command$'
+desc = "выполнить виджет по имени"
+
+[[describe]]
+action = '^execute-named-command$'
+desc = "выполнить виджет по имени"
+
+[[describe]]
+action = '^display-shell-version$'
+desc = "версия bash"
+
+[[describe]]
+action = '^accept-and-next$'
+desc = "выполнить и взять следующую"
+
+[[describe]]
+action = '^accept-line$'
+desc = "выполнить команду"
+
+[[describe]]
+action = '^accept-single-line-or-newline$'
+desc = "выполнить или новая строка"
+
+[[describe]]
+action = '^newline$'
+desc = "новая строка"
+
+[[describe]]
+action = '^discard-line$'
+desc = "сбросить строку"
+
+[[describe]]
+action = '^clear-screen$'
+desc = "очистить экран"
+
+[[describe]]
+action = '^redraw-line$'
+desc = "перерисовать строку"
+
+[[describe]]
+action = '^vi_cmap/accept$'
+desc = "выполнить команду vi"
+
+[[describe]]
+action = '^vi_cmap/cancel$'
+desc = "отменить команду vi"
+
+[[describe]]
+action = '^batch-insert$'
+desc = "пакетный ввод"
+
+
+# Группы по действию: общий порядок — history, completion, edit, motion и другие,
+# порядок показа задаёт view.toml.
+[[group]]
+action = '^vi-command/search-char'
+group = "motion"
+
+[[group]]
+action = '^vi-command/commandline$'
+group = "line"
+
+[[group]]
+action = '^(fzf-file-widget|ble/util/eval-stdout .*|tv_smart_autocomplete)$'
+group = "tools"
+
+[[group]]
+action = 'history|^__atuin_history|^tv_shell_history$|^i\\eh$|^insert-(last|nth)-argument$|^dabbrev-expand$|^magic-(space|slash)$|^(backward|forward)-line history$'
+group = "history"
+
+[[group]]
+action = '^(vi-command/search-(repeat|reverse-repeat|word-(backward|forward)|backward|forward))$|^(isearch|nsearch)/'
+group = "search"
+
+[[group]]
+action = 'complete|^menu|^auto|sabbrev'
+group = "completion"
+
+[[group]]
+action = '^(vi_[nixo]map)/(.*-mode(-.*)?|cancel|exit|switch-to-.*)$|^overwrite-mode$'
+group = "mode"
+
+[[group]]
+action = 'keyboard-macro|^vi_nmap/(play|record)-register$'
+group = "macro"
+
+[[group]]
+action = '^(accept|newline$|discard-line$|clear-screen$|redraw-line$|fg$|vi_cmap/|vi-command/(cancel|exit-on-empty-line|:q)$)'
+group = "line"
+
+[[group]]
+action = 'kill|delete|copy|yank|transpose|case|capitalize|upcase|downcase|quoted-insert|bracketed-paste|undo|redo|revert|repeat|paste|connect-line|crement|operator|insert-comment|expand|tilde|edit-and|universal-arg|replace|zap|^set-mark$|register$'
+group = "edit"
+
+[[group]]
+action = 'char|word|line|beginning|end|first|last|nth|mark|scroll|page|text-object|vword|uword|sword|cword|eol|exchange|matchpair|visual-area'
+group = "motion"
+
+[[group]]
+action = '.*'
+group = "other"
+
+[[origin]]
+type = '^[xcs]$'
+action = '^(fzf-|ble/util/eval-stdout "__fzf_|i\\eh$)'
+origin = "fzf"
+
+[[origin]]
+type = '^[xcs]$'
+action = '^__atuin_'
+origin = "atuin"
+
+[[origin]]
+type = '^[xcs]$'
+action = '^tv_'
+origin = "tv"
+
+[[origin]]
+type = '^[xcs]$'
+origin = "user"
+
+[[origin]]
+action = '^vi-rlfunc/'
+origin = "readline"
+
+[[origin]]
+origin = "ble"

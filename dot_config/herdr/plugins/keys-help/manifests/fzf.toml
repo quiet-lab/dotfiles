@@ -1,0 +1,375 @@
+# Манифест fzf (D6 изменения herdr-keys-help). Внутри открытого fzf таблица статична:
+# строится один раз при входе в контекст. Источники по порядку: действия с клавишами по
+# умолчанию из `man fzf` (подраздел AVAILABLE ACTIONS: строка «действие, клавиши через
+# пробел, пояснение в скобках»), затем привязки `--bind` из переменной FZF_DEFAULT_OPTS
+# процесса fzf, которые переопределяют умолчания. Пояснение из скобок man — `desc_full`;
+# короткие описания — в правилах [[describe]].
+
+program = "fzf"
+priority = 100
+origins = ["fzf", "user"]
+
+[detect]
+process = ["fzf"]
+shell_commands = ["fzf", "fzf *", "fzf-*", "__fzf_*"]
+
+[modes]
+default = "fzf"
+
+# Клавиши одного действия идут в строке man через пробел (`ctrl-b left`), значение группы
+# `key` источник не делит, поэтому на каждую позицию клавиши (1-я … 4-я) — свой источник.
+[[source]]
+modes = ["*"]
+kind = "regex"
+command = ["man", "-P", "cat", "fzf"]
+regex = '''^ {9}(?P<action>[a-z][a-z0-9/+-]*(?:\([^)]*\))?) {2,}(?P<key>[^\s(]\S*)(?: +[^\s(]\S*)*(?: +\((?P<desc>.*)\))?$'''
+desc_field = "desc"
+origin = "fzf"
+
+[[source]]
+modes = ["*"]
+kind = "regex"
+command = ["man", "-P", "cat", "fzf"]
+regex = '''^ {9}(?P<action>[a-z][a-z0-9/+-]*(?:\([^)]*\))?) {2,}(?:[^\s(]\S* +){1}(?P<key>[^\s(]\S*)(?: +[^\s(]\S*)*(?: +\((?P<desc>.*)\))?$'''
+desc_field = "desc"
+origin = "fzf"
+
+[[source]]
+modes = ["*"]
+kind = "regex"
+command = ["man", "-P", "cat", "fzf"]
+regex = '''^ {9}(?P<action>[a-z][a-z0-9/+-]*(?:\([^)]*\))?) {2,}(?:[^\s(]\S* +){2}(?P<key>[^\s(]\S*)(?: +[^\s(]\S*)*(?: +\((?P<desc>.*)\))?$'''
+desc_field = "desc"
+origin = "fzf"
+
+[[source]]
+modes = ["*"]
+kind = "regex"
+command = ["man", "-P", "cat", "fzf"]
+regex = '''^ {9}(?P<action>[a-z][a-z0-9/+-]*(?:\([^)]*\))?) {2,}(?:[^\s(]\S* +){3}(?P<key>[^\s(]\S*)(?: +[^\s(]\S*)*(?: +\((?P<desc>.*)\))?$'''
+desc_field = "desc"
+origin = "fzf"
+
+[[source]]
+modes = ["*"]
+kind = "regex"
+env = "FZF_DEFAULT_OPTS"
+regex = '''(?:--bind[= ]['"]?|,)(?P<key>[^\s,:'"]+):(?P<action>[a-z][a-z0-9+-]*(?:\([^)]*\))?)'''
+on_conflict = "override"
+origin = "user"
+
+[[describe]]
+action = '^abort$'
+desc = "выйти без выбора"
+
+[[describe]]
+action = '^cancel$'
+desc = "сбросить запрос или выйти"
+
+[[describe]]
+action = '^close$'
+desc = "закрыть просмотр или выйти"
+
+[[describe]]
+action = '^accept$'
+desc = "выбрать запись"
+
+[[describe]]
+action = '^accept-non-empty$'
+desc = "выбрать непустое"
+
+[[describe]]
+action = '^accept-or-print-query$'
+desc = "выбрать или вернуть запрос"
+
+[[describe]]
+action = '^become\('
+desc = "заменить процесс командой"
+
+[[describe]]
+action = '^backward-char$'
+desc = "символ влево"
+
+[[describe]]
+action = '^forward-char$'
+desc = "символ вправо"
+
+[[describe]]
+action = '^backward-word$'
+desc = "слово влево"
+
+[[describe]]
+action = '^forward-word$'
+desc = "слово вправо"
+
+[[describe]]
+action = '^(backward|forward)-subword$'
+desc = "часть слова"
+
+[[describe]]
+action = '^beginning-of-line$'
+desc = "в начало запроса"
+
+[[describe]]
+action = '^end-of-line$'
+desc = "в конец запроса"
+
+[[describe]]
+action = '^backward-delete-char(/eof)?$'
+desc = "удалить символ слева"
+
+[[describe]]
+action = '^delete-char$'
+desc = "удалить символ справа"
+
+[[describe]]
+action = '^delete-char/eof$'
+desc = "удалить символ или выйти"
+
+[[describe]]
+action = '^backward-kill-word$'
+desc = "вырезать слово слева"
+
+[[describe]]
+action = '^kill-word$'
+desc = "вырезать слово справа"
+
+[[describe]]
+action = '^(backward-)?kill-subword$'
+desc = "вырезать часть слова"
+
+[[describe]]
+action = '^kill-line$'
+desc = "вырезать до конца запроса"
+
+[[describe]]
+action = '^unix-line-discard$'
+desc = "вырезать до начала запроса"
+
+[[describe]]
+action = '^unix-word-rubout$'
+desc = "вырезать слово слева"
+
+[[describe]]
+action = '^yank$'
+desc = "вставить вырезанное"
+
+[[describe]]
+action = '^clear-query$'
+desc = "очистить запрос"
+
+[[describe]]
+action = '^change-query\('
+desc = "заменить запрос"
+
+[[describe]]
+action = '^clear-screen$'
+desc = "перерисовать экран"
+
+[[describe]]
+action = '^down$'
+desc = "запись ниже"
+
+[[describe]]
+action = '^up$'
+desc = "запись выше"
+
+[[describe]]
+action = '^down-match$'
+desc = "совпадение ниже"
+
+[[describe]]
+action = '^up-match$'
+desc = "совпадение выше"
+
+[[describe]]
+action = '^(down|up)-selected$|^(next|prev)-selected$'
+desc = "отмеченная запись"
+
+[[describe]]
+action = '^page-down$'
+desc = "страница вниз"
+
+[[describe]]
+action = '^page-up$'
+desc = "страница вверх"
+
+[[describe]]
+action = '^half-page-down$'
+desc = "полстраницы вниз"
+
+[[describe]]
+action = '^half-page-up$'
+desc = "полстраницы вверх"
+
+[[describe]]
+action = '^first$|^best$'
+desc = "к первой записи"
+
+[[describe]]
+action = '^last$'
+desc = "к последней записи"
+
+[[describe]]
+action = '^pos\('
+desc = "к записи по номеру"
+
+[[describe]]
+action = '^jump$'
+desc = "прыжок по меткам"
+
+[[describe]]
+action = '^offset-(down|up)$'
+desc = "сдвинуть список"
+
+[[describe]]
+action = '^offset-middle$'
+desc = "запись в середину"
+
+[[describe]]
+action = '^toggle\+down$'
+desc = "отметить и вниз"
+
+[[describe]]
+action = '^toggle\+up$'
+desc = "отметить и вверх"
+
+[[describe]]
+action = '^toggle$'
+desc = "отметить запись"
+
+[[describe]]
+action = '^toggle-all$'
+desc = "инвертировать отметки"
+
+[[describe]]
+action = '^select(-all)?$'
+desc = "отметить"
+
+[[describe]]
+action = '^deselect(-all)?$'
+desc = "снять отметку"
+
+[[describe]]
+action = '^clear-multi$|^change-multi'
+desc = "сбросить отметки"
+
+[[describe]]
+action = '^toggle-wrap-word$'
+desc = "перенос по словам"
+
+[[describe]]
+action = '^toggle-wrap$'
+desc = "перенос строк"
+
+[[describe]]
+action = '^toggle-preview$'
+desc = "панель просмотра"
+
+[[describe]]
+action = '^(hide|show)-preview$'
+desc = "панель просмотра"
+
+[[describe]]
+action = '^preview-(down|up)$'
+desc = "просмотр на строку"
+
+[[describe]]
+action = '^preview-(page|half-page)-(down|up)$'
+desc = "просмотр постранично"
+
+[[describe]]
+action = '^preview-(top|bottom)$'
+desc = "просмотр к краю"
+
+[[describe]]
+action = '^preview\('
+desc = "показать просмотр"
+
+[[describe]]
+action = '^change-preview'
+desc = "сменить просмотр"
+
+[[describe]]
+action = '^toggle-sort$'
+desc = "порядок сортировки"
+
+[[describe]]
+action = '^toggle-search$|^(enable|disable)-search$'
+desc = "поиск по запросу"
+
+[[describe]]
+action = '^toggle-track$|^track'
+desc = "следить за записью"
+
+[[describe]]
+action = '^toggle-header$|^(hide|show)-header$'
+desc = "заголовок"
+
+[[describe]]
+action = '^toggle-input$|^(hide|show)-input$'
+desc = "строка запроса"
+
+[[describe]]
+action = '^reload(-sync)?\('
+desc = "перечитать список"
+
+[[describe]]
+action = '^execute(-silent)?\('
+desc = "выполнить команду"
+
+[[describe]]
+action = '^(transform|bg-transform)'
+desc = "вычислить действие"
+
+[[describe]]
+action = '^prev-history$'
+desc = "прежний запрос"
+
+[[describe]]
+action = '^next-history$'
+desc = "следующий запрос"
+
+[[describe]]
+action = '^ignore$|^bell$'
+desc = "ничего не делает"
+
+[[group]]
+action = '(?:^abort$)|(?:^cancel$)|(?:^close$)|(?:^become\()'
+group = "app"
+
+[[group]]
+action = '(?:^accept$)|(?:^accept-non-empty$)|(?:^accept-or-print-query$)|(?:^toggle\+down$)|(?:^toggle\+up$)|(?:^toggle$)|(?:^toggle-all$)|(?:^select(-all)?$)|(?:^deselect(-all)?$)|(?:^clear-multi$|^change-multi)'
+group = "select"
+
+[[group]]
+action = '(?:^backward-char$)|(?:^forward-char$)|(?:^backward-word$)|(?:^forward-word$)|(?:^(backward|forward)-subword$)|(?:^beginning-of-line$)|(?:^end-of-line$)|(?:^down$)|(?:^up$)|(?:^down-match$)|(?:^up-match$)|(?:^(down|up)-selected$|^(next|prev)-selected$)|(?:^page-down$)|(?:^page-up$)|(?:^half-page-down$)|(?:^half-page-up$)|(?:^first$|^best$)|(?:^last$)|(?:^pos\()|(?:^jump$)'
+group = "motion"
+
+[[group]]
+action = '(?:^backward-delete-char(/eof)?$)|(?:^delete-char$)|(?:^delete-char/eof$)|(?:^backward-kill-word$)|(?:^kill-word$)|(?:^(backward-)?kill-subword$)|(?:^kill-line$)|(?:^unix-line-discard$)|(?:^unix-word-rubout$)|(?:^yank$)|(?:^clear-query$)|(?:^change-query\()'
+group = "edit"
+
+[[group]]
+action = '(?:^clear-screen$)|(?:^offset-(down|up)$)|(?:^offset-middle$)|(?:^toggle-wrap-word$)|(?:^toggle-wrap$)|(?:^toggle-sort$)|(?:^toggle-search$|^(enable|disable)-search$)|(?:^toggle-track$|^track)|(?:^toggle-header$|^(hide|show)-header$)|(?:^toggle-input$|^(hide|show)-input$)'
+group = "view"
+
+[[group]]
+action = '(?:^toggle-preview$)|(?:^(hide|show)-preview$)|(?:^preview-(down|up)$)|(?:^preview-(page|half-page)-(down|up)$)|(?:^preview-(top|bottom)$)|(?:^preview\()|(?:^change-preview)'
+group = "preview"
+
+[[group]]
+action = '(?:^reload(-sync)?\()|(?:^execute(-silent)?\()|(?:^(transform|bg-transform))'
+group = "source"
+
+[[group]]
+action = '(?:^prev-history$)|(?:^next-history$)'
+group = "history"
+
+[[group]]
+action = '(?:^ignore$|^bell$)'
+group = "other"
+
+[[group]]
+action = '.*'
+group = "other"

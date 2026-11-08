@@ -1,0 +1,514 @@
+# Манифест atuin (D6 изменения herdr-keys-help). Режим берётся из `keymap_mode`
+# ~/.config/atuin/config.toml: emacs -> search, vim-insert -> insert, vim-normal ->
+# normal; пока ключ не задан (умолчание emacs, значение auto действует как emacs для
+# клавиши, вызванной без --keymap-mode) — search. Таблица статична (умолчания atuin
+# 18.24.5, исходники crates/atuin/src/command/client/search/keybindings/defaults.rs)
+# плюс переопределения пользователя из разделов [keymap.<режим>] конфига (форма `map`:
+# ключ — клавиша atuin, значение — действие). Клавиши внутри открытого atuin
+# определяются по режиму; вкладка «подробности» (C-o) и префиксный режим C-a описаны
+# как отдельные записи («C-a d» и т. п.). Короткие описания — по-русски, полный
+# текст — из таблицы действий docs/configuration/advanced-key-binding.md.
+
+program = "atuin"
+priority = 100
+origins = ["atuin", "user"]
+
+[detect]
+process = ["atuin"]
+shell_commands = ["atuin *", "__atuin_*"]
+
+[modes]
+default = "search"
+
+[modes.from_config]
+file = "~/.config/atuin/config.toml"
+key = "keymap_mode"
+map = { emacs = "search", auto = "search", vim-insert = "insert", vim-normal = "normal" }
+
+[[source]]
+modes = ["search", "insert"]
+kind = "static"
+origin = "atuin"
+entries = [
+  { key = "C-c", action = "return-original" },
+  { key = "C-g", action = "return-original" },
+  { key = "C-o", action = "toggle-tab" },
+  { key = "TAB", action = "return-selection" },
+  { key = "C-a", action = "enter-prefix-mode" },
+  { key = "right", action = "cursor-right" },
+  { key = "left", action = "cursor-left" },
+  { key = "down", action = "select-next" },
+  { key = "up", action = "select-previous" },
+  { key = "BS", action = "delete-char-before" },
+  { key = "RET", action = "accept" },
+  { key = "C-m", action = "accept" },
+  { key = "C-y", action = "copy" },
+  { key = "C-left", action = "cursor-word-left" },
+  { key = "M-b", action = "cursor-word-left" },
+  { key = "C-b", action = "cursor-left" },
+  { key = "C-right", action = "cursor-word-right" },
+  { key = "M-f", action = "cursor-word-right" },
+  { key = "C-f", action = "cursor-right" },
+  { key = "home", action = "cursor-start" },
+  { key = "C-e", action = "cursor-end" },
+  { key = "end", action = "cursor-end" },
+  { key = "C-BS", action = "delete-word-before" },
+  { key = "M-BS", action = "delete-word-before" },
+  { key = "C-h", action = "delete-char-before" },
+  { key = "C-?", action = "delete-char-before" },
+  { key = "C-delete", action = "delete-word-after" },
+  { key = "M-d", action = "delete-word-after" },
+  { key = "delete", action = "delete-char-after" },
+  { key = "C-d", action = "delete-char-after" },
+  { key = "C-w", action = "delete-to-word-boundary" },
+  { key = "C-u", action = "clear-line" },
+  { key = "C-r", action = "cycle-filter-mode" },
+  { key = "C-s", action = "cycle-search-mode" },
+  { key = "C-n", action = "select-next" },
+  { key = "C-j", action = "select-next" },
+  { key = "C-p", action = "select-previous" },
+  { key = "C-k", action = "select-previous" },
+  { key = "C-l", action = "redraw" },
+  { key = "next", action = "scroll-page-down" },
+  { key = "prior", action = "scroll-page-up" },
+]
+
+[[source]]
+modes = ["search"]
+kind = "static"
+origin = "atuin"
+entries = [
+  { key = "ESC", action = "exit" },
+  { key = "C-[", action = "exit" },
+]
+
+[[source]]
+modes = ["insert"]
+kind = "static"
+origin = "atuin"
+entries = [
+  { key = "ESC", action = "vim-enter-normal" },
+  { key = "C-[", action = "vim-enter-normal" },
+]
+
+[[source]]
+modes = ["search", "insert"]
+kind = "static"
+origin = "atuin"
+entries = [
+  { key = "M-1", action = "return-selection-N" },
+]
+
+[[source]]
+modes = ["normal"]
+kind = "static"
+origin = "atuin"
+entries = [
+  { key = "C-c", action = "return-original" },
+  { key = "C-g", action = "return-original" },
+  { key = "C-o", action = "toggle-tab" },
+  { key = "TAB", action = "return-selection" },
+  { key = "ESC", action = "exit" },
+  { key = "C-[", action = "exit" },
+  { key = "C-a", action = "enter-prefix-mode" },
+  { key = "j", action = "select-next" },
+  { key = "k", action = "select-previous" },
+  { key = "h", action = "cursor-left" },
+  { key = "l", action = "cursor-right" },
+  { key = "0", action = "cursor-start" },
+  { key = "$", action = "cursor-end" },
+  { key = "w", action = "cursor-word-right" },
+  { key = "b", action = "cursor-word-left" },
+  { key = "e", action = "cursor-word-end" },
+  { key = "x", action = "delete-char-after" },
+  { key = "d d", action = "clear-line" },
+  { key = "D", action = "clear-to-end" },
+  { key = "C", action = "vim-change-to-end" },
+  { key = "?", action = "vim-search-insert" },
+  { key = "/", action = "vim-search-insert" },
+  { key = "a", action = "vim-enter-insert-after" },
+  { key = "A", action = "vim-enter-insert-at-end" },
+  { key = "i", action = "vim-enter-insert" },
+  { key = "I", action = "vim-enter-insert-at-start" },
+  { key = "C-u", action = "scroll-half-page-up" },
+  { key = "C-d", action = "scroll-half-page-down" },
+  { key = "C-b", action = "scroll-page-up" },
+  { key = "C-f", action = "scroll-page-down" },
+  { key = "G", action = "scroll-to-bottom" },
+  { key = "g g", action = "scroll-to-top" },
+  { key = "H", action = "scroll-to-screen-top" },
+  { key = "M", action = "scroll-to-screen-middle" },
+  { key = "L", action = "scroll-to-screen-bottom" },
+  { key = "down", action = "select-next" },
+  { key = "up", action = "select-previous" },
+  { key = "next", action = "scroll-page-down" },
+  { key = "prior", action = "scroll-page-up" },
+  { key = "RET", action = "accept" },
+]
+
+[[source]]
+modes = ["normal"]
+kind = "static"
+origin = "atuin"
+entries = [
+  { key = "1", action = "return-selection-N" },
+]
+
+[[source]]
+modes = ["search", "insert", "normal"]
+kind = "static"
+origin = "atuin"
+entries = [
+  { key = "C-a d", action = "delete" },
+  { key = "C-a D", action = "delete-all" },
+  { key = "C-a a", action = "cursor-start" },
+  { key = "C-a g", action = "accept-cd" },
+  { key = "C-a G", action = "return-cd" },
+  { key = "C-a c", action = "switch-context" },
+]
+
+[[source]]
+modes = ["search"]
+kind = "toml"
+file = "~/.config/atuin/config.toml"
+tables = ["keymap.emacs"]
+origin = "user"
+on_conflict = "override"
+
+[[source]]
+modes = ["insert"]
+kind = "toml"
+file = "~/.config/atuin/config.toml"
+tables = ["keymap.vim-insert"]
+origin = "user"
+on_conflict = "override"
+
+[[source]]
+modes = ["normal"]
+kind = "toml"
+file = "~/.config/atuin/config.toml"
+tables = ["keymap.vim-normal"]
+origin = "user"
+on_conflict = "override"
+
+[[describe]]
+action = '^cursor-left$'
+desc = "символ влево"
+desc_full = "Move cursor one character left"
+
+[[describe]]
+action = '^cursor-right$'
+desc = "символ вправо"
+desc_full = "Move cursor one character right"
+
+[[describe]]
+action = '^cursor-word-left$'
+desc = "слово влево"
+desc_full = "Move cursor one word left"
+
+[[describe]]
+action = '^cursor-word-right$'
+desc = "слово вправо"
+desc_full = "Move cursor one word right"
+
+[[describe]]
+action = '^cursor-word-end$'
+desc = "к концу слова"
+desc_full = "Move cursor to end of current/next word (vim `e` motion)"
+
+[[describe]]
+action = '^cursor-start$'
+desc = "в начало строки"
+desc_full = "Move cursor to start of line"
+
+[[describe]]
+action = '^cursor-end$'
+desc = "в конец строки"
+desc_full = "Move cursor to end of line"
+
+[[describe]]
+action = '^delete-char-before$'
+desc = "удалить символ слева"
+desc_full = "Delete the character before the cursor (backspace)"
+
+[[describe]]
+action = '^delete-char-after$'
+desc = "удалить символ справа"
+desc_full = "Delete the character after the cursor (delete)"
+
+[[describe]]
+action = '^delete-word-before$'
+desc = "удалить слово слева"
+desc_full = "Delete the word before the cursor"
+
+[[describe]]
+action = '^delete-word-after$'
+desc = "удалить слово справа"
+desc_full = "Delete the word after the cursor"
+
+[[describe]]
+action = '^delete-to-word-boundary$'
+desc = "удалить до границы слова"
+desc_full = "Delete to the next word boundary (like `ctrl-w`)"
+
+[[describe]]
+action = '^clear-line$'
+desc = "очистить строку"
+desc_full = "Clear the entire input line"
+
+[[describe]]
+action = '^clear-to-start$'
+desc = "очистить до начала"
+desc_full = "Clear the start of input line"
+
+[[describe]]
+action = '^clear-to-end$'
+desc = "очистить до конца"
+desc_full = "Clear the end of input line"
+
+[[describe]]
+action = '^select-next$'
+desc = "запись ниже"
+desc_full = "Move selection to the next item in the results list"
+
+[[describe]]
+action = '^select-previous$'
+desc = "запись выше"
+desc_full = "Move selection to the previous item in the results list"
+
+[[describe]]
+action = '^scroll-half-page-up$'
+desc = "полстраницы вверх"
+desc_full = "Scroll half a page up"
+
+[[describe]]
+action = '^scroll-half-page-down$'
+desc = "полстраницы вниз"
+desc_full = "Scroll half a page down"
+
+[[describe]]
+action = '^scroll-page-up$'
+desc = "страница вверх"
+desc_full = "Scroll a full page up"
+
+[[describe]]
+action = '^scroll-page-down$'
+desc = "страница вниз"
+desc_full = "Scroll a full page down"
+
+[[describe]]
+action = '^scroll-to-top$'
+desc = "к началу списка"
+desc_full = "Jump to the top of the list"
+
+[[describe]]
+action = '^scroll-to-bottom$'
+desc = "к концу списка"
+desc_full = "Jump to the bottom of the list"
+
+[[describe]]
+action = '^scroll-to-screen-top$'
+desc = "к верху экрана"
+desc_full = "Jump to the top of the visible search results"
+
+[[describe]]
+action = '^scroll-to-screen-middle$'
+desc = "к середине экрана"
+desc_full = "Jump to the middle of the visible search results"
+
+[[describe]]
+action = '^scroll-to-screen-bottom$'
+desc = "к низу экрана"
+desc_full = "Jump to the bottom of the visible search results"
+
+[[describe]]
+action = '^accept$'
+desc = "выполнить выбранное"
+desc_full = "Accept the selected entry and execute it immediately"
+
+[[describe]]
+action = '^accept-cd$'
+desc = "перейти в каталог команды"
+desc_full = "Change to the directory the selected entry ran in, immediately"
+
+[[describe]]
+action = '^return-selection$'
+desc = "вставить без запуска"
+desc_full = "Return the selected entry to the command line without executing"
+
+[[describe]]
+action = '^return-cd$'
+desc = "вставить cd в каталог"
+desc_full = "Put a command changing to the directory the selected entry ran in on the command line without executing"
+
+[[describe]]
+action = '^copy$'
+desc = "копировать команду"
+desc_full = "Copy the selected entry to the clipboard"
+
+[[describe]]
+action = '^delete$'
+desc = "удалить из истории"
+desc_full = "Delete the selected entry from history"
+
+[[describe]]
+action = '^delete-all$'
+desc = "удалить все такие записи"
+desc_full = "Delete all history entries matching the selected command text"
+
+[[describe]]
+action = '^return-original$'
+desc = "выйти без выбора"
+desc_full = "Close the TUI and return the original command line text"
+
+[[describe]]
+action = '^return-query$'
+desc = "вернуть запрос"
+desc_full = "Close the TUI and return the current search query"
+
+[[describe]]
+action = '^exit$'
+desc = "выйти"
+desc_full = "Exit the TUI (behavior depends on the `exit_mode` setting)"
+
+[[describe]]
+action = '^redraw$'
+desc = "перерисовать экран"
+desc_full = "Redraw the screen"
+
+[[describe]]
+action = '^cycle-filter-mode$'
+desc = "следующий фильтр"
+desc_full = "Cycle through the enabled [filter modes](config.md#filter_mode)"
+
+[[describe]]
+action = '^cycle-search-mode$'
+desc = "следующий режим поиска"
+desc_full = "Cycle through [search modes](config.md#search_mode) (prefix, fulltext, (daemon-)fuzzy)"
+
+[[describe]]
+action = '^switch-context$'
+desc = "контекст выбранной команды"
+desc_full = "Switch to the [context](../guide/advanced-usage.md#context-switch) of the currently selected command"
+
+[[describe]]
+action = '^clear-context$'
+desc = "вернуть исходный контекст"
+desc_full = "Return to the initial [context](../guide/advanced-usage.md#context-switch)"
+
+[[describe]]
+action = '^toggle-tab$'
+desc = "поиск или подробности"
+desc_full = "Toggle between the search tab and inspector tab"
+
+[[describe]]
+action = '^vim-enter-normal$'
+desc = "обычный режим"
+desc_full = "Switch to vim normal mode"
+
+[[describe]]
+action = '^vim-enter-insert$'
+desc = "режим ввода"
+desc_full = "Switch to vim insert mode (cursor stays in place)"
+
+[[describe]]
+action = '^vim-enter-insert-after$'
+desc = "ввод после курсора"
+desc_full = "Switch to vim insert mode (cursor moves right, like vim `a`)"
+
+[[describe]]
+action = '^vim-enter-insert-at-start$'
+desc = "ввод в начале строки"
+desc_full = "Move to start of line and enter vim insert mode (like vim `I`)"
+
+[[describe]]
+action = '^vim-enter-insert-at-end$'
+desc = "ввод в конце строки"
+desc_full = "Move to end of line and enter vim insert mode (like vim `A`)"
+
+[[describe]]
+action = '^vim-search-insert$'
+desc = "новый запрос"
+desc_full = "Clear the search input and enter vim insert mode (like vim `?` or `/`)"
+
+[[describe]]
+action = '^vim-change-to-end$'
+desc = "заменить до конца строки"
+desc_full = "Delete to end of line and enter vim insert mode (like vim `C`)"
+
+[[describe]]
+action = '^enter-prefix-mode$'
+desc = "префикс команд"
+desc_full = "Enter prefix mode (waits for one more key, for example `d` for delete)"
+
+[[describe]]
+action = '^inspect-previous$'
+desc = "запись выше"
+desc_full = "Select the row above, or scroll output up"
+
+[[describe]]
+action = '^inspect-next$'
+desc = "запись ниже"
+desc_full = "Select the row below, or scroll output down"
+
+[[describe]]
+action = '^inspect-runs$'
+desc = "запуски"
+desc_full = "Open Runs"
+
+[[describe]]
+action = '^inspect-session$'
+desc = "сеанс"
+desc_full = "Open Session"
+
+[[describe]]
+action = '^inspect-stats$'
+desc = "статистика"
+desc_full = "Open Stats"
+
+[[describe]]
+action = '^inspect-output$'
+desc = "вывод команды"
+desc_full = "Open captured output"
+
+[[describe]]
+action = '^noop$'
+desc = "ничего не делает"
+desc_full = "Do nothing (useful for disabling a default binding)"
+
+[[describe]]
+action = '^return-selection-N$'
+desc = "запись по номеру (1…9)"
+desc_full = "Return the Nth entry below the selection without executing (for example, `return-selection-1` through `return-selection-9`)"
+
+[[group]]
+action = '^(cursor-left|cursor-right|cursor-word-left|cursor-word-right|cursor-word-end|cursor-start|cursor-end|select-next|select-previous|scroll-half-page-up|scroll-half-page-down|scroll-page-up|scroll-page-down|scroll-to-top|scroll-to-bottom|scroll-to-screen-top|scroll-to-screen-middle|scroll-to-screen-bottom|inspect-previous|inspect-next)$'
+group = "motion"
+
+[[group]]
+action = '^(delete-char-before|delete-char-after|delete-word-before|delete-word-after|delete-to-word-boundary|clear-line|clear-to-start|clear-to-end)$'
+group = "edit"
+
+[[group]]
+action = '^(accept|accept-cd|return-selection|return-cd|copy|delete|delete-all|return-original|return-query|exit|redraw|return-selection-N)$'
+group = "run"
+
+[[group]]
+action = '^(cycle-filter-mode|cycle-search-mode|switch-context|clear-context)$'
+group = "search"
+
+[[group]]
+action = '^(toggle-tab|inspect-runs|inspect-session|inspect-stats|inspect-output)$'
+group = "view"
+
+[[group]]
+action = '^(vim-enter-normal|vim-enter-insert|vim-enter-insert-after|vim-enter-insert-at-start|vim-enter-insert-at-end|vim-search-insert|vim-change-to-end|enter-prefix-mode)$'
+group = "mode"
+
+[[group]]
+action = '^(noop)$'
+group = "other"
+
+[[group]]
+action = '.*'
+group = "other"

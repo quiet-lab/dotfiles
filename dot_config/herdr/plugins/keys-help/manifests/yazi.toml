@@ -1,0 +1,1103 @@
+# Манифест yazi (D6 и D9 изменения herdr-keys-help). Слой интерфейса сообщает поставщик
+# в ~/.config/yazi/init.lua (запись `yazi-<pid>.json`, поле `mode` — родное имя слоя:
+# mgr, tasks, spot, pick, input, confirm, cmp, help). Запуск не из оболочки виден по
+# процессу переднего плана, запуск из оболочки — по записи `exec` (функция `y` из
+# ~/.bashrc запускает yazi с --cwd-file).
+#
+# Таблица: умолчания выпуска 26.9.1 (файл data/yazi-keymap-26.9.1.toml — keymap-default.toml
+# исходников, без правок) и поверх них ~/.config/yazi/keymap.toml (prepend_keymap перед
+# умолчаниями, append_keymap после, keymap заменяет умолчания). Поле `desc` исходников и
+# keymap.toml — полный текст (`desc_full`); короткие описания — в правилах [[describe]]
+# ниже, по слою (`modes`, родное имя слоя) и действию (`run`; массив команд склеен через
+# «; »). Пути без `~`, `/` и `{` — относительно каталога манифестов.
+
+program = "yazi"
+priority = 100
+origins = ["yazi", "user"]
+
+[detect]
+provider = "yazi"
+process = ["yazi"]
+shell_commands = ["yazi", "yazi *", "y", "y *"]
+
+[modes]
+default = "mgr"
+names = { mgr = "manager" }
+
+[[source]]
+modes = ["*"]
+kind = "toml"
+file = "data/yazi-keymap-26.9.1.toml"
+tables = ["{mode}"]
+arrays = ["keymap"]
+key_field = "on"
+action_field = "run"
+desc_field = "desc"
+origin = "yazi"
+
+[[source]]
+modes = ["*"]
+kind = "toml"
+file = "~/.config/yazi/keymap.toml"
+tables = ["{mode}"]
+arrays = ["prepend_keymap", "keymap", "append_keymap"]
+key_field = "on"
+action_field = "run"
+desc_field = "desc"
+replace_if = "keymap"
+on_conflict = "override"
+origin = "user"
+
+[[describe]]
+modes = ["mgr"]
+action = '^escape$'
+desc = "сбросить выделение и поиск"
+
+[[describe]]
+modes = ["mgr"]
+action = '^quit$'
+desc = "выйти"
+
+[[describe]]
+modes = ["mgr"]
+action = '^quit --no-cwd-file$'
+desc = "выйти без смены каталога"
+
+[[describe]]
+modes = ["mgr"]
+action = '^close$'
+desc = "закрыть вкладку"
+
+[[describe]]
+modes = ["mgr"]
+action = '^suspend$'
+desc = "приостановить yazi"
+
+[[describe]]
+modes = ["mgr"]
+action = '^arrow prev$'
+desc = "файл выше"
+
+[[describe]]
+modes = ["mgr"]
+action = '^arrow next$'
+desc = "файл ниже"
+
+[[describe]]
+modes = ["mgr"]
+action = '^arrow top$'
+desc = "в начало списка"
+
+[[describe]]
+modes = ["mgr"]
+action = '^arrow bot$'
+desc = "в конец списка"
+
+[[describe]]
+modes = ["mgr"]
+action = '^arrow -50%$'
+desc = "полстраницы вверх"
+
+[[describe]]
+modes = ["mgr"]
+action = '^arrow 50%$'
+desc = "полстраницы вниз"
+
+[[describe]]
+modes = ["mgr"]
+action = '^arrow -100%$'
+desc = "страница вверх"
+
+[[describe]]
+modes = ["mgr"]
+action = '^arrow 100%$'
+desc = "страница вниз"
+
+[[describe]]
+modes = ["mgr"]
+action = '^leave$'
+desc = "в родительский каталог"
+
+[[describe]]
+modes = ["mgr"]
+action = '^enter$'
+desc = "войти в каталог"
+
+[[describe]]
+modes = ["mgr"]
+action = '^back$'
+desc = "назад по истории"
+
+[[describe]]
+modes = ["mgr"]
+action = '^forward$'
+desc = "вперёд по истории"
+
+[[describe]]
+modes = ["mgr"]
+action = '^toggle; arrow 1$'
+desc = "отметить файл"
+
+[[describe]]
+modes = ["mgr"]
+action = '^toggle_all --state=on$'
+desc = "выделить все файлы"
+
+[[describe]]
+modes = ["mgr"]
+action = '^toggle_all$'
+desc = "инвертировать выделение"
+
+[[describe]]
+modes = ["mgr"]
+action = '^visual_mode$'
+desc = "режим выделения"
+
+[[describe]]
+modes = ["mgr"]
+action = '^visual_mode --unset$'
+desc = "режим снятия выделения"
+
+[[describe]]
+modes = ["mgr"]
+action = '^seek -5$'
+desc = "просмотр вверх"
+
+[[describe]]
+modes = ["mgr"]
+action = '^seek 5$'
+desc = "просмотр вниз"
+
+[[describe]]
+modes = ["mgr"]
+action = '^spot$'
+desc = "сведения о файле"
+
+[[describe]]
+modes = ["mgr"]
+action = '^open$'
+desc = "открыть файл"
+
+[[describe]]
+modes = ["mgr"]
+action = '^open --interactive$'
+desc = "открыть через выбор"
+
+[[describe]]
+modes = ["mgr"]
+action = '^yank$'
+desc = "копировать"
+
+[[describe]]
+modes = ["mgr"]
+action = '^yank --cut$'
+desc = "вырезать"
+
+[[describe]]
+modes = ["mgr"]
+action = '^paste$'
+desc = "вставить"
+
+[[describe]]
+modes = ["mgr"]
+action = '^paste --force$'
+desc = "вставить с заменой"
+
+[[describe]]
+modes = ["mgr"]
+action = '^link$'
+desc = "символическая ссылка"
+
+[[describe]]
+modes = ["mgr"]
+action = '^link --relative$'
+desc = "относительная ссылка"
+
+[[describe]]
+modes = ["mgr"]
+action = '^hardlink$'
+desc = "жёсткая ссылка"
+
+[[describe]]
+modes = ["mgr"]
+action = '^unyank$'
+desc = "отменить копирование"
+
+[[describe]]
+modes = ["mgr"]
+action = '^remove$'
+desc = "в корзину"
+
+[[describe]]
+modes = ["mgr"]
+action = '^remove --permanently$'
+desc = "удалить насовсем"
+
+[[describe]]
+modes = ["mgr"]
+action = '^create$'
+desc = "создать файл"
+
+[[describe]]
+modes = ["mgr"]
+action = '^bulk_create$'
+desc = "создать несколько файлов"
+
+[[describe]]
+modes = ["mgr"]
+action = '^rename --cursor=before_ext$'
+desc = "переименовать"
+
+[[describe]]
+modes = ["mgr"]
+action = '^shell --interactive$'
+desc = "выполнить команду"
+
+[[describe]]
+modes = ["mgr"]
+action = '^shell --block --interactive$'
+desc = "команда с ожиданием"
+
+[[describe]]
+modes = ["mgr"]
+action = '^hidden toggle$'
+desc = "скрытые файлы"
+
+[[describe]]
+modes = ["mgr"]
+action = '^search --via=fd$'
+desc = "поиск по имени (fd)"
+
+[[describe]]
+modes = ["mgr"]
+action = '^search --via=rg$'
+desc = "поиск по тексту (rg)"
+
+[[describe]]
+modes = ["mgr"]
+action = '^escape --search$'
+desc = "отменить поиск"
+
+[[describe]]
+modes = ["mgr"]
+action = '^plugin fzf$'
+desc = "переход через fzf"
+
+[[describe]]
+modes = ["mgr"]
+action = '^plugin zoxide$'
+desc = "переход через zoxide"
+
+[[describe]]
+modes = ["mgr"]
+action = '^linemode size$'
+desc = "показать размер"
+
+[[describe]]
+modes = ["mgr"]
+action = '^linemode permissions$'
+desc = "показать права"
+
+[[describe]]
+modes = ["mgr"]
+action = '^linemode btime$'
+desc = "показать время создания"
+
+[[describe]]
+modes = ["mgr"]
+action = '^linemode mtime$'
+desc = "показать время правки"
+
+[[describe]]
+modes = ["mgr"]
+action = '^linemode owner$'
+desc = "показать владельца"
+
+[[describe]]
+modes = ["mgr"]
+action = '^linemode none$'
+desc = "без дополнительной колонки"
+
+[[describe]]
+modes = ["mgr"]
+action = '^copy path$'
+desc = "копировать путь"
+
+[[describe]]
+modes = ["mgr"]
+action = '^copy url$'
+desc = "копировать URL файла"
+
+[[describe]]
+modes = ["mgr"]
+action = '^copy dirpath$'
+desc = "копировать путь каталога"
+
+[[describe]]
+modes = ["mgr"]
+action = '^copy dirurl$'
+desc = "копировать URL каталога"
+
+[[describe]]
+modes = ["mgr"]
+action = '^copy filename$'
+desc = "копировать имя файла"
+
+[[describe]]
+modes = ["mgr"]
+action = '^copy name_without_ext$'
+desc = "копировать имя без расширения"
+
+[[describe]]
+modes = ["mgr"]
+action = '^filter --smart$'
+desc = "фильтр файлов"
+
+[[describe]]
+modes = ["mgr"]
+action = '^find --smart$'
+desc = "найти далее"
+
+[[describe]]
+modes = ["mgr"]
+action = '^find --previous --smart$'
+desc = "найти ранее"
+
+[[describe]]
+modes = ["mgr"]
+action = '^find_arrow$'
+desc = "следующее найденное"
+
+[[describe]]
+modes = ["mgr"]
+action = '^find_arrow --previous$'
+desc = "предыдущее найденное"
+
+[[describe]]
+modes = ["mgr"]
+action = '^sort mtime --reverse=no; linemode mtime$'
+desc = "по времени правки"
+
+[[describe]]
+modes = ["mgr"]
+action = '^sort mtime --reverse=yes; linemode mtime$'
+desc = "по времени правки назад"
+
+[[describe]]
+modes = ["mgr"]
+action = '^sort btime --reverse=no; linemode btime$'
+desc = "по времени создания"
+
+[[describe]]
+modes = ["mgr"]
+action = '^sort btime --reverse=yes; linemode btime$'
+desc = "по времени создания назад"
+
+[[describe]]
+modes = ["mgr"]
+action = '^sort extension --reverse=no$'
+desc = "по расширению"
+
+[[describe]]
+modes = ["mgr"]
+action = '^sort extension --reverse=yes$'
+desc = "по расширению назад"
+
+[[describe]]
+modes = ["mgr"]
+action = '^sort alphabetical --reverse=no$'
+desc = "по алфавиту"
+
+[[describe]]
+modes = ["mgr"]
+action = '^sort alphabetical --reverse=yes$'
+desc = "по алфавиту назад"
+
+[[describe]]
+modes = ["mgr"]
+action = '^sort natural --reverse=no$'
+desc = "по естественному порядку"
+
+[[describe]]
+modes = ["mgr"]
+action = '^sort natural --reverse=yes$'
+desc = "по естественному порядку назад"
+
+[[describe]]
+modes = ["mgr"]
+action = '^sort size --reverse=no; linemode size$'
+desc = "по размеру"
+
+[[describe]]
+modes = ["mgr"]
+action = '^sort size --reverse=yes; linemode size$'
+desc = "по размеру назад"
+
+[[describe]]
+modes = ["mgr"]
+action = '^sort random --reverse=no$'
+desc = "в случайном порядке"
+
+[[describe]]
+modes = ["mgr"]
+action = '^cd ~$'
+desc = "в домашний каталог"
+
+[[describe]]
+modes = ["mgr"]
+action = '^cd ~/\.config$'
+desc = "в ~/.config"
+
+[[describe]]
+modes = ["mgr"]
+action = '^cd ~/Downloads$'
+desc = "в ~/Downloads"
+
+[[describe]]
+modes = ["mgr"]
+action = '^plugin trash$'
+desc = "в корзину (каталог)"
+
+[[describe]]
+modes = ["mgr"]
+action = '^cd --interactive$'
+desc = "перейти по пути"
+
+[[describe]]
+modes = ["mgr"]
+action = '^follow$'
+desc = "к цели ссылки"
+
+[[describe]]
+modes = ["mgr"]
+action = '^tab_create --current$'
+desc = "новая вкладка"
+
+[[describe]]
+modes = ["mgr"]
+action = '^tab_rename --interactive$'
+desc = "переименовать вкладку"
+
+[[describe]]
+modes = ["mgr"]
+action = '^tab_switch 0$'
+desc = "вкладка 1"
+
+[[describe]]
+modes = ["mgr"]
+action = '^tab_switch 1$'
+desc = "вкладка 2"
+
+[[describe]]
+modes = ["mgr"]
+action = '^tab_switch 2$'
+desc = "вкладка 3"
+
+[[describe]]
+modes = ["mgr"]
+action = '^tab_switch 3$'
+desc = "вкладка 4"
+
+[[describe]]
+modes = ["mgr"]
+action = '^tab_switch 4$'
+desc = "вкладка 5"
+
+[[describe]]
+modes = ["mgr"]
+action = '^tab_switch 5$'
+desc = "вкладка 6"
+
+[[describe]]
+modes = ["mgr"]
+action = '^tab_switch 6$'
+desc = "вкладка 7"
+
+[[describe]]
+modes = ["mgr"]
+action = '^tab_switch 7$'
+desc = "вкладка 8"
+
+[[describe]]
+modes = ["mgr"]
+action = '^tab_switch 8$'
+desc = "вкладка 9"
+
+[[describe]]
+modes = ["mgr"]
+action = '^tab_switch -1 --relative$'
+desc = "предыдущая вкладка"
+
+[[describe]]
+modes = ["mgr"]
+action = '^tab_switch 1 --relative$'
+desc = "следующая вкладка"
+
+[[describe]]
+modes = ["mgr"]
+action = '^tab_swap -1$'
+desc = "вкладку влево"
+
+[[describe]]
+modes = ["mgr"]
+action = '^tab_swap 1$'
+desc = "вкладку вправо"
+
+[[describe]]
+modes = ["mgr"]
+action = '^tasks:show$'
+desc = "менеджер задач"
+
+[[describe]]
+modes = ["mgr"]
+action = '^help$'
+desc = "справка по клавишам"
+
+[[describe]]
+modes = ["tasks"]
+action = '^close$'
+desc = "закрыть менеджер задач"
+
+[[describe]]
+modes = ["tasks"]
+action = '^arrow prev$'
+desc = "задача выше"
+
+[[describe]]
+modes = ["tasks"]
+action = '^arrow next$'
+desc = "задача ниже"
+
+[[describe]]
+modes = ["tasks"]
+action = '^inspect$'
+desc = "вывод задачи"
+
+[[describe]]
+modes = ["tasks"]
+action = '^cancel$'
+desc = "отменить задачу"
+
+[[describe]]
+modes = ["tasks"]
+action = '^help$'
+desc = "справка по клавишам"
+
+[[describe]]
+modes = ["spot"]
+action = '^close$'
+desc = "закрыть сведения"
+
+[[describe]]
+modes = ["spot"]
+action = '^arrow prev$'
+desc = "строка выше"
+
+[[describe]]
+modes = ["spot"]
+action = '^arrow next$'
+desc = "строка ниже"
+
+[[describe]]
+modes = ["spot"]
+action = '^swipe prev$'
+desc = "предыдущий файл"
+
+[[describe]]
+modes = ["spot"]
+action = '^swipe next$'
+desc = "следующий файл"
+
+[[describe]]
+modes = ["spot"]
+action = '^copy cell$'
+desc = "копировать ячейку"
+
+[[describe]]
+modes = ["spot"]
+action = '^help$'
+desc = "справка по клавишам"
+
+[[describe]]
+modes = ["pick"]
+action = '^close$'
+desc = "отменить выбор"
+
+[[describe]]
+modes = ["pick"]
+action = '^close --submit$'
+desc = "подтвердить выбор"
+
+[[describe]]
+modes = ["pick"]
+action = '^arrow prev$'
+desc = "вариант выше"
+
+[[describe]]
+modes = ["pick"]
+action = '^arrow next$'
+desc = "вариант ниже"
+
+[[describe]]
+modes = ["pick"]
+action = '^help$'
+desc = "справка по клавишам"
+
+[[describe]]
+modes = ["input"]
+action = '^close$'
+desc = "отменить ввод"
+
+[[describe]]
+modes = ["input"]
+action = '^close --submit$'
+desc = "подтвердить ввод"
+
+[[describe]]
+modes = ["input"]
+action = '^escape$'
+desc = "обычный режим или отмена"
+
+[[describe]]
+modes = ["input"]
+action = '^insert$'
+desc = "режим ввода"
+
+[[describe]]
+modes = ["input"]
+action = '^move first-char; insert$'
+desc = "ввод в начале строки"
+
+[[describe]]
+modes = ["input"]
+action = '^insert --append$'
+desc = "ввод после курсора"
+
+[[describe]]
+modes = ["input"]
+action = '^move eol; insert --append$'
+desc = "ввод в конце строки"
+
+[[describe]]
+modes = ["input"]
+action = '^visual$'
+desc = "режим выделения"
+
+[[describe]]
+modes = ["input"]
+action = '^replace$'
+desc = "заменить символ"
+
+[[describe]]
+modes = ["input"]
+action = '^move bol; visual; move eol$'
+desc = "выделить до конца строки"
+
+[[describe]]
+modes = ["input"]
+action = '^move eol; visual; move bol$'
+desc = "выделить до начала строки"
+
+[[describe]]
+modes = ["input"]
+action = '^move -1$'
+desc = "символ влево"
+
+[[describe]]
+modes = ["input"]
+action = '^move 1$'
+desc = "символ вправо"
+
+[[describe]]
+modes = ["input"]
+action = '^backward$'
+desc = "слово влево"
+
+[[describe]]
+modes = ["input"]
+action = '^backward wide$'
+desc = "слово влево (по пробелам)"
+
+[[describe]]
+modes = ["input"]
+action = '^forward$'
+desc = "слово вправо"
+
+[[describe]]
+modes = ["input"]
+action = '^forward wide$'
+desc = "слово вправо (по пробелам)"
+
+[[describe]]
+modes = ["input"]
+action = '^forward --end-of-word$'
+desc = "к концу слова"
+
+[[describe]]
+modes = ["input"]
+action = '^forward wide --end-of-word$'
+desc = "к концу слова (по пробелам)"
+
+[[describe]]
+modes = ["input"]
+action = '^backward lean$'
+desc = "слово влево"
+
+[[describe]]
+modes = ["input"]
+action = '^forward lean --end-of-word$'
+desc = "к концу слова"
+
+[[describe]]
+modes = ["input"]
+action = '^move bol$'
+desc = "в начало строки"
+
+[[describe]]
+modes = ["input"]
+action = '^move eol$'
+desc = "в конец строки"
+
+[[describe]]
+modes = ["input"]
+action = '^move first-char$'
+desc = "к первому непробелу"
+
+[[describe]]
+modes = ["input"]
+action = '^backspace$'
+desc = "удалить символ слева"
+
+[[describe]]
+modes = ["input"]
+action = '^backspace --under$'
+desc = "удалить символ под курсором"
+
+[[describe]]
+modes = ["input"]
+action = '^kill bol$'
+desc = "вырезать до начала строки"
+
+[[describe]]
+modes = ["input"]
+action = '^kill eol$'
+desc = "вырезать до конца строки"
+
+[[describe]]
+modes = ["input"]
+action = '^kill backward$'
+desc = "вырезать слово назад"
+
+[[describe]]
+modes = ["input"]
+action = '^kill forward$'
+desc = "вырезать слово вперёд"
+
+[[describe]]
+modes = ["input"]
+action = '^delete --cut$'
+desc = "вырезать выделенное"
+
+[[describe]]
+modes = ["input"]
+action = '^delete --cut; move eol$'
+desc = "вырезать до конца строки"
+
+[[describe]]
+modes = ["input"]
+action = '^delete --cut --insert$'
+desc = "заменить выделенное"
+
+[[describe]]
+modes = ["input"]
+action = '^delete --cut --insert; move eol$'
+desc = "заменить до конца строки"
+
+[[describe]]
+modes = ["input"]
+action = '^delete --cut --insert; move 1$'
+desc = "заменить символ"
+
+[[describe]]
+modes = ["input"]
+action = '^move bol; delete --cut --insert; move eol$'
+desc = "заменить всю строку"
+
+[[describe]]
+modes = ["input"]
+action = '^delete --cut; move 1 --in-operating$'
+desc = "вырезать символ"
+
+[[describe]]
+modes = ["input"]
+action = '^yank$'
+desc = "копировать выделенное"
+
+[[describe]]
+modes = ["input"]
+action = '^paste$'
+desc = "вставить после курсора"
+
+[[describe]]
+modes = ["input"]
+action = '^paste --before$'
+desc = "вставить перед курсором"
+
+[[describe]]
+modes = ["input"]
+action = '^undo; casefy lower$'
+desc = "отменить или в нижний регистр"
+
+[[describe]]
+modes = ["input"]
+action = '^casefy upper$'
+desc = "в верхний регистр"
+
+[[describe]]
+modes = ["input"]
+action = '^redo$'
+desc = "вернуть правку"
+
+[[describe]]
+modes = ["input"]
+action = '^recall -1$'
+desc = "прежний ввод"
+
+[[describe]]
+modes = ["input"]
+action = '^recall 1$'
+desc = "следующий ввод"
+
+[[describe]]
+modes = ["input"]
+action = '^help$'
+desc = "справка по клавишам"
+
+[[describe]]
+modes = ["confirm"]
+action = '^close$'
+desc = "отказаться"
+
+[[describe]]
+modes = ["confirm"]
+action = '^close --submit$'
+desc = "подтвердить"
+
+[[describe]]
+modes = ["confirm"]
+action = '^arrow prev$'
+desc = "строка выше"
+
+[[describe]]
+modes = ["confirm"]
+action = '^arrow next$'
+desc = "строка ниже"
+
+[[describe]]
+modes = ["confirm"]
+action = '^help$'
+desc = "справка по клавишам"
+
+[[describe]]
+modes = ["cmp"]
+action = '^close$'
+desc = "отменить дополнение"
+
+[[describe]]
+modes = ["cmp"]
+action = '^close --submit$'
+desc = "принять вариант"
+
+[[describe]]
+modes = ["cmp"]
+action = '^close --submit; input:close --submit$'
+desc = "принять и подтвердить ввод"
+
+[[describe]]
+modes = ["cmp"]
+action = '^arrow prev$'
+desc = "вариант выше"
+
+[[describe]]
+modes = ["cmp"]
+action = '^arrow next$'
+desc = "вариант ниже"
+
+[[describe]]
+modes = ["cmp"]
+action = '^help$'
+desc = "справка по клавишам"
+
+[[describe]]
+modes = ["help"]
+action = '^escape$'
+desc = "обычный режим или закрыть"
+
+[[describe]]
+modes = ["help"]
+action = '^close$'
+desc = "закрыть справку"
+
+[[describe]]
+modes = ["help"]
+action = '^close --submit$'
+desc = "выполнить выбранное"
+
+[[describe]]
+modes = ["help"]
+action = '^arrow prev$'
+desc = "строка выше"
+
+[[describe]]
+modes = ["help"]
+action = '^arrow next$'
+desc = "строка ниже"
+
+[[group]]
+modes = ["mgr"]
+action = '^(escape|toggle; arrow 1|toggle_all --state=on|toggle_all|visual_mode|visual_mode --unset)$'
+group = "select"
+
+[[group]]
+modes = ["mgr"]
+action = '^(quit|quit --no-cwd-file|suspend|tasks:show|help)$'
+group = "app"
+
+[[group]]
+modes = ["mgr"]
+action = '^(close|tab_create --current|tab_rename --interactive|tab_switch 0|tab_switch 1|tab_switch 2|tab_switch 3|tab_switch 4|tab_switch 5|tab_switch 6|tab_switch 7|tab_switch 8|tab_switch -1 --relative|tab_switch 1 --relative|tab_swap -1|tab_swap 1)$'
+group = "tabs"
+
+[[group]]
+modes = ["mgr"]
+action = '^(arrow prev|arrow next|arrow top|arrow bot|arrow -50%|arrow 50%|arrow -100%|arrow 100%|leave|enter|back|forward)$'
+group = "motion"
+
+[[group]]
+modes = ["mgr"]
+action = '^(seek -5|seek 5|spot|hidden toggle|linemode size|linemode permissions|linemode btime|linemode mtime|linemode owner|linemode none)$'
+group = "view"
+
+[[group]]
+modes = ["mgr"]
+action = '^(open|open --interactive|yank|yank --cut|paste|paste --force|link|link --relative|hardlink|unyank|remove|remove --permanently|create|bulk_create|rename --cursor=before_ext|shell --interactive|shell --block --interactive)$'
+group = "files"
+
+[[group]]
+modes = ["mgr"]
+action = '^(search --via=fd|search --via=rg|escape --search|filter --smart|find --smart|find --previous --smart|find_arrow|find_arrow --previous)$'
+group = "search"
+
+[[group]]
+modes = ["mgr"]
+action = '^(plugin fzf|plugin zoxide|cd ~|cd ~/\.config|cd ~/Downloads|plugin trash|cd --interactive|follow)$'
+group = "goto"
+
+[[group]]
+modes = ["mgr"]
+action = '^(copy path|copy url|copy dirpath|copy dirurl|copy filename|copy name_without_ext)$'
+group = "copy"
+
+[[group]]
+modes = ["mgr"]
+action = '^(sort mtime --reverse=no; linemode mtime|sort mtime --reverse=yes; linemode mtime|sort btime --reverse=no; linemode btime|sort btime --reverse=yes; linemode btime|sort extension --reverse=no|sort extension --reverse=yes|sort alphabetical --reverse=no|sort alphabetical --reverse=yes|sort natural --reverse=no|sort natural --reverse=yes|sort size --reverse=no; linemode size|sort size --reverse=yes; linemode size|sort random --reverse=no)$'
+group = "sort"
+
+[[group]]
+modes = ["tasks"]
+action = '^(close|cancel|help)$'
+group = "app"
+
+[[group]]
+modes = ["tasks"]
+action = '^(arrow prev|arrow next)$'
+group = "motion"
+
+[[group]]
+modes = ["tasks"]
+action = '^(inspect)$'
+group = "view"
+
+[[group]]
+modes = ["spot"]
+action = '^(close|help)$'
+group = "app"
+
+[[group]]
+modes = ["spot"]
+action = '^(arrow prev|arrow next|swipe prev|swipe next)$'
+group = "motion"
+
+[[group]]
+modes = ["spot"]
+action = '^(copy cell)$'
+group = "copy"
+
+[[group]]
+modes = ["pick"]
+action = '^(close|close --submit|help)$'
+group = "app"
+
+[[group]]
+modes = ["pick"]
+action = '^(arrow prev|arrow next)$'
+group = "motion"
+
+[[group]]
+modes = ["input"]
+action = '^(close|close --submit|help)$'
+group = "app"
+
+[[group]]
+modes = ["input"]
+action = '^(escape|insert|move first-char; insert|insert --append|move eol; insert --append|visual|move bol; visual; move eol|move eol; visual; move bol)$'
+group = "mode"
+
+[[group]]
+modes = ["input"]
+action = '^(replace|backspace|backspace --under|kill bol|kill eol|kill backward|kill forward|delete --cut|delete --cut; move eol|delete --cut --insert|delete --cut --insert; move eol|delete --cut --insert; move 1|move bol; delete --cut --insert; move eol|delete --cut; move 1 --in-operating|yank|paste|paste --before|undo; casefy lower|casefy upper|redo)$'
+group = "edit"
+
+[[group]]
+modes = ["input"]
+action = '^(move -1|move 1|backward|backward wide|forward|forward wide|forward --end-of-word|forward wide --end-of-word|backward lean|forward lean --end-of-word|move bol|move eol|move first-char)$'
+group = "motion"
+
+[[group]]
+modes = ["input"]
+action = '^(recall -1|recall 1)$'
+group = "history"
+
+[[group]]
+modes = ["confirm"]
+action = '^(close|close --submit|help)$'
+group = "app"
+
+[[group]]
+modes = ["confirm"]
+action = '^(arrow prev|arrow next)$'
+group = "motion"
+
+[[group]]
+modes = ["cmp"]
+action = '^(close|close --submit|close --submit; input:close --submit|help)$'
+group = "app"
+
+[[group]]
+modes = ["cmp"]
+action = '^(arrow prev|arrow next)$'
+group = "motion"
+
+[[group]]
+modes = ["help"]
+action = '^(escape|close|close --submit)$'
+group = "app"
+
+[[group]]
+modes = ["help"]
+action = '^(arrow prev|arrow next)$'
+group = "motion"
+
+[[group]]
+action = '.*'
+group = "other"

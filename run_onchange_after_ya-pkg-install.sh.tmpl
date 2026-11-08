@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Плагины и темы yazi из package.toml (full-border, catppuccin-frappe): после правки
+# package.toml ставим их заново. Хеш файла: {{ include "dot_config/yazi/package.toml" | sha256sum }}
+# Каталоги plugins/ и flavors/ пакетов в источник не входят, их восстанавливает `ya pkg`.
+if command -v ya >/dev/null 2>&1; then
+  ya pkg install || echo "ya pkg install не удался (нет сети?): плагины yazi не обновлены" >&2
+fi
