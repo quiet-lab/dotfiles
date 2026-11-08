@@ -1,5 +1,5 @@
 //! Вид просмотрщика (D13): шапка, ячейки «клавиша → действие» шириной
-//! не меньше 44 символов (1–5 колонок), заголовки групп, подписи происхождения, прокрутка, навигация
+//! не меньше 33 символов (1–5 колонок), заголовки групп, подписи происхождения, прокрутка, навигация
 //! `h j k l g G`, поиск `/` с `n`/`N`, окно подробностей `K`, скрытие `d D u`.
 
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
@@ -7,9 +7,9 @@ use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 use crate::view::{Section, Shown};
 
 /// Наименьшая ширина ячейки (D13).
-pub const CELL_MIN: usize = 44;
+pub const CELL_MIN: usize = 33;
 
-/// Число колонок по ширине панели: `n = min(5, max(1, ⌊W / 44⌋))`.
+/// Число колонок по ширине панели: `n = min(5, max(1, ⌊W / 33⌋))`.
 pub fn columns_for_width(w: usize) -> usize {
     (w / CELL_MIN).clamp(1, 5)
 }
@@ -701,16 +701,17 @@ mod tests {
     #[test]
     fn widths() {
         assert_eq!(columns_for_width(40), 1);
-        assert_eq!(columns_for_width(120), 2);
-        assert_eq!(columns_for_width(160), 3);
-        assert_eq!(columns_for_width(180), 4);
+        assert_eq!(columns_for_width(80), 2);
+        assert_eq!(columns_for_width(120), 3);
+        assert_eq!(columns_for_width(140), 4);
+        assert_eq!(columns_for_width(180), 5);
         assert_eq!(columns_for_width(260), 5);
     }
 
     #[test]
     fn nav_columns() {
         let s = vec![sec("a", &["1", "2", "3", "4", "5"]), sec("b", &["6", "7", "8"])];
-        let lay = layout(&s, 160);
+        let lay = layout(&s, 120);
         assert!(lay.columns.len() <= 3);
         let entries = flatten(&s);
         let mut st = UiState::default();
@@ -757,18 +758,18 @@ mod tests {
         let keys: Vec<String> = (0..30).map(|i| format!("k{i}")).collect();
         let refs: Vec<&str> = keys.iter().map(String::as_str).collect();
         let s = vec![sec("a", &refs[..4]), sec("b", &refs[4..])];
-        let lay = layout_rows(&s, 150, 6);
+        let lay = layout_rows(&s, 110, 6);
         assert_eq!((lay.ncols, lay.rows), (3, 6));
         assert!(lay.columns.len() > 3);
         // Второй раздел начинается на первом экране.
         assert!(lay.pos[4].0 < 3);
         let mut st = UiState { selected: 29, ..Default::default() };
-        let lines = render(&mut st, &Header::default(), &s, 150, 7);
+        let lines = render(&mut st, &Header::default(), &s, 110, 7);
         assert_eq!(lines.len(), 7);
         assert!(st.left > 0, "экран сдвинут к выбранной колонке");
         assert!(lines.iter().any(|l| l.contains("k29")));
         st.selected = 0;
-        let lines = render(&mut st, &Header::default(), &s, 150, 7);
+        let lines = render(&mut st, &Header::default(), &s, 110, 7);
         assert_eq!(st.left, 0);
         assert!(lines.iter().any(|l| l.contains("k0\x1b")), "{lines:?}");
     }

@@ -68,28 +68,28 @@ fn width_of(s: &str) -> usize {
 
 #[test]
 fn columns_by_width_spec() {
-    // D13: n = min(5, max(1, ⌊W / 44⌋)).
+    // D13: n = min(5, max(1, ⌊W / 33⌋)).
     assert_eq!(columns_for_width(40), 1);
-    assert_eq!(columns_for_width(87), 1);
-    assert_eq!(columns_for_width(88), 2);
-    assert_eq!(columns_for_width(120), 2);
-    assert_eq!(columns_for_width(160), 3);
-    assert_eq!(columns_for_width(176), 4);
-    assert_eq!(columns_for_width(200), 4);
-    assert_eq!(columns_for_width(219), 4);
-    assert_eq!(columns_for_width(220), 5);
+    assert_eq!(columns_for_width(65), 1);
+    assert_eq!(columns_for_width(66), 2);
+    assert_eq!(columns_for_width(98), 2);
+    assert_eq!(columns_for_width(99), 3);
+    assert_eq!(columns_for_width(131), 3);
+    assert_eq!(columns_for_width(132), 4);
+    assert_eq!(columns_for_width(164), 4);
+    assert_eq!(columns_for_width(165), 5);
     assert_eq!(columns_for_width(260), 5);
     assert_eq!(columns_for_width(400), 5);
-    assert_eq!(ui::CELL_MIN, 44);
+    assert_eq!(ui::CELL_MIN, 33);
 }
 
 #[test]
 fn layout_ncols_follow_width() {
     let s = numbered(40);
-    assert_eq!(layout(&s, 150).ncols, 3);
-    assert_eq!(layout(&s, 200).ncols, 4);
+    assert_eq!(layout(&s, 110).ncols, 3);
+    assert_eq!(layout(&s, 150).ncols, 4);
     assert_eq!(layout(&s, 250).ncols, 5);
-    assert_eq!(layout(&s, 150).col_width, 50);
+    assert_eq!(layout(&s, 150).col_width, 37);
     assert_eq!(layout(&s, 260).col_width, 52);
 }
 
@@ -183,9 +183,9 @@ fn render_header_has_context_and_target() {
 
 #[test]
 fn render_column_count_matches_width() {
-    // 60 записей: на ширине 250 строка таблицы содержит 5 ячеек, на 150 — 3.
+    // 60 записей: на ширине 250 строка таблицы содержит 5 ячеек, на 110 — 3.
     let s = numbered(60);
-    for (w, n) in [(150usize, 3usize), (200, 4), (250, 5), (40, 1)] {
+    for (w, n) in [(110usize, 3usize), (150, 4), (250, 5), (40, 1)] {
         let mut st = UiState::default();
         let lines = ui::render(&mut st, &Header::default(), &s, w, 100);
         let plain: Vec<String> = lines.iter().map(|l| strip_ansi(l)).collect();

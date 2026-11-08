@@ -19,12 +19,12 @@ fn pts(en: &Entry, pat: &str) -> Option<i64> {
 // ---- D13: ширины ----
 
 #[test]
-fn columns_40_120_160_260() {
+fn columns_40_80_120_140_180() {
     let sections = vec![Section {
         title: Some("g".into()),
         entries: (0..60).map(|i| Shown { entry: e(&format!("k{i}"), "действие"), ..Default::default() }).collect(),
     }];
-    for (w, n) in [(40usize, 1usize), (120, 2), (160, 3), (260, 5)] {
+    for (w, n) in [(40usize, 1usize), (80, 2), (120, 3), (140, 4), (180, 5), (260, 5)] {
         assert_eq!(columns_for_width(w), n, "w={w}");
         let lay = layout(&sections, w);
         assert_eq!(lay.ncols, n, "w={w}");
