@@ -16,7 +16,7 @@ use crate::engine::Engine;
 use crate::entry::Entry;
 use crate::extract::Build;
 use crate::herdr::{event_data, event_name, s, Client, Incoming, Subscription};
-use crate::input::{Input, VIEWER_MARK};
+use crate::input::Input;
 use crate::ui::{self, Action, Header, UiState};
 use crate::view::{self, Edit, ViewConfig};
 use crate::{paths, term, toggle, unknown};
@@ -67,6 +67,9 @@ struct Viewer {
     completion: Vec<Entry>,
     /// Извлечение параметров первого слова: команда и процесс.
     opt_job: Option<(String, Job)>,
+    /// Процессы переднего плана цели на последнем пересчёте: по ним
+    /// выбирается активная запись (`Records::pick`).
+    fg_pids: HashSet<i32>,
 }
 
 fn str_list(v: &Value, key: &str) -> Vec<Value> {
@@ -271,7 +274,7 @@ impl Viewer {
         self.ino.unwatch(&dir);
         self.ino.watch(&dir);
         // Отметка открытой панели: по ней поставщик пишет строку ввода (D17).
-        let _ = std::fs::write(dir.join(VIEWER_MARK), b"");
+        crate::input::create_mark(&dir);
         self.records = Records::scan(&dir);
     }
 
@@ -279,8 +282,9 @@ impl Viewer {
     fn update_input(&mut self) {
         let dir = paths::pane_dir(&self.target);
         let pidfds: HashSet<i32> = self.pidfds.keys().copied().collect();
-        let name = self.records.active_name(|p| pidfds.contains(&p)).map(str::to_string);
-        let pid = self.records.active(|p| pidfds.contains(&p)).map(|r| r.pid);
+        let slot = self.records.pick(|p| pidfds.contains(&p), |p| self.fg_pids.contains(&p));
+        let name = slot.map(|s| s.name.clone());
+        let pid = slot.map(|s| s.record.pid);
         let stem = name.and_then(|n| n.strip_suffix(".json").map(str::to_string));
         self.input.set_active(&dir, stem);
         if self.input.line.is_some() {
@@ -358,6 +362,7 @@ impl Viewer {
 
     fn drop_pid(&mut self, pid: i32) {
         self.pidfds.remove(&pid);
+        self.engine.forget_pid(pid);
         let dir = paths::pane_dir(&self.target);
         for name in self.records.remove_pid(pid) {
             let _ = std::fs::remove_file(dir.join(name));
@@ -409,7 +414,9 @@ impl Viewer {
         let (procs, shell) = self.procs();
         let title = self.title();
         let pidfds: HashSet<i32> = self.pidfds.keys().copied().collect();
-        let active = self.records.active(|p| pidfds.contains(&p)).cloned();
+        self.fg_pids = procs.iter().map(|p| p.pid).collect();
+        let fg = &self.fg_pids;
+        let active = self.records.pick(|p| pidfds.contains(&p), |p| fg.contains(&p)).map(|s| s.record.clone());
         let target = self.target.clone();
         let client = RefCell::new(&mut self.client);
         let cache: RefCell<ScreenCache> = RefCell::new(HashMap::new());
@@ -733,7 +740,14 @@ impl Viewer {
                 recompute = true;
             }
             if self.input.is_path_dir(&e.dir) {
-                path_changed = true;
+                // Имя из события — инкрементальное обновление; событие
+                // о самом каталоге — полное пересканирование.
+                if e.name.is_empty() {
+                    path_changed = true;
+                } else {
+                    self.input.on_path_entry(&e.name);
+                    input_changed = true;
+                }
             }
         }
         if reload_manifests {
@@ -782,6 +796,10 @@ impl Viewer {
                 field: "hide_groups".to_string(),
                 value: g,
             }),
+            Action::Message(m) => {
+                self.message = Some(m);
+                self.render();
+            }
             Action::Undo => {
                 if let Some(e) = self.undo.pop() {
                     let rev = match e {
@@ -854,8 +872,9 @@ enum Tag {
     MSub,
     Ino,
     Sig,
-    Job,
-    OptJob,
+    /// Готовность задания с номером `Job::n`.
+    Job(u64),
+    OptJob(u64),
     Pid(i32),
 }
 
@@ -912,6 +931,7 @@ pub fn run() -> Result<(), String> {
         input: Input::default(),
         completion: Vec::new(),
         opt_job: None,
+        fg_pids: HashSet::new(),
     };
     v.load_view();
     for d in v.view_dirs() {
@@ -968,10 +988,10 @@ fn event_loop(v: &mut Viewer) -> Result<(), String> {
             add(sfd.as_raw_fd(), Tag::Sig, &mut fds);
         }
         if let Some(j) = &v.job {
-            add(j.pidfd.as_raw_fd(), Tag::Job, &mut fds);
+            add(j.pidfd.as_raw_fd(), Tag::Job(j.n), &mut fds);
         }
         if let Some((_, j)) = &v.opt_job {
-            add(j.pidfd.as_raw_fd(), Tag::OptJob, &mut fds);
+            add(j.pidfd.as_raw_fd(), Tag::OptJob(j.n), &mut fds);
         }
         for (pid, fd) in &v.pidfds {
             add(fd.as_raw_fd(), Tag::Pid(*pid), &mut fds);
@@ -1068,8 +1088,12 @@ fn event_loop(v: &mut Viewer) -> Result<(), String> {
                         }
                     }
                 }
-                Tag::Job => v.job_done(),
-                Tag::OptJob => v.opt_job_done(),
+                // Обработчик события раньше в этой итерации мог заменить
+                // задание: готовность прежнего pidfd к новому не относится,
+                // а ожидание нового процесса заблокировало бы цикл.
+                Tag::Job(n) if v.job.as_ref().is_some_and(|j| j.n == n) => v.job_done(),
+                Tag::OptJob(n) if v.opt_job.as_ref().is_some_and(|(_, j)| j.n == n) => v.opt_job_done(),
+                Tag::Job(_) | Tag::OptJob(_) => {}
                 Tag::Pid(pid) => {
                     v.drop_pid(pid);
                     v.recompute();

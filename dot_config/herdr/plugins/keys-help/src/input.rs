@@ -12,8 +12,14 @@ use crate::entry::Entry;
 /// Предел ячеек раздела «дополнение».
 pub const MAX_COMPLETION: usize = 20;
 
-/// Имя файла-отметки открытой панели в каталоге цели.
-pub const VIEWER_MARK: &str = "viewer";
+/// Префикс файлов-отметок открытых панелей в каталоге цели: у каждого
+/// просмотрщика своя отметка `viewer.<pid>` (D17).
+pub const VIEWER_MARK_PREFIX: &str = "viewer.";
+
+/// Имя отметки этого просмотрщика.
+pub fn mark_name() -> String {
+    format!("{VIEWER_MARK_PREFIX}{}", std::process::id())
+}
 
 #[derive(Default)]
 pub struct Input {
@@ -39,29 +45,53 @@ pub struct OptNeed {
     pub argv: Vec<String>,
 }
 
-/// Файл строки ввода, если он не старше отметки `viewer`: файлы, записанные
-/// до появления отметки (прежняя панель), не читаются.
-fn read(dir: &Path, name: &str) -> Option<String> {
-    let p = dir.join(name);
-    let mark = crate::extract::mtime_ns(&dir.join(VIEWER_MARK))?;
-    if crate::extract::mtime_ns(&p)? < mark {
-        return None;
-    }
-    std::fs::read_to_string(p).ok()
-}
-
-/// Снятие отметки `viewer` вместе с файлами строки ввода каталога: модуль
-/// оболочки без отметки их не обновляет и удалить сам не может.
-pub fn remove_mark(dir: &Path) {
-    let _ = std::fs::remove_file(dir.join(VIEWER_MARK));
-    if let Ok(rd) = std::fs::read_dir(dir) {
-        for e in rd.flatten() {
-            let n = e.file_name().to_string_lossy().to_string();
-            if n.ends_with(".line") || n.ends_with(".words") || n.ends_with(".cands") {
-                let _ = std::fs::remove_file(e.path());
-            }
+/// Удаляет отметки завершившихся просмотрщиков (убит без уборки): иначе
+/// модуль оболочки писал бы файлы для панели, которой нет. Возвращает число
+/// живых отметок.
+fn sweep_marks(dir: &Path) -> usize {
+    let Ok(rd) = std::fs::read_dir(dir) else { return 0 };
+    let mut n = 0;
+    for e in rd.flatten() {
+        let name = e.file_name().to_string_lossy().to_string();
+        let Some(pid) = name.strip_prefix(VIEWER_MARK_PREFIX) else { continue };
+        let alive = pid
+            .parse::<i32>()
+            .is_ok_and(|p| std::path::Path::new(&format!("/proc/{p}")).exists());
+        if alive {
+            n += 1;
+        } else {
+            let _ = std::fs::remove_file(e.path());
         }
     }
+    n
+}
+
+/// Файл строки ввода; пустой файл — данных нет. Устаревшие данные модуль
+/// оболочки обнуляет сам: изменение строки без наблюдения очищает файл (D17).
+fn read(dir: &Path, name: &str) -> Option<String> {
+    std::fs::read_to_string(dir.join(name)).ok().filter(|t| !t.is_empty())
+}
+
+/// Создание своей отметки в каталоге цели.
+pub fn create_mark(dir: &Path) {
+    sweep_marks(dir);
+    let _ = std::fs::write(dir.join(mark_name()), b"");
+}
+
+/// Снятие своей отметки. Файлы строки ввода остаются: при возврате на цель
+/// без ввода разделы показываются по ним сразу; удаляются они только уборкой
+/// каталога закрытой панели.
+pub fn remove_mark(dir: &Path) {
+    let _ = std::fs::remove_file(dir.join(mark_name()));
+    // Отметка прежнего формата (общая для всех просмотрщиков).
+    let _ = std::fs::remove_file(dir.join("viewer"));
+    sweep_marks(dir);
+}
+
+/// Исполняемый обычный файл (по ссылкам).
+fn is_exec(p: &Path) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::metadata(p).is_ok_and(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -152,20 +182,36 @@ impl Input {
         Some((old, dirs))
     }
 
-    /// Список команд по каталогам `PATH` (вызывается и по inotify каталога).
+    /// Список команд по каталогам `PATH` (при смене набора каталогов).
     pub fn rebuild_path(&mut self) {
-        use std::os::unix::fs::PermissionsExt;
         let mut cmds = BTreeSet::new();
         for d in &self.path_dirs {
             let Ok(rd) = std::fs::read_dir(d) else { continue };
             for e in rd.flatten() {
-                let Ok(m) = std::fs::metadata(e.path()) else { continue };
-                if m.is_file() && m.permissions().mode() & 0o111 != 0 {
+                if is_exec(&e.path()) {
                     cmds.insert(e.file_name().to_string_lossy().to_string());
                 }
             }
         }
         self.path_cmds = cmds;
+    }
+
+    /// Событие inotify об имени `name` в каталоге `PATH`: команда
+    /// добавляется или снимается по наличию исполняемого файла с этим именем
+    /// в любом из каталогов `PATH` — без пересканирования каталогов.
+    pub fn on_path_entry(&mut self, name: &str) {
+        if name.is_empty() || name.contains('/') {
+            return;
+        }
+        if self.path_dirs.iter().any(|d| is_exec(&d.join(name))) {
+            self.path_cmds.insert(name.to_string());
+        } else {
+            self.path_cmds.remove(name);
+        }
+    }
+
+    pub fn has_command(&self, name: &str) -> bool {
+        self.path_cmds.contains(name)
     }
 
     pub fn is_path_dir(&self, dir: &Path) -> bool {
@@ -311,7 +357,7 @@ mod tests {
     #[test]
     fn completion_sources() {
         let d = tmp("compl");
-        std::fs::write(d.join(VIEWER_MARK), "").expect("mark");
+        create_mark(&d);
         std::fs::write(d.join("ble-1.line"), "2\ngs").expect("line");
         std::fs::write(d.join("ble-1.words"), "sabbrev\tgs\tgit status\nalias\tgsw\tgit switch\nfunction\tgsx\t\n").expect("words");
         std::fs::write(d.join("ble-1.cands"), "gs\ngsutil\n").expect("cands");
@@ -328,7 +374,57 @@ mod tests {
         assert!(i.completion().0.is_empty());
         assert!(!i.on_file("ble-2.line"));
         remove_mark(&d);
-        assert!(!d.join("ble-1.line").exists() && !d.join(VIEWER_MARK).exists());
+        assert!(d.join("ble-1.line").exists() && !d.join(mark_name()).exists());
         let _ = std::fs::remove_dir_all(&d);
+    }
+
+    #[test]
+    fn marks_per_viewer() {
+        let d = tmp("marks");
+        create_mark(&d);
+        // Отметка другого живого просмотрщика (pid 1 жив всегда) и отметка
+        // завершившегося процесса.
+        std::fs::write(d.join("viewer.1"), "").expect("other");
+        std::fs::write(d.join("viewer.999999999"), "").expect("dead");
+        std::fs::write(d.join("ble-1.line"), "0\nx").expect("line");
+        std::fs::write(d.join("ble-1.cands"), "").expect("cands");
+        remove_mark(&d);
+        assert!(!d.join(mark_name()).exists());
+        assert!(d.join("viewer.1").exists(), "чужая отметка остаётся");
+        assert!(!d.join("viewer.999999999").exists(), "отметка мёртвого процесса снята");
+        assert!(d.join("ble-1.line").exists(), "файлы строки ввода остаются");
+        // Возврат на цель: файлы читаются сразу, пустой — нет данных.
+        let mut i = Input::default();
+        i.set_active(&d, Some("ble-1".into()));
+        assert!(i.line.is_some());
+        assert!(i.cands.is_none());
+        let _ = std::fs::remove_dir_all(&d);
+    }
+
+    #[test]
+    fn path_entry_incremental() {
+        use std::os::unix::fs::PermissionsExt;
+        let a = tmp("path-a");
+        let b = tmp("path-b");
+        let mut i = Input { path_dirs: vec![a.clone(), b.clone()], ..Default::default() };
+        i.rebuild_path();
+        assert!(!i.has_command("kh-x"));
+        let mk = |d: &Path| {
+            let p = d.join("kh-x");
+            std::fs::write(&p, "").expect("file");
+            std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o755)).expect("chmod");
+        };
+        mk(&a);
+        i.on_path_entry("kh-x");
+        assert!(i.has_command("kh-x"));
+        mk(&b);
+        std::fs::remove_file(a.join("kh-x")).expect("rm");
+        i.on_path_entry("kh-x");
+        assert!(i.has_command("kh-x"), "есть во втором каталоге");
+        std::fs::set_permissions(b.join("kh-x"), std::fs::Permissions::from_mode(0o644)).expect("chmod");
+        i.on_path_entry("kh-x");
+        assert!(!i.has_command("kh-x"), "снят бит исполнения (IN_ATTRIB)");
+        let _ = std::fs::remove_dir_all(&a);
+        let _ = std::fs::remove_dir_all(&b);
     }
 }

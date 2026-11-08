@@ -11,11 +11,28 @@ use crate::entry::Entry;
 use crate::extract::{self, Build, Built, FileStamp, Outputs, Subst};
 use crate::manifest::Manifest;
 
+/// Предел записей кеша таблиц в памяти.
+pub const CACHE_MAX: usize = 64;
+
+struct CacheItem {
+    files: Vec<FileStamp>,
+    entries: Vec<Entry>,
+    /// Таблица без ревизии записи в ключе: манифест, команда, процесс.
+    base: String,
+    pid: Option<i32>,
+    /// Порядок вставки: при переполнении снимается самая старая запись.
+    seq: u64,
+}
+
 pub struct Engine {
     pub manifests: Vec<Manifest>,
     pub errors: Vec<String>,
+    /// Выводы команд текущего построения: живут, пока строится одна таблица
+    /// (ключ `building`); готовую таблицу хранит `cache`.
     pub outputs: Outputs,
-    cache: HashMap<String, (Vec<FileStamp>, Vec<Entry>)>,
+    building: String,
+    cache: HashMap<String, CacheItem>,
+    seq: u64,
 }
 
 /// Окружение процесса из `/proc/<pid>/environ`.
@@ -99,6 +116,16 @@ pub fn disk_key(command: &str, pid: Option<i32>) -> String {
     )
 }
 
+/// Есть ли у манифеста командный источник, подставляющий поля записи.
+fn record_commands(m: &Manifest) -> bool {
+    m.sources.iter().any(|s| {
+        s.spec
+            .command
+            .as_ref()
+            .is_some_and(|c| c.iter().any(|a| a.contains("{record.")))
+    })
+}
+
 impl Engine {
     pub fn load(dirs: &[PathBuf]) -> Engine {
         let (manifests, errors) = crate::manifest::load_dirs(dirs);
@@ -106,7 +133,9 @@ impl Engine {
             manifests,
             errors,
             outputs: Outputs::new(),
+            building: String::new(),
             cache: HashMap::new(),
+            seq: 0,
         }
     }
 
@@ -157,8 +186,43 @@ impl Engine {
         }
     }
 
-    fn mem_key(&self, res: &Resolution, sub: &Subst) -> String {
-        format!("{}|{}", self.manifests[res.manifest].path.display(), sub.cache_key())
+    /// Ключ таблицы в памяти. Если командный источник манифеста подставляет
+    /// поля записи (`{record.…}`), в ключ входит ревизия записи: перезапись
+    /// записи поставщиком (смена режима Neovim) строит таблицу заново, и
+    /// привязки, появившиеся позже (LSP), попадают в неё.
+    fn mem_key(&self, res: &Resolution, sub: &Subst) -> (String, String) {
+        let m = &self.manifests[res.manifest];
+        let base = format!("{}|{}|{:?}", m.path.display(), res.command, res.pid);
+        let rev = if record_commands(m) {
+            res.record.as_ref().map(|r| r.rev).unwrap_or(0)
+        } else {
+            0
+        };
+        (format!("{}|{}|{rev}", m.path.display(), sub.cache_key()), base)
+    }
+
+    fn cache_put(&mut self, key: String, base: String, pid: Option<i32>, files: Vec<FileStamp>, entries: Vec<Entry>) {
+        // Прежние таблицы того же манифеста, команды и процесса больше
+        // не нужны: ключ сменился вместе с ревизией записи или подстановками.
+        self.cache.retain(|k, v| v.base != base || *k == key);
+        self.seq += 1;
+        let seq = self.seq;
+        self.cache.insert(key, CacheItem { files, entries, base, pid, seq });
+        while self.cache.len() > CACHE_MAX {
+            let Some(old) = self.cache.iter().min_by_key(|(_, v)| v.seq).map(|(k, _)| k.clone()) else {
+                break;
+            };
+            self.cache.remove(&old);
+        }
+    }
+
+    /// Процесс завершился: его таблицы из кеша снимаются.
+    pub fn forget_pid(&mut self, pid: i32) {
+        self.cache.retain(|_, v| v.pid != Some(pid));
+    }
+
+    pub fn cache_len(&self) -> usize {
+        self.cache.len()
     }
 
     fn disk_path(&self, res: &Resolution) -> PathBuf {
@@ -171,24 +235,30 @@ impl Engine {
     /// Готовая таблица из кеша или очередной шаг построения.
     pub fn step(&mut self, res: &Resolution) -> Build {
         let sub = self.subst(res);
-        let key = self.mem_key(res, &sub);
-        if let Some((files, entries)) = self.cache.get(&key) {
-            if stamps_valid(files) {
+        let (key, base) = self.mem_key(res, &sub);
+        if let Some(c) = self.cache.get(&key) {
+            if stamps_valid(&c.files) {
                 return Build::Done(Built {
-                    entries: entries.clone(),
-                    files: files.clone(),
+                    entries: c.entries.clone(),
+                    files: c.files.clone(),
                 });
             }
         }
-        let m = &self.manifests[res.manifest];
-        if m.detect.fallback {
+        // Выводы команд действительны только внутри построения одной таблицы.
+        if self.building != key {
+            self.outputs.clear();
+            self.building = key.clone();
+        }
+        let pid = res.pid;
+        let fallback = self.manifests[res.manifest].detect.fallback;
+        if fallback {
             let dk = disk_key(&res.command, res.pid);
             if let Some(dc) = std::fs::read_to_string(self.disk_path(res))
                 .ok()
                 .and_then(|t| serde_json::from_str::<DiskCache>(&t).ok())
             {
                 if dc.key == dk && stamps_valid(&dc.files) {
-                    self.cache.insert(key, (dc.files.clone(), dc.entries.clone()));
+                    self.cache_put(key, base, pid, dc.files.clone(), dc.entries.clone());
                     return Build::Done(Built {
                         entries: dc.entries,
                         files: dc.files,
@@ -196,11 +266,12 @@ impl Engine {
                 }
             }
         }
-        let b = extract::build(m, &sub, &self.outputs);
+        let b = extract::build(&self.manifests[res.manifest], &sub, &self.outputs);
         if let Build::Done(built) = &b {
-            self.cache
-                .insert(key, (built.files.clone(), built.entries.clone()));
-            if m.detect.fallback {
+            self.outputs.clear();
+            self.building.clear();
+            self.cache_put(key, base, pid, built.files.clone(), built.entries.clone());
+            if fallback {
                 let dc = DiskCache {
                     key: disk_key(&res.command, res.pid),
                     files: built.files.clone(),

@@ -4,7 +4,7 @@
 
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
-use crate::view::{Section, Shown};
+use crate::view::{Section, SectionKind, Shown};
 
 /// Наименьшая ширина ячейки (D13).
 pub const CELL_MIN: usize = 33;
@@ -229,6 +229,8 @@ pub enum Action {
     HideGroup(String),
     /// Отменить последнее скрытие.
     Undo,
+    /// Сообщение в строке состояния без правки конфигурации.
+    Message(String),
 }
 
 /// Состояние навигации.
@@ -397,7 +399,17 @@ impl UiState {
                 Action::Redraw
             }
             Key::Char('q') => Action::Focus,
+            // Кандидат дополнения — не клавиша таблицы: в `hide` не пишется.
+            Key::Char('d') if entries[sel].kind == SectionKind::Completion => {
+                Action::Message("кандидата дополнения скрыть нельзя".to_string())
+            }
             Key::Char('d') => Action::Hide(entries[sel].entry.key.clone()),
+            // Скрыть группу можно только из раздела группы: у разделов
+            // закреплённых записей, курсора, дополнения и происхождения
+            // своего поля скрытия в view.toml нет (D15).
+            Key::Char('D') if entries[sel].kind != SectionKind::Group => {
+                Action::Message(format!("группу скрыть нельзя: {}", entries[sel].kind.label()))
+            }
             Key::Char('D') => Action::HideGroup(entries[sel].entry.group.clone()),
             Key::Char('u') => Action::Undo,
             _ => Action::None,
@@ -750,6 +762,27 @@ mod tests {
         assert_eq!(st.selected, 2);
         assert_eq!(st.handle(Key::Char('d'), &lay, &entries), Action::Hide("xx".into()));
         assert_eq!(st.handle(Key::Char('q'), &lay, &entries), Action::Focus);
+    }
+
+    #[test]
+    fn hide_keys_by_section_kind() {
+        let mut s = vec![sec("a", &["k1"]), sec("b", &["k2"])];
+        s[0].entries[0].kind = SectionKind::Completion;
+        s[1].entries[0].kind = SectionKind::Origin;
+        let lay = layout(&s, 120);
+        let entries = flatten(&s);
+        let mut st = UiState::default();
+        assert_eq!(
+            st.handle(Key::Char('d'), &lay, &entries),
+            Action::Message("кандидата дополнения скрыть нельзя".into())
+        );
+        assert!(matches!(st.handle(Key::Char('D'), &lay, &entries), Action::Message(_)));
+        st.selected = 1;
+        assert_eq!(st.handle(Key::Char('d'), &lay, &entries), Action::Hide("k2".into()));
+        assert_eq!(
+            st.handle(Key::Char('D'), &lay, &entries),
+            Action::Message("группу скрыть нельзя: раздел по происхождению".into())
+        );
     }
 
     #[test]

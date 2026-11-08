@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Сборка и регистрация плагина herdr keys-help (изменение OpenSpec herdr-keys-help,
-# D1, D12): plugin link сборку не запускает, поэтому её делает этот сценарий после
-# применения файлов. Сценарий выполняется заново только при изменении исходников:
-# хеши файлов ниже входят в его текст.
+# Сборка плагина herdr keys-help (изменение OpenSpec herdr-keys-help, D1, D12):
+# plugin link сборку не запускает, поэтому её делает этот сценарий после применения
+# файлов. Сценарий выполняется заново только при изменении исходников: хеши файлов
+# ниже входят в его текст. Регистрацию плагина делает сценарий
+# run_after_link-herdr-keys-help.sh при каждом apply: ей нужен запущенный сервер herdr.
 {{- $root := joinPath .chezmoi.sourceDir "dot_config/herdr/plugins/keys-help" }}
 # Cargo.toml {{ include (joinPath $root "Cargo.toml") | sha256sum }}
 # Cargo.lock {{ include (joinPath $root "Cargo.lock") | sha256sum }}
@@ -16,6 +17,3 @@
 set -euo pipefail
 cd "$HOME/.config/herdr/plugins/keys-help"
 cargo build --release --locked
-if command -v herdr >/dev/null 2>&1; then
-  herdr plugin link "$PWD" >/dev/null
-fi

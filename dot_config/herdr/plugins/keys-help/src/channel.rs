@@ -32,6 +32,11 @@ pub struct Record {
     /// (`{record.<поле>}`), ядро их имён не знает.
     #[serde(flatten)]
     pub extra: BTreeMap<String, serde_json::Value>,
+    /// Ревизия записи: номер её последнего изменения в наборе `Records`
+    /// (растёт при каждой перезаписи файла). Входит в ключ кеша таблиц
+    /// с командными источниками, зависящими от записи (D6).
+    #[serde(skip)]
+    pub rev: u64,
 }
 
 fn default_state() -> String {
@@ -119,6 +124,8 @@ impl Records {
     pub fn put(&mut self, name: String, record: Record) {
         self.next_seq += 1;
         let seq = self.next_seq;
+        let mut record = record;
+        record.rev = seq;
         self.slots.retain(|s| s.name != name);
         self.slots.push(Slot { name, record, seq });
     }
@@ -141,20 +148,24 @@ impl Records {
 
     /// Активная запись: последняя изменённая запись живого процесса.
     pub fn active(&self, alive: impl Fn(i32) -> bool) -> Option<&Record> {
-        self.slots
-            .iter()
-            .rev()
-            .find(|s| alive(s.record.pid))
-            .map(|s| &s.record)
+        self.pick(alive, |_| false).map(|s| &s.record)
     }
 
     /// Имя файла активной записи.
     pub fn active_name(&self, alive: impl Fn(i32) -> bool) -> Option<&str> {
+        self.pick(alive, |_| false).map(|s| s.name.as_str())
+    }
+
+    /// Активная запись с учётом переднего плана: самая свежая запись
+    /// в состоянии `active` живого процесса переднего плана (`fg`), иначе —
+    /// самая свежая запись живого процесса. Так запись оболочки о запуске `fg`
+    /// не заслоняет запись программы, вернувшейся на передний план.
+    pub fn pick(&self, alive: impl Fn(i32) -> bool, fg: impl Fn(i32) -> bool) -> Option<&Slot> {
         self.slots
             .iter()
             .rev()
-            .find(|s| alive(s.record.pid))
-            .map(|s| s.name.as_str())
+            .find(|s| s.record.state == "active" && alive(s.record.pid) && fg(s.record.pid))
+            .or_else(|| self.slots.iter().rev().find(|s| alive(s.record.pid)))
     }
 
     /// Последняя запись программы (для подстановок при печати таблицы).
@@ -335,6 +346,8 @@ impl Inotify {
             | libc::IN_MOVED_FROM
             | libc::IN_CREATE
             | libc::IN_DELETE
+            // Смена прав (бит исполнения файла в каталоге PATH).
+            | libc::IN_ATTRIB
             | libc::IN_DELETE_SELF
             | libc::IN_MOVE_SELF;
         use std::os::fd::AsRawFd;
@@ -443,6 +456,23 @@ mod tests {
         assert_eq!(r.active(|p| p != 2).map(|x| x.program.as_str()), Some("ble"));
         r.put("ble-1.json".into(), rec("ble", 1));
         assert_eq!(r.active(|_| true).map(|x| x.program.as_str()), Some("ble"));
+    }
+
+    #[test]
+    fn pick_prefers_foreground_record() {
+        // nvim (pid 3) вернулся на передний план после Ctrl-Z; позже оболочка
+        // записала состояние exec с командой fg.
+        let mut r = Records::default();
+        r.put("nvim-3.json".into(), rec("nvim", 3));
+        let mut exec = rec("ble", 1);
+        exec.state = "exec".into();
+        exec.command = Some("fg".into());
+        r.put("ble-1.json".into(), exec);
+        let fg = |p: i32| p == 3;
+        assert_eq!(r.pick(|_| true, fg).map(|s| s.name.as_str()), Some("nvim-3.json"));
+        // nvim в фоне: передний план — оболочка, берётся самая свежая запись.
+        assert_eq!(r.pick(|_| true, |p| p == 1).map(|s| s.name.as_str()), Some("ble-1.json"));
+        assert_eq!(r.pick(|_| true, |_| false).map(|s| s.name.as_str()), Some("ble-1.json"));
     }
 
     fn panes_tmp(name: &str) -> PathBuf {

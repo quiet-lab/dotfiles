@@ -9,7 +9,6 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
-use std::time::{Duration, SystemTime};
 
 use common::*;
 use keys_help::cursor::{self, Line, Pos, When};
@@ -328,52 +327,45 @@ fn no_cursor_section_without_position() {
     assert!(dimmed(&s).is_empty());
 }
 
-// ---- Input: файлы и отметка viewer ----
+// ---- Input: файлы и отметка viewer.<pid> ----
 
 fn mark(dir: &Path) {
     std::fs::create_dir_all(dir).unwrap();
-    std::fs::write(dir.join(input::VIEWER_MARK), "").unwrap();
+    input::create_mark(dir);
 }
 
 fn put(dir: &Path, name: &str, fixture: &str) {
     std::fs::write(dir.join(name), fx(fixture)).unwrap();
 }
 
-fn set_age(path: &Path, secs_ago: u64) {
-    let f = std::fs::File::options().write(true).open(path).unwrap();
-    f.set_modified(SystemTime::now() - Duration::from_secs(secs_ago)).unwrap();
-}
-
 #[test]
-fn files_older_than_mark_are_ignored() {
+fn files_kept_from_before_are_read_at_once() {
+    // Возврат фокуса без ввода: файлы, записанные при прежней отметке,
+    // читаются сразу, без сравнения со временем отметки.
     let d = tmpdir("in-old");
-    mark(&d);
     put(&d, "ble-1.line", "kh.line");
     put(&d, "ble-1.words", "shell.words");
     put(&d, "ble-1.cands", "kh.cands");
-    // Файлы от прежней панели: старше отметки.
-    for n in ["ble-1.line", "ble-1.words", "ble-1.cands"] {
-        set_age(&d.join(n), 3600);
-    }
+    mark(&d);
     let mut i = Input::default();
     assert!(i.set_active(&d, Some("ble-1".into())));
-    assert!(i.line.is_none() && i.words.is_empty() && i.cands.is_none());
-    assert!(i.pos().is_none());
-    // Свежая запись после отметки читается по событию файла.
-    put(&d, "ble-1.line", "kh.line");
-    assert!(i.on_file("ble-1.line"));
     assert_eq!(i.line.as_ref().map(|l| l.text.as_str()), Some("kh"));
-    // Старые слова так и не прочитаны.
-    assert!(i.words.is_empty());
+    assert_eq!(i.words.len(), 5);
+    assert!(i.cands.is_some());
 }
 
 #[test]
-fn no_mark_means_no_data() {
-    let d = tmpdir("in-nomark");
-    put(&d, "ble-1.line", "kh.line");
+fn empty_file_means_no_data() {
+    // Модуль обнуляет файл, когда строка изменилась без наблюдения.
+    let d = tmpdir("in-empty");
+    mark(&d);
+    for n in ["ble-1.line", "ble-1.words", "ble-1.cands"] {
+        std::fs::write(d.join(n), "").unwrap();
+    }
     let mut i = Input::default();
     i.set_active(&d, Some("ble-1".into()));
-    assert!(i.line.is_none());
+    assert!(i.line.is_none() && i.words.is_empty() && i.cands.is_none());
+    assert!(i.pos().is_none());
 }
 
 #[test]
@@ -405,18 +397,22 @@ fn files_read_by_events_and_other_records_ignored() {
 }
 
 #[test]
-fn remove_mark_deletes_mark_and_input_files_only() {
+fn remove_mark_removes_only_own_mark() {
     let d = tmpdir("in-rm");
     mark(&d);
     for (n, f) in [("ble-1.line", "kh.line"), ("ble-1.words", "shell.words"), ("ble-1.cands", "kh.cands")] {
         put(&d, n, f);
     }
     std::fs::write(d.join("ble-1.json"), "{}").unwrap();
+    std::fs::write(d.join("viewer"), "").unwrap();
+    std::fs::write(d.join("viewer.1"), "").unwrap();
     input::remove_mark(&d);
-    for n in ["viewer", "ble-1.line", "ble-1.words", "ble-1.cands"] {
-        assert!(!d.join(n).exists(), "{n} остался");
+    assert!(!d.join(input::mark_name()).exists(), "своя отметка осталась");
+    assert!(!d.join("viewer").exists(), "отметка прежнего формата осталась");
+    assert!(d.join("viewer.1").exists(), "отметка другого просмотрщика снята");
+    for n in ["ble-1.line", "ble-1.words", "ble-1.cands", "ble-1.json"] {
+        assert!(d.join(n).exists(), "{n} удалён");
     }
-    assert!(d.join("ble-1.json").exists(), "запись поставщика не трогается");
 }
 
 // ---- раздел «дополнение» ----
@@ -668,6 +664,9 @@ fn cursor_section_at_most_8_one_per_rule_shortest_key() {
     let edit = keys_in(section(&s, "edit").unwrap());
     assert!(edit.contains(&"C-w") && edit.contains(&"C-k") && edit.contains(&"C-t"), "{edit:?}");
     assert!(dimmed(&s).is_empty(), "{:?}", dimmed(&s));
+    // Вид раздела у записей: от него зависит, можно ли скрыть группу (`D`).
+    assert!(c.entries.iter().all(|e| e.kind == view::SectionKind::Cursor));
+    assert!(section(&s, "motion").unwrap().entries.iter().all(|e| e.kind == view::SectionKind::Group));
 }
 
 #[test]

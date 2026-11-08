@@ -243,3 +243,77 @@ fn manifest_program_tables_are_not_written_to_disk_cache() {
     assert_eq!(t.entries.len(), 3);
     assert!(!d.join("cache").exists(), "кеш программы с манифестом записан на диск");
 }
+
+// ---- кеш таблиц с командными источниками по записи (D6) ----
+
+const REV_MANIFEST: &str = r#"
+program = "kh-rev"
+origins = ["kh-rev"]
+
+[detect]
+provider = "kh-rev"
+
+[modes]
+default = "main"
+
+[[source]]
+kind = "regex"
+command = ["kh-dump", "{record.server}"]
+regex = '''^(?P<key>\S+) (?P<action>.+)$'''
+"#;
+
+fn rev_record(pid: i32, rev: u64) -> keys_help::channel::Record {
+    let mut r = keys_help::channel::parse_record(&format!(
+        r#"{{"v":1,"program":"kh-rev","mode":"main","pid":{pid},"state":"active","server":"/s{pid}"}}"#
+    ))
+    .unwrap();
+    r.rev = rev;
+    r
+}
+
+fn rev_res(e: &Engine, pid: i32, rev: u64) -> context::Resolution {
+    let mut r = context::from_ctx(&e.manifests, "kh-rev.main").expect("kh-rev");
+    r.record = Some(rev_record(pid, rev));
+    r.pid = Some(pid);
+    r
+}
+
+fn build_with(e: &mut Engine, (pid, rev): (i32, u64), out: &str) -> Vec<String> {
+    let res = &rev_res(e, pid, rev);
+    match e.step(res) {
+        Build::Need(a) => {
+            e.outputs.insert(a, Some(out.to_string()));
+            match e.step(res) {
+                Build::Done(b) => b.entries.into_iter().map(|x| x.key).collect(),
+                Build::Need(a) => panic!("{a:?}"),
+            }
+        }
+        Build::Done(b) => b.entries.into_iter().map(|x| x.key).collect(),
+    }
+}
+
+#[test]
+fn record_revision_rebuilds_command_table() {
+    let d = tmpdir("rev");
+    std::fs::write(d.join("kh-rev.toml"), REV_MANIFEST).unwrap();
+    let mut e = Engine::load(&[d]);
+    assert!(e.errors.is_empty(), "{:?}", e.errors);
+    assert_eq!(build_with(&mut e, (10, 1), "a x\n"), vec!["a"]);
+    // Та же ревизия — из кеша, без команды.
+    assert!(matches!(e.step(&rev_res(&e, 10, 1)), Build::Done(_)));
+    // Запись перезаписана (смена режима): команда запускается заново,
+    // новые привязки (LSP) попадают в таблицу.
+    assert_eq!(build_with(&mut e, (10, 2), "a x\nb y\n"), vec!["a", "b"]);
+    // Таблица прежней ревизии того же процесса снята.
+    assert_eq!(e.cache_len(), 1);
+    // Процесс завершился — его таблицы сняты.
+    build_with(&mut e, (11, 1), "c z\n");
+    assert_eq!(e.cache_len(), 2);
+    e.forget_pid(10);
+    assert_eq!(e.cache_len(), 1);
+    // Предел размера кеша.
+    for pid in 100..(100 + keys_help::engine::CACHE_MAX as i32 + 5) {
+        build_with(&mut e, (pid, 1), "q w\n");
+    }
+    assert_eq!(e.cache_len(), keys_help::engine::CACHE_MAX);
+}

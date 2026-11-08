@@ -253,10 +253,37 @@ pub struct Section {
     pub entries: Vec<Shown>,
 }
 
+/// Вид раздела, в котором показана запись: скрыть группу клавишей `D`
+/// можно только из раздела группы.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SectionKind {
+    #[default]
+    Group,
+    Pin,
+    Cursor,
+    Completion,
+    Origin,
+}
+
+impl SectionKind {
+    /// Название раздела для сообщения о том, что группу скрыть нельзя.
+    pub fn label(self) -> &'static str {
+        match self {
+            SectionKind::Group => "группа",
+            SectionKind::Pin => "закреплённые записи",
+            SectionKind::Cursor => "раздел по позиции курсора",
+            SectionKind::Completion => "раздел дополнения",
+            SectionKind::Origin => "раздел по происхождению",
+        }
+    }
+}
+
 /// Запись к показу с признаком подписи происхождения.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Shown {
     pub entry: Entry,
+    /// Раздел, в котором запись показана.
+    pub kind: SectionKind,
     pub show_origin: bool,
     /// Неприменима при текущей позиции курсора (D17): показывается приглушённой.
     pub dim: bool,
@@ -332,7 +359,7 @@ pub fn apply_ext(table: &[Entry], eff: &Effective, extra: &Extra) -> Vec<Section
     let mut pinned = Vec::new();
     for p in &eff.pin {
         if let Some(i) = list.iter().position(|e| &e.key == p) {
-            pinned.push(shown(list.remove(i)));
+            pinned.push(Shown { kind: SectionKind::Pin, ..shown(list.remove(i)) });
         }
     }
     if !pinned.is_empty() {
@@ -377,14 +404,23 @@ pub fn apply_ext(table: &[Entry], eff: &Effective, extra: &Extra) -> Vec<Section
             list = rest;
             out.push(Section {
                 title: Some(CURSOR_TITLE.to_string()),
-                entries: moved.into_iter().flatten().map(shown).collect(),
+                entries: moved
+                    .into_iter()
+                    .flatten()
+                    .map(|e| Shown { kind: SectionKind::Cursor, ..shown(e) })
+                    .collect(),
             });
         }
     }
     if !extra.completion.is_empty() {
         out.push(Section {
             title: Some(COMPLETION_TITLE.to_string()),
-            entries: extra.completion.iter().cloned().map(shown).collect(),
+            entries: extra
+                .completion
+                .iter()
+                .cloned()
+                .map(|e| Shown { kind: SectionKind::Completion, ..shown(e) })
+                .collect(),
         });
     }
     for o in &extra.origin_order {
@@ -398,7 +434,7 @@ pub fn apply_ext(table: &[Entry], eff: &Effective, extra: &Extra) -> Vec<Section
             title: Some(o.clone()),
             entries: mine.into_iter().map(|e| {
                 let d = dims.contains(&e.key);
-                Shown { dim: d, ..shown(e) }
+                Shown { dim: d, kind: SectionKind::Origin, ..shown(e) }
             }).collect(),
         });
     }
