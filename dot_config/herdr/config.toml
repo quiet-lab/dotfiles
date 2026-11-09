@@ -53,12 +53,17 @@ done = "✅"
 unknown = "🗿"
 
 # Форма курсора по строке состояния Claude Code (форк duty-herdr): в режиме
-# INSERT редактора vim — черта, иначе блок. Требует CLAUDE_CODE_NATIVE_CURSOR=1
-# в ~/.claude/settings.json, иначе Claude Code рисует свой блок поверх.
+# INSERT редактора vim — черта, иначе блок. Строка статуса — первая непустая
+# под нижней рамкой поля ввода (ниже бывает список фоновых агентов). Подсказка
+# ? и строка про Ctrl-C заменяют её одинаково в обоих режимах — форма
+# сохраняется (keep). Требует CLAUDE_CODE_NATIVE_CURSOR=1 в
+# ~/.claude/settings.json, иначе Claude Code рисует свой блок поверх.
 [ui.cursor_shape_by_screen.claude]
 default = "steady_block"
 rules = [
-  { contains = "-- INSERT --", shape = "steady_bar", bottom_non_empty_lines = 2 },
+  { contains = "-- INSERT --", shape = "steady_bar", after_last_line_containing = "────", top_non_empty_lines = 1 },
+  { contains = "Press Ctrl-C again to exit", shape = "keep", after_last_line_containing = "────", top_non_empty_lines = 1 },
+  { contains = "! for shell mode", shape = "keep", after_last_line_containing = "────", top_non_empty_lines = 1 },
 ]
 
 # Символы workspace по каталогам (форк duty-herdr). Источник символов —
