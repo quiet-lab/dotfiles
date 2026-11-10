@@ -85,8 +85,8 @@ axata)
 	nm=$(nmcli -g GENERAL.STATE con show id axata 2>/dev/null)
 	row "Соединение" "${nm:-не активно}"
 	row "Адрес tun0" "$(ip -4 -br addr show dev tun0 2>/dev/null | awk '{ print $3 }' || true)"
-	route=$(ip -4 route show 10.200.0.0/16 2>/dev/null | head -n1 | sed -E 's/^[^ ]+ //; s/ proto .*//')
-	row "10.200.0.0/16" "${route:-маршрута нет}"
+	route=$(ip -4 route show 10.0.0.0/8 2>/dev/null | head -n1 | sed -E 's/^[^ ]+ //; s/ proto .*//')
+	row "10.0.0.0/8" "${route:-маршрута нет}"
 	# remote из vpn.data: «remote = адрес\:порт»; секреты в vpn.data не входят.
 	server=$(nmcli -g vpn.data con show id axata 2>/dev/null | tr ',' '\n' |
 		sed -n 's/^ *remote = //p' | sed 's/\\//g')
