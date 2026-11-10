@@ -325,6 +325,17 @@ google-chrome-ai`, те же ключи Wayland и VA-API, что и у сосе
 прежние вкладки после переноса не восстановились. Ярлыка в
 `~/.local/share/applications` для AI2 нет: запускает его только демон.
 
+## DNS проводного соединения
+
+Профиль NetworkManager «Проводное подключение 2» (канал `enp43s0`, DHCP) не
+лежит под chezmoi; в нём задано `ipv4.dns-search '~ru,~by,~su,~xn--p1ai'`:
+NetworkManager передаёт эти зоны systemd-resolved маршрутными доменами, домен
+`bbrouter` приходит по DHCP. Зоны остаются за маршрутизатором, когда канал
+`amn0` забирает остальные имена (`docs/amnezia-split-tunnel.md`, раздел
+«DNS»). Восстановление: `nmcli connection modify 'Проводное подключение 2'
+ipv4.dns-search '~ru,~by,~su,~xn--p1ai'`, затем переподключение или
+`resolvectl domain enp43s0 bbrouter '~ru' '~by' '~su' '~xn--p1ai'`.
+
 ## Резервные копии удалённого
 
 **`~/work/archive/`** — история удалённого 2026-09-16 кода eww:
