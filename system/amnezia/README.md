@@ -8,14 +8,14 @@
 | `amn-export-config` | `/usr/local/sbin` | сборка `amn0.conf` из хранилища AmneziaVPN и шаблона; при выгрузке удаляет `country.json`; если страна выбрана в панели, `install.sh` и `amn-switch` вызывают его с `--rerender` — нынешний конфиг заново подставляется в шаблон |
 | `amn-apply-config` | `/usr/local/sbin` | установка конфига страны из стандартного ввода (JSON от `amn-country set`): проверка по шаблону, перезапуск, откат |
 | `awg-quick@amn0.service.d/50-log-verbose.conf` | `/etc/systemd/system/awg-quick@amn0.service.d` | подробный журнал amneziawg-go для состояния «связи нет» в трее |
-| `amn-zones-update` | `/usr/local/sbin` | загрузка таблицы nftables `inet amn` с наборами |
+| `amn-zones-update` | `/usr/local/sbin` | загрузка таблицы nftables `inet amn` с наборами `zones` (адреса напрямую) и `bypass` |
 | `amn-route` | `/usr/local/sbin` | правило метки, таблица 100 и DNS канала для зон за туннелем (ловушки `awg-quick`) |
 | `amn-switch` | `/usr/local/sbin` | переход с приложения на `awg-quick@amn0` с проверкой и откатом |
 | `../sudo/sudoers.d/amn-switch` | `/etc/sudoers.d` (0440) | без пароля: `amn-switch`, `systemctl start/stop/restart awg-quick@amn0`, `awg show amn0 endpoints`, `awg show amn0 latest-handshakes`, `amn-zones-update --count` и `--force`, `amn-apply-config` без аргументов (значок `amn0` в трее панели) |
 | `install.sh` | не ставится | установка файлов, переход, возврат, состояние |
 | `amn0.conf.template` | `/etc/amnezia` | шаблон конфига без ключей |
 | `amn.nft` | `/etc/amnezia` | таблица `inet amn` без элементов наборов |
-| `countries.txt`, `domains.txt`, `bypass.txt` | `/etc/amnezia` | страны, домены и адреса напрямую |
+| `countries.txt`, `bypass.txt` | `/etc/amnezia` | страны и адреса, которые идут напрямую |
 | `../NetworkManager/conf.d/90-amn0-unmanaged.conf` | `/etc/NetworkManager/conf.d` | NetworkManager не управляет `amn0` |
 
 Сценарии выполняются от root из ловушек `awg-quick`, поэтому лежат

@@ -2,8 +2,8 @@
 # Загружает таблицу nftables inet amn (amn.nft) с наборами zones и bypass.
 #
 # Набор zones — подсети стран из countries.txt (зоны ipdeny.com, кэш
-# по странам в zones.d/ и собранный из него zones.nft) и адреса доменов из
-# domains.txt; набор bypass — сервер туннеля из amn0.conf и записи bypass.txt.
+# по странам в zones.d/ и собранный из него zones.nft), адреса которых идут
+# напрямую; набор bypass — сервер туннеля из amn0.conf и записи bypass.txt.
 # Таблица целиком пересоздаётся одной транзакцией nft -f, поэтому на время
 # загрузки правил без наборов нет.
 #
@@ -11,12 +11,13 @@
 #                                7 суток (из amn-route up), загрузить
 #   amn-zones-update --force     скачать зоны заново и загрузить
 #   amn-zones-update --reload    загрузить из кэша без скачивания (после
-#                                правки domains.txt или bypass.txt)
+#                                правки bypass.txt)
 #   amn-zones-update --count     напечатать число элементов набора zones
 #
 # Ошибки списков не мешают туннелю: зона, которая не скачалась, берётся из
-# прежнего кэша страны; имя, которое не разрешилось, и строка, которая
-# не является адресом или подсетью IPv4, пропускаются с сообщением.
+# прежнего кэша страны; строка, которая не является адресом или подсетью
+# IPv4, пропускается с сообщением. Если ни одна зона не скачалась и кэша
+# нет, набор zones пуст и весь трафик идёт в туннель.
 # Отказ самой загрузки nft -f останавливает подъём туннеля (amn-route up
 # снимает правило и завершается ошибкой): без таблицы туннель бесполезен.
 set -euo pipefail
@@ -29,7 +30,6 @@ nft_file=$dir/amn.nft
 zones_cache=$dir/zones.nft
 zones_dir=$dir/zones.d
 countries=$dir/countries.txt
-domains=$dir/domains.txt
 bypass=$dir/bypass.txt
 awg_conf=$dir/amneziawg/amn0.conf
 max_age_days=7
@@ -140,14 +140,6 @@ if [ "$need_download" -eq 1 ]; then
     fi
 fi
 
-# Адреса доменов: getent идёт через NSS и systemd-resolved, как приложения.
-: >"$work/domains.txt"
-for name in $(entries "$domains"); do
-    if ! getent ahostsv4 "$name" | awk '{ print $1 }' >>"$work/domains.txt"; then
-        echo "amn-zones-update: имя $name не разрешилось" >&2
-    fi
-done
-
 # Сервер туннеля: адрес или имя из Endpoint (порт отбрасывается).
 : >"$work/bypass.txt"
 entries "$bypass" >>"$work/bypass.txt"
@@ -168,7 +160,6 @@ fi
     echo "delete table inet amn"
     echo "include \"$nft_file\""
     [ -s "$zones_cache" ] && echo "include \"$zones_cache\""
-    valid_ipv4 domains.txt <"$work/domains.txt" | sort -u | emit_elements zones
     valid_ipv4 bypass.txt <"$work/bypass.txt" | sort -u | emit_elements bypass
 } >"$work/load.nft"
 

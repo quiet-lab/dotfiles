@@ -46,9 +46,11 @@ files)
     for f in amn-export-config amn-apply-config amn-zones-update amn-route amn-switch; do
         install -m 0755 -o root -g root "$here/$f" "/usr/local/sbin/$f"
     done
-    for f in amn.nft amn0.conf.template countries.txt domains.txt bypass.txt; do
+    for f in amn.nft amn0.conf.template countries.txt bypass.txt; do
         install -m 0644 -o root -g root "$here/$f" "/etc/amnezia/$f"
     done
+    # Список доменов прежней установки больше не используется.
+    rm -f /etc/amnezia/domains.txt
     install -D -m 0644 -o root -g root \
         "$here/awg-quick@amn0.service.d/50-log-verbose.conf" \
         /etc/systemd/system/awg-quick@amn0.service.d/50-log-verbose.conf

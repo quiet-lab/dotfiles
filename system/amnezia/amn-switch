@@ -59,7 +59,7 @@ print_summary() {
 rollback() {
     echo "=== откат к прямому выходу: $1"
     # Служба выключается, а не только останавливается: иначе после
-    # перезагрузки неработающий туннель снова заберёт адреса набора zones.
+    # перезагрузки неработающий туннель снова заберёт весь внешний трафик.
     systemctl disable --now awg-quick@amn0.service
     /usr/local/sbin/amn-route down amn0
     if ping -c 2 -W 2 192.168.1.1 >/dev/null; then
@@ -173,9 +173,9 @@ if ! systemctl restart awg-quick@amn0.service; then
 fi
 result "awg-quick@amn0: $(systemctl is-active awg-quick@amn0.service)"
 
-# 5. Проверка туннеля: адрес api.anthropic.com должен быть в наборе zones,
-# маршрут с меткой 0x1 — идти через amn0, запрос — пройти и увеличить
-# счётчик принятых байтов amn0.
+# 5. Проверка туннеля: адрес api.anthropic.com не должен быть ни в наборе
+# zones, ни в bypass (адреса напрямую), маршрут с меткой 0x1 — идти через
+# amn0, запрос — пройти и увеличить счётчик принятых байтов amn0.
 rx_before=$(cat /sys/class/net/amn0/statistics/rx_bytes)
 anthropic=$(curl -sS --max-time 20 -o /dev/null -w '%{remote_ip} %{http_code}' https://api.anthropic.com/ 2>&1)
 rx_after=$(cat /sys/class/net/amn0/statistics/rx_bytes)
@@ -183,9 +183,11 @@ remote_ip=${anthropic%% *}
 if ! [[ $anthropic =~ ^[0-9.]+\ [1-5][0-9][0-9]$ ]]; then
     rollback "запрос к api.anthropic.com не прошёл: '$anthropic'"
 fi
-if ! nft get element inet amn zones "{ $remote_ip }" >/dev/null 2>&1; then
-    rollback "адреса $remote_ip (api.anthropic.com) нет в наборе zones"
-fi
+for set in zones bypass; do
+    if nft get element inet amn "$set" "{ $remote_ip }" >/dev/null 2>&1; then
+        rollback "адрес $remote_ip (api.anthropic.com) есть в наборе $set и пошёл бы напрямую"
+    fi
+done
 route_dev=$(ip -4 route get "$remote_ip" mark 0x1 | awk '{ for (i = 1; i < NF; i++) if ($i == "dev") { print $(i + 1); exit } }')
 if [ "$route_dev" != amn0 ]; then
     rollback "маршрут к $remote_ip с меткой 0x1 идёт через '${route_dev}', а не через amn0"
@@ -225,11 +227,12 @@ done
 echo "=== ip -4 route"; ip -4 route
 echo "=== ip -4 rule"; ip -4 rule
 echo "=== ip -4 route show table 100"; ip -4 route show table 100
-result "элементов в наборе zones: $(/usr/local/sbin/amn-zones-update --count)"
+result "элементов в наборе zones (адреса напрямую): $(/usr/local/sbin/amn-zones-update --count)"
 result "маршрут 10.200.115.180: $(ip -4 route get 10.200.115.180 | head -1)"
-# ip.ru.net отвечает адресом простым текстом, и его адрес не входит в набор
-# zones: запрос идёт напрямую и возвращает адрес прямого выхода, а не
-# туннеля. 2ip.ru отвечает на curl страницей защиты от ботов с кодом 503.
+# ip.ru.net отвечает адресом простым текстом; его адрес в наборе zones
+# (Россия), поэтому запрос идёт напрямую и возвращает адрес прямого выхода,
+# а api.ipify.org — адрес туннеля. Сервис Яндекса для этого не годится:
+# он отвечает 127.0.0.1.
 direct_ip=$(curl -fsS --max-time 15 https://ip.ru.net/ 2>/dev/null || echo нет ответа)
 tunnel_ip=$(curl -fsS --max-time 15 https://api.ipify.org 2>/dev/null || echo нет ответа)
 result "внешний адрес напрямую (ip.ru.net): $direct_ip"
