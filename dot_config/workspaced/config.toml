@@ -141,6 +141,24 @@ left = { x = 340, y = 10, w = 1920, h = 2140 }
 center = { x = 1125, y = 10, w = 1920, h = 2140 }
 right = { x = 1910, y = 10, w = 1920, h = 2140 }
 
+# Две колонки по 1740 px от панели до края экрана и главное окно 1920 px
+# по центру рабочей области (центр 2085, окно 1125…3045) поверх обеих.
+[templates.halves-center]
+main = "center"
+[templates.halves-center.cells]
+left = { x = 340, y = 10, w = 1740, h = 2140 }
+center = { x = 1125, y = 10, w = 1920, h = 2140 }
+right = { x = 2090, y = 10, w = 1740, h = 2140 }
+
+# Четыре четверти рабочей области с отступом 10 px; главная — левая верхняя.
+[templates.quarters]
+main = "left_top"
+[templates.quarters.cells]
+left_top = { x = 340, y = 10, w = 1740, h = 1065 }
+left_bottom = { x = 340, y = 1085, w = 1740, h = 1065 }
+right_top = { x = 2090, y = 10, w = 1740, h = 1065 }
+right_bottom = { x = 2090, y = 1085, w = 1740, h = 1065 }
+
 # Крест: колонки по краям, центр разбит на верх, середину (главная) и низ.
 [templates.cross]
 main = "center"
@@ -331,9 +349,9 @@ rect = { w = 1500, h = 1500 }
 
 # ---- Workspace ----------------------------------------------------------
 
-# Рабочий workspace на шаблоне thirds-split: herdr по центру (главный),
-# Chromium слева вверху, Chrome профиля Default слева внизу (остаётся общим
-# с surf), neovide справа. Это домашние места приложений.
+# Рабочий workspace на шаблоне halves-center: herdr по центру (главный),
+# Chromium и Chrome профиля Default (остаётся общим с surf) стопкой в левой
+# ячейке на всю высоту, neovide справа. Это домашние места приложений.
 # mode = "home": клавиша приложения ставит его окна в центр, остальные
 # приложения возвращаются на свои домашние места, а приложение, чей дом —
 # центр (herdr), уходит в свободную ячейку: сначала в освободившийся дом
@@ -341,22 +359,21 @@ rect = { w = 1500, h = 1500 }
 # только дома: в центре и в чужой ячейке окно получает размер ячейки.
 [workspaces.work]
 chain = "SUPER+TAB w"
-template = "thirds-split"
+template = "halves-center"
 mode = "home"
 main = "herdr"
 icon = "folder-development"
 [workspaces.work.apps]
 herdr = "center"
-chromium = { rect = { x = 340, y = 10, w = 1740, h = 1065 } }
-chrome = { rect = { x = 340, y = 1085, w = 1740, h = 1065 } }
-neovide = { rect = { x = 2090, y = 10, w = 1740, h = 2140 } }
+chromium = "left"
+chrome = "left"
+neovide = "right"
 
-# Браузеры на шаблоне overlay: Яндекс.Браузер (главный) и Chrome профиля
-# Default по центру, Chrome профиля AI.dev2026 слева, профиля AI2 справа
-# (решение пользователя 17.10.2026). Живёт на столе 2.
-# mode = "stack": окна стоят друг поверх друга, и менять их ячейками незачем —
-# клавиша браузера поднимает его окно наверх и даёт ему фокус, не двигая
-# ни одного окна. У work режим home — раскладка по домам.
+# Браузеры на шаблоне quarters, сетка 2×2: Яндекс.Браузер (главный) слева
+# вверху, Chrome профиля Default слева внизу, Chrome профиля AI.dev2026
+# справа вверху, профиля AI2 справа внизу. Живёт на столе 2.
+# mode = "stack": клавиша браузера поднимает его окно наверх и даёт ему
+# фокус, не двигая ни одного окна. У work режим home — раскладка по домам.
 # У каждого браузера две клавиши. Super+B/V/Y — клавиши surf (поле chain
 # записи ниже): в surf они ведут цикл по окнам браузера, на столе с другим
 # workspace поднимают surf. Shift+Super+B/V/Y — собственные клавиши
@@ -365,15 +382,15 @@ neovide = { rect = { x = 2090, y = 10, w = 1740, h = 2140 } }
 # общим; если surf не запущен, открывают браузер в этом workspace.
 [workspaces.surf]
 chain = "SUPER+TAB s"
-template = "overlay"
+template = "quarters"
 main = "yandex-browser"
 icon = "yandex-browser"
 mode = "stack"
 [workspaces.surf.apps]
-chrome = { rect = { x = 340, y = 1085, w = 1740, h = 1065 }, chain = "SUPER+B" }
-yandex-browser = { rect = { x = 340, y = 10, w = 1740, h = 1065 }, chain = "SUPER+Y" }
-chrome-ai = { rect = { x = 2090, y = 10, w = 1740, h = 1065 }, chain = "SUPER+V" }
-chrome-ai2 = { rect = { x = 2090, y = 1085, w = 1740, h = 1065 }, chain = "SUPER+V" }
+chrome = { cell = "left_bottom", chain = "SUPER+B" }
+yandex-browser = { cell = "left_top", chain = "SUPER+Y" }
+chrome-ai = { cell = "right_top", chain = "SUPER+V" }
+chrome-ai2 = { cell = "right_bottom", chain = "SUPER+V" }
 # steam = { rect = { x = 1445, y = 680, w = 1280, h = 800 } }
 
 # Поднимается при старте демона после восстановления сессии (стол 1).
