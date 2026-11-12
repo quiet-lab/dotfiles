@@ -5,8 +5,8 @@
 # процессов и остановку демона переживают. HYPRLAND_INSTANCE_SIGNATURE и
 # WAYLAND_DISPLAY приходят из окружения пользовательского systemd.
 # Демон стартует после подготовки herdr (herdr-prestart.service, спецификация
-# hyprland-autostart): herdr стартового workspace открывается уже обновлённым
-# и без восстановления прежних workspace. Wants, а не Requires: неудача
+# hyprland-autostart): herdr стартового workspace открывается с интеграцией
+# под установленную версию и без восстановления прежних workspace. Wants, а не Requires: неудача
 # подготовки демон не останавливает.
 [Unit]
 Description=Демон workspace (workspaced)

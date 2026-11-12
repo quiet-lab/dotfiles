@@ -4,15 +4,11 @@
 # Запускается юнитом herdr-prestart.service до демона workspaced, который
 # открывает herdr в стартовом workspace.
 #
-# Шаги:
-#   1. claude update — обновление Claude Code (установка native);
-#      автообновление в ~/.claude.json выключено, обновление идёт здесь;
-#   2. herdr update — обновление herdr (форк duty-herdr из GitHub Releases
-#      quiet-lab/duty-herdr, бинарник в ~/.local/bin/herdr); сеть или Releases
-#      недоступны — шаг печатает причину и старт не задерживает;
-#   3. herdr integration install claude — хук состояния агента и группа
+# Шаги (быстрые, без сети; обновлений Claude Code и herdr здесь нет — herdr
+# собирается пользователем со своими патчами, Claude Code он обновляет сам):
+#   1. herdr integration install claude — хук состояния агента и группа
 #      SessionStart в ~/.claude/settings.json под установленную версию herdr;
-#   4. чистый старт herdr: если сервер herdr не запущен, session.json
+#   2. чистый старт herdr: если сервер herdr не запущен, session.json
 #      переименовывается в session.json.<дата-время> рядом (хранится не больше
 #      десяти копий), и herdr открывает одно пространство в каталоге запуска,
 #      не восстанавливая прежние workspace; запущенный сервер не трогается.
@@ -37,52 +33,27 @@ esac
 
 # Юнит пользовательского systemd запускается без PATH оболочки, поэтому
 # программы указаны полными путями.
-claude=$HOME/.local/bin/claude
 herdr=$HOME/.local/bin/herdr
 herdr_dir=$HOME/.config/herdr
 session=$herdr_dir/session.json
 keep=10
-# Срок claude update: проверка версии занимает 2 с, скачивание новой версии
-# (около 330 МБ) — до 30 с на нынешней сети; 90 с — запас втрое.
-update_timeout=90
-# Срок herdr update: загрузка бинарника (32 МБ) с GitHub Releases на станции
-# занимает 3,1 с (замер curl, один прогон), запрос манифеста и проверка
-# SHA-256 — доли секунды; срок вдвое больше замера с округлением — 10 с.
-# Вместе с claude update (90 с) укладывается в TimeoutStartSec юнита (120 с).
-herdr_update_timeout=10
 failed=0
 
 say() { printf '%s\n' "$*"; }
 
 # Шаг 1.
 if [ "$dry" -eq 1 ]; then
-    say "1. claude update: выполнил бы «timeout $update_timeout $claude update» (сейчас $("$claude" --version 2>/dev/null || echo 'версия неизвестна'))"
-elif ! timeout "$update_timeout" "$claude" update; then
-    say "1. claude update завершился с ошибкой или по сроку $update_timeout с" >&2
-    failed=1
-fi
-
-# Шаг 2. Отказ обновления (нет сети, Releases недоступны) не считается
-# ошибкой подготовки: herdr стартует установленной версией.
-if [ "$dry" -eq 1 ]; then
-    say "2. herdr update: выполнил бы «timeout $herdr_update_timeout $herdr update» (сейчас $("$herdr" --version 2>/dev/null || echo 'версия неизвестна'))"
-elif ! timeout "$herdr_update_timeout" "$herdr" update; then
-    say "2. herdr update не выполнен (сеть, Releases или срок $herdr_update_timeout с) — остаётся установленная версия" >&2
-fi
-
-# Шаг 3.
-if [ "$dry" -eq 1 ]; then
-    say "3. интеграция: выполнил бы «$herdr integration install claude» ($($herdr --version 2>/dev/null))"
+    say "1. интеграция: выполнил бы «$herdr integration install claude» ($($herdr --version 2>/dev/null))"
 elif ! "$herdr" integration install claude; then
-    say "3. herdr integration install claude завершился с ошибкой" >&2
+    say "1. herdr integration install claude завершился с ошибкой" >&2
     failed=1
 fi
 
-# Шаг 4. Сервер запущен — `herdr status server` печатает «status: running».
+# Шаг 2. Сервер запущен — `herdr status server` печатает «status: running».
 if "$herdr" status server 2>/dev/null | grep -qx 'status: running'; then
-    say "4. сервер запущен — session.json не трогаю"
+    say "2. сервер запущен — session.json не трогаю"
 elif [ ! -e "$session" ]; then
-    say "4. сервер не запущен, session.json нет — herdr стартует с чистого листа"
+    say "2. сервер не запущен, session.json нет — herdr стартует с чистого листа"
 else
     backup=$session.$(date +%Y%m%d-%H%M%S)
     # Копии старше десятой по времени удаляются; имена сравниваются как
@@ -91,15 +62,15 @@ else
         -regex '.*/session\.json\.[0-9]\{8\}-[0-9]\{6\}' -printf '%f\n' |
         sort -r | tail -n +"$keep")
     if [ "$dry" -eq 1 ]; then
-        say "4. сервер не запущен — переименовал бы session.json в ${backup##*/}"
+        say "2. сервер не запущен — переименовал бы session.json в ${backup##*/}"
         [ "${#old[@]}" -eq 0 ] || say "   и удалил бы старые копии: ${old[*]}"
     elif mv -n "$session" "$backup"; then
-        say "4. сервер не запущен — session.json переименован в ${backup##*/}"
+        say "2. сервер не запущен — session.json переименован в ${backup##*/}"
         for f in "${old[@]}"; do
             rm -f -- "$herdr_dir/$f"
         done
     else
-        say "4. не удалось переименовать session.json" >&2
+        say "2. не удалось переименовать session.json" >&2
         failed=1
     fi
 fi

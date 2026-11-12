@@ -81,21 +81,6 @@ Hyprland MUST передавать `WAYLAND_DISPLAY`, `XDG_CURRENT_DESKTOP` и `
 - **WHEN** сервер `axata` не отвечает при загрузке
 - **THEN** экран входа появляется не позже чем через 105 с от начала загрузки, проводное соединение и `amn0` работают, а значок `axata` в трее показывает ошибку
 
-### Requirement: Предстартовая подготовка herdr
-herdr станции MUST быть форком duty-herdr из GitHub Releases `quiet-lab/duty-herdr`, установленным в `~/.local/bin/herdr`; пакет `herdr-bin` MUST NOT быть установлен. При старте сессии Hyprland, до демона workspaced, пользовательский юнит `herdr-prestart.service` MUST выполнить сценарий `~/.local/bin/handmade-scripts/herdr-prestart`: `claude update` со сроком 90 с, `herdr update` со сроком 10 с, `herdr integration install claude` и чистый старт herdr. Ошибка шага MUST записываться в журнал и MUST NOT останавливать следующие шаги и запуск демона workspaced; недоступность сети или Releases при `herdr update` MUST NOT считаться ошибкой подготовки. Ключ `--dry-run` MUST печатать шаги, ничего не меняя.
-
-#### Scenario: Пробный запуск
-- **WHEN** выполнена `herdr-prestart --dry-run`
-- **THEN** сценарий печатает четыре шага, ни один файл не меняется, `claude update`, `herdr update` и `herdr integration install claude` не выполняются
-
-#### Scenario: Claude Code не обновился
-- **WHEN** `claude update` завершился ошибкой или по сроку
-- **THEN** журнал юнита содержит строку об ошибке, herdr и интеграция обновлены, демон workspaced запущен
-
-#### Scenario: Releases недоступны
-- **WHEN** `herdr update` не уложился в срок или не достучался до GitHub Releases
-- **THEN** журнал юнита содержит строку «herdr update не выполнен», установленная версия не изменилась, интеграция и чистый старт выполнены, код выхода сценария 0
-
 ### Requirement: Чистый старт herdr
 Если сервер herdr не запущен, сценарий подготовки MUST переименовать `~/.config/herdr/session.json` в `session.json.<дата-время>` в том же каталоге и хранить не больше десяти таких копий; при запущенном сервере MUST NOT трогать файлы сессии. herdr стартового workspace MUST открываться в каталоге `~/work/telecom/axata/monorepo-ocp` (`cwd` у `[apps.herdr]`) одним пространством и MUST NOT запускать Claude Code сам (`resume_agents_on_restore = false` в `~/.config/herdr/config.toml`).
 
@@ -106,3 +91,25 @@ herdr станции MUST быть форком duty-herdr из GitHub Releases 
 #### Scenario: Сервер herdr уже запущен
 - **WHEN** сценарий подготовки запускается при работающем сервере herdr
 - **THEN** сценарий пишет «сервер запущен — session.json не трогаю», файлы `~/.config/herdr` не меняются
+
+### Requirement: herdr из форка duty-herdr
+herdr станции MUST быть форком duty-herdr, установленным в `~/.local/bin/herdr` собственной сборкой пользователя; пакет `herdr-bin` MUST NOT быть установлен. Старт сессии MUST NOT обновлять herdr и Claude Code.
+
+#### Scenario: Источник herdr
+- **WHEN** проверяется установка herdr
+- **THEN** `~/.local/bin/herdr` — бинарник форка, `pacman -Q herdr-bin` не находит пакета
+
+#### Scenario: Вход в сессию без сети
+- **WHEN** имена не разрешаются, сессия стартует
+- **THEN** в журнале сессии нет вызовов `claude update` и `herdr update`
+
+### Requirement: Быстрая предстартовая подготовка herdr
+При старте сессии Hyprland, до демона workspaced, пользовательский юнит `herdr-prestart.service` MUST выполнить `~/.local/bin/handmade-scripts/herdr-prestart`: только быстрые шаги без сети — `herdr integration install claude` и чистый старт herdr. Ошибка шага MUST записываться в журнал и MUST NOT останавливать запуск демона workspaced. Ключ `--dry-run` MUST печатать шаги, ничего не меняя.
+
+#### Scenario: Пробный запуск
+- **WHEN** выполнена `herdr-prestart --dry-run`
+- **THEN** сценарий печатает два шага, ни один файл не меняется, `herdr integration install claude` не выполняется
+
+#### Scenario: Подготовка при недоступной сети
+- **WHEN** имена не разрешаются (туннель `amn0` без рукопожатия), сессия стартует
+- **THEN** `herdr-prestart.service` завершается меньше чем за 2 с, `workspaced.service` стартует без ожидания сети
