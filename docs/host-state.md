@@ -19,6 +19,10 @@ initramfs, без которой параметр не действует. Фа�
 почему от VRR отказались и как проверить изъян заново —
 в [`decisions/0006-nvidia-conceal-vrr-caps.md`](decisions/0006-nvidia-conceal-vrr-caps.md).
 
+**`/boot/limine.conf`** — конфиг загрузчика Limine. Срок меню задаёт первая
+строка `timeout: 1`; `limine-entry-tool` меняет только записи ядер и глобальную
+часть не трогает. Привязка контрольной суммы конфига к загрузчику не включена.
+
 **`/etc/greetd/config.toml`** — конфиг менеджера входа. Источник лежит
 в репозитории (`system/greetd/config.toml`), но chezmoi каталог `system/`
 не применяет: в `/etc` файл кладёт сценарий `system/greetd/migrate.sh`
