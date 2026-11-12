@@ -347,9 +347,9 @@ main = "herdr"
 icon = "folder-development"
 [workspaces.work.apps]
 herdr = "center"
-chromium = "left_top"
-chrome = "left_bottom"
-neovide = "right"
+chromium = { rect = { x = 340, y = 10, w = 1740, h = 1065 } }
+chrome = { rect = { x = 340, y = 1085, w = 1740, h = 1065 } }
+neovide = { rect = { x = 2090, y = 10, w = 1740, h = 2140 } }
 
 # Браузеры на шаблоне overlay: Яндекс.Браузер (главный) и Chrome профиля
 # Default по центру, Chrome профиля AI.dev2026 слева, профиля AI2 справа
@@ -370,10 +370,10 @@ main = "yandex-browser"
 icon = "yandex-browser"
 mode = "stack"
 [workspaces.surf.apps]
-chrome = { cell = "center", chain = "SUPER+B" }
-yandex-browser = { cell = "center", chain = "SUPER+Y" }
-chrome-ai = { cell = "left", chain = "SUPER+V" }
-chrome-ai2 = { cell = "right", chain = "SUPER+V" }
+chrome = { rect = { x = 340, y = 1085, w = 1740, h = 1065 }, chain = "SUPER+B" }
+yandex-browser = { rect = { x = 340, y = 10, w = 1740, h = 1065 }, chain = "SUPER+Y" }
+chrome-ai = { rect = { x = 2090, y = 10, w = 1740, h = 1065 }, chain = "SUPER+V" }
+chrome-ai2 = { rect = { x = 2090, y = 1085, w = 1740, h = 1065 }, chain = "SUPER+V" }
 # steam = { rect = { x = 1445, y = 680, w = 1280, h = 800 } }
 
 # Поднимается при старте демона после восстановления сессии (стол 1).
