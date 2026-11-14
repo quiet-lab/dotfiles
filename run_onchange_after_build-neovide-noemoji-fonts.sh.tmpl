@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Копии шрифта IosevkaTermSlab NF без кодов эмодзи под семейством
+# «IosevkaTermSlab NF NoEmoji» для Neovide (dot_config/neovide/config.toml):
+# одноцветные фазы луны основного шрифта иначе перекрывают цветные из Noto Color Emoji.
+# Сценарий выполняется заново при изменении своего текста, сценария вырезания
+# или исходных файлов шрифтов: их хеши входят в текст ниже.
+{{- $fonts := joinPath .chezmoi.homeDir ".local/share/fonts" }}
+# strip-emoji-font {{ include (joinPath .chezmoi.sourceDir "dot_local/bin/handmade-scripts/executable_strip-emoji-font") | sha256sum }}
+{{- range (list "Light" "Bold" "LightItalic" "BoldItalic") }}
+# {{ . }} {{ include (joinPath $fonts (printf "IosevkaTermSlabNerdFont-%s.ttf" .)) | sha256sum }}
+{{- end }}
+set -euo pipefail
+fonts="$HOME/.local/share/fonts"
+for style in Light Bold LightItalic BoldItalic; do
+  python3 -I "$HOME/.local/bin/handmade-scripts/strip-emoji-font" \
+    "$fonts/IosevkaTermSlabNerdFont-$style.ttf" \
+    "$fonts/IosevkaTermSlabNoEmoji-$style.ttf" "IosevkaTermSlab NF NoEmoji"
+done
+fc-cache -f "$fonts"

@@ -10,21 +10,37 @@ startup-message-capture = false
 [font]
 size = 16.00
 
+# Основной шрифт заменён копией без кодов эмодзи (сценарий chezmoi
+# run_onchange_after_build-neovide-noemoji-fonts): в оригинале есть одноцветные
+# фазы луны и подобные знаки, и Neovide рисует их вместо цветных из Noto Color Emoji.
+
 [[font.normal]]
-family = "IosevkaTermSlab NF"
+family = "IosevkaTermSlab NF NoEmoji"
 style = "W200"
 
+[[font.normal]]
+family = "Noto Color Emoji"
+
 [[font.bold]]
-family = "IosevkaTermSlab NF"
+family = "IosevkaTermSlab NF NoEmoji"
 style = "W600"
 
+[[font.bold]]
+family = "Noto Color Emoji"
+
 [[font.italic]]
-family = "IosevkaTermSlab NF"
+family = "IosevkaTermSlab NF NoEmoji"
 style = "W200 Italic"
 
+[[font.italic]]
+family = "Noto Color Emoji"
+
 [[font.bold_italic]]
-family = "IosevkaTermSlab NF"
+family = "IosevkaTermSlab NF NoEmoji"
 style = "W600 Italic"
+
+[[font.bold_italic]]
+family = "Noto Color Emoji"
 
 [box-drawing.sizes]
 default = [1, 3]

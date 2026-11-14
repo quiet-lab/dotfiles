@@ -349,3 +349,19 @@ ipv4.dns-search '~ru,~by,~su,~xn--p1ai'`, затем переподключен�
 `eww-patches/` с патчами ветки поверх master eww. В репозитории dotfiles
 этого нет: спецификации `eww-*` лежат только
 в `../openspec/changes/archive/`.
+
+## Шрифт Neovide без эмодзи
+
+Основной шрифт `IosevkaTermSlab NF` содержит одноцветные знаки из блока
+эмодзи (фазы луны U+1F311…1F318, 🆘), и Neovide берёт для символа первый
+шрифт списка, в котором знак есть, поэтому цветной `Noto Color Emoji`
+до них не доходит. Поэтому `dot_config/neovide/config.toml` называет первым
+семейство `IosevkaTermSlab NF NoEmoji`, вторым — `Noto Color Emoji`.
+
+Копии файлов `IosevkaTermSlabNerdFont-{Light,Bold,LightItalic,BoldItalic}.ttf`
+без кодов U+1F000…1FAFF создаёт в `~/.local/share/fonts`
+(`IosevkaTermSlabNoEmoji-*.ttf`) сценарий chezmoi
+`run_onchange_after_build-neovide-noemoji-fonts.sh.tmpl` с помощью
+`~/.local/bin/handmade-scripts/strip-emoji-font` (нужен `python-fonttools`);
+сценарий выполняется заново при изменении исходных шрифтов или своего текста.
+Исходные файлы шрифтов не меняются, в git копий нет.
