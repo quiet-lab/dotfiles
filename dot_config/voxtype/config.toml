@@ -126,7 +126,7 @@ on_demand_loading = false
 # (токенизатор Whisper large-v3), начало более длинной подсказки
 # отбрасывается, поэтому подсказка держится в этом пределе, а при добавлении
 # слов её длина пересчитывается.
-initial_prompt = "Поиск в atuin и ble.sh не работает. Что обсудить по Nuitka и HeavyCI? Почему diff в Bitbucket не показывает конфликт в docs: call anatomy? Будем писать на Rust, использовать http2 и websocket. Зачем меняли секреты vault? Почему claude code спрашивает? Пуллреквесты не создаются, Jenkins упал. Когда создана база qms_dev2? QMS занят 8–15 секунд. Выкати на prod, сначала проверь на dev, поправь type. Домен oktell-ocp для прода, настрой dev2 в nginx. Проверь front playwrite-ом, OCP должен работать, прогони blackbox-тесты для back-а. Перезапусти voxtype, wezterm и herdr. Открой файл в neovim, проверь настройки neovide, прогони prettier."
+initial_prompt = "Поиск в atuin и ble.sh не работает. Что обсудить по Nuitka и HeavyCI? Почему diff в Bitbucket не показывает конфликт в docs: call anatomy? Будем писать на Rust, использовать LightRAG, http2 и websocket. Зачем меняли секреты vault? Почему claude code спрашивает? Пуллреквесты не создаются, Jenkins упал. Когда создана база qms_dev2? QMS занят 15 секунд. Выкати на prod, проверь на dev, поправь type. Домен oktell-ocp для прода, настрой dev2 в nginx. Проверь front playwrite-ом, OCP должен работать, прогони blackbox-тесты для back-а. Перезапусти voxtype, wezterm и herdr. Открой файл в neovim, проверь настройки neovide, прогони prettier."
 mode = "local"
 flash_attention = true
 gpu_isolation = false
