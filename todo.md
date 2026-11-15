@@ -10,6 +10,7 @@
 
 ### Открытые вопросы к пользователю
 
+- Плагин Neovim `claudr.nvim` (`~/work/pets/claudr.nvim`): проверки руками и решения, отложенные пользователем 15.11.2026, — в разделе «Открытые вопросы к пользователю» его местного снимка `todo.local.md`; первая проверка — окно ввода сообщения по `m` в дереве `:Claudr tree`.
 - [`herdr-keys-help`](openspec/changes/herdr-keys-help/tasks.md), 9.3 и таблица регрессий протокола kitty: после перезапуска клиента herdr (сервер ещё на сборке `duty-v0.9.5.14+ru-layout-chords`, установлен `duty-v0.9.5.15`) Alt+R, Alt+T, Alt+H в оболочке открывают atuin, tv и fzf с их таблицами в нижней панели; Esc и `i` меняют таблицу режима ble.sh; Alt+F, Alt+D, Alt+↑, Ctrl+Alt+T работают; Ctrl+Alt+Shift+/ и Ctrl+Alt+R срабатывают в русской раскладке; панель `claude-input` печатает как прежде. После подтверждения — архивация (шаг 1).
 - Панель ввода `claude-input`: стрелки вверх и вниз листают историю ввода Claude Code (после переоткрытия панели Ctrl+Alt+R); выбор пункта свободного ввода в диалоге не уводит с workspace диалога (форк herdr с `duty-v0.9.5.14`).
 - Neovim: `gq` не переносит строки, потому что `formatexpr` отдан conform.nvim с prettier (`--prose-wrap preserve`), работает только `gw`. Варианты: `formatexpr=""` с `textwidth` для markdown и текста в ftplugin; prettier с `--prose-wrap always --print-width 80`; `formatexpr=""` глобально. Решение не принято.
