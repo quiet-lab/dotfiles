@@ -1,8 +1,6 @@
-# Установка пакетов uv идёт через proxy-группу Nexus, а не через pypi.org.
-# Адрес — .chezmoidata.toml. Замки проектов (uv.lock) с прямыми адресами
-# files.pythonhosted.org этот файл не меняет.
+# Файл не задаёт индекс пакетов: зеркало Nexus как индекс по умолчанию
+# переписывало uv.lock проектов на адреса зеркала при каждом `uv run`/`uv sync`
+# без `--locked`. Зеркало передаётся явно рецептами и оснасткой
+# (UV_DEFAULT_INDEX, --default-index); адрес — .chezmoidata.toml.
+# allow-insecure-host нужен, когда зеркало передано явно (адрес по http).
 allow-insecure-host = ["{{ .nexus.host }}:{{ .nexus.port }}"]
-
-[[index]]
-url = "http://{{ .nexus.host }}:{{ .nexus.port }}/repository/pypi-group/simple/"
-default = true
