@@ -1376,7 +1376,7 @@ workspace и показываются клавишей-переключател�
 
 ### Вне серии: monitor-loss-layout
 
-Изменение [`monitor-loss-layout`](../openspec/changes/monitor-loss-layout/).
+Изменение [`monitor-loss-layout`](../openspec/changes/archive/2026-11-21-monitor-loss-layout/).
 Повод — дефект: после пропажи и возвращения монитора окна правее 1920 px
 сдвигались на 1920 px влево, а демон записывал сдвиг изменённым местом.
 
