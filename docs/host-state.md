@@ -273,6 +273,22 @@ fedora-box`, поле `restart_policy` в базе podman; проверяетс�
 явно (`--log-driver k8s-file` в `container_manager_additional_flags`
 или `log_driver` в `~/.config/containers/containers.conf`).
 
+**Репозиторий dnf `fedora-cisco-openh264` в контейнере отключён**
+(Fedora 44, dnf5: `dnf config-manager setopt fedora-cisco-openh264.enabled=0`,
+запись лежит в `/etc/dnf/repos.override.d/99-config_manager.repo` контейнера;
+проверяется `distrobox enter fedora-box -- dnf repolist --all`). Сервер
+`ciscobinary.openh264.org` отвечает 403 на загрузку пакета `openh264`,
+и полное обновление `dnf upgrade` из-за этого обрывается. Вместо `openh264`
+в контейнере стоит заглушка `noopenh264`: библиотеку требуют только
+`libavcodec-free` и `libheif`, и заглушка их устраивает; программного
+кодирования и декодирования H.264 через ffmpeg и gstreamer в контейнере
+поэтому нет. Условие пересмотра: в контейнере появилась программа, которой
+нужен программный H.264 через системные библиотеки, — тогда репозиторий
+включить (`dnf config-manager setopt fedora-cisco-openh264.enabled=1`)
+и поставить `openh264`. Пакеты контейнера обновляются командой
+`distrobox enter fedora-box -- sudo dnf -y upgrade --refresh`; браузеры
+после обновления работают на старой версии до перезапуска.
+
 ## Ярлыки приложений
 
 **`~/.local/share/applications/fedora-box-*.desktop`** — записи,
