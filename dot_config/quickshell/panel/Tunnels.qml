@@ -8,6 +8,8 @@
 // `inotifywait` (хранилище приложения, country.json); для axata — общий поток
 // `nmcli monitor` панели (синглтон NmMonitor) и журнал юнита axata-vpn
 // (NetworkManager сообщает об отказе VPN раньше, чем юнит становится failed).
+// Профиль сети (файл /etc/amnezia/profile, спецификация network-profiles)
+// читает тот же `inotifywait`: замена файла перечитывает оба туннеля.
 // Таймеров и опроса нет.
 pragma Singleton
 import Quickshell
@@ -23,9 +25,11 @@ Singleton {
     // Состояние: state — "up", "down", "starting", "failed"; ip — адрес
     // устройства; service — состояние юнита systemd; error — текст последней
     // неудачной команды значка (пусто, если ошибки нет); noLink — причина
-    // состояния «поднят, но связи нет» (строка журнала), пусто — связь есть.
-    property var amn: ({ state: "down", ip: "", service: "", error: "", noLink: "", country: "", countryName: "" })
-    property var axata: ({ state: "down", ip: "", service: "", error: "", noLink: "" })
+    // состояния «поднят, но связи нет» (строка журнала), пусто — связь есть;
+    // profile — профиль сети ("main", "backup"); connection — соединение
+    // NetworkManager туннеля axata ("axata", "axata-full"; у amn0 пусто).
+    property var amn: ({ state: "down", ip: "", service: "", error: "", noLink: "", country: "", countryName: "", profile: "main", connection: "" })
+    property var axata: ({ state: "down", ip: "", service: "", error: "", noLink: "", profile: "main", connection: "axata" })
 
     // --- Чтение состояния: один процесс на туннель, событие во время чтения
     // откладывает следующее чтение до конца текущего (как у плитки сети). ---
@@ -159,10 +163,15 @@ Singleton {
         label: "inotifywait"
         // Страна туннеля: хранилище приложения AmneziaVPN (страна из
         // приложения) и /etc/amnezia (country.json — страна, выбранная через
-        // amn-country). Реагируют строки об этих двух файлах.
+        // amn-country); профиль сети — /etc/amnezia/profile (net-profile
+        // заменяет его переименованием временного файла). Реагируют строки
+        // об этих файлах; пустая строка после перезапуска потока — обо всех.
         command: ["inotifywait", "-m", "-q", "-e", "close_write,moved_to,delete", "--format", "%w%f",
             root.home + "/.config/AmneziaVPN.ORG/", "/etc/amnezia/"]
-        onLine: (text) => { if (text === "" || /AmneziaVPN\.conf$|country\.json$/.test(text)) root.readCountry(); }
+        onLine: (text) => {
+            if (text === "" || /AmneziaVPN\.conf$|country\.json$/.test(text)) root.readCountry();
+            if (text === "" || /\/profile$/.test(text)) { root.readAmn(); root.readAxata(); }
+        }
     }
     Stream {
         label: "journalctl -f axata-vpn"
@@ -222,17 +231,33 @@ Singleton {
     // у каждого туннеля; код выхода и последняя строка вывода ошибок попадают
     // в error туннеля и показываются в подсказке. Пока действие выполняется,
     // второе над тем же туннелем не запускается: act возвращает false,
-    // подсказка показывает «выполняется действие» (свойства amnBusy, axataBusy). ---
-    readonly property bool amnBusy: amnAction.running
-    readonly property bool axataBusy: axataAction.running
+    // подсказка показывает «выполняется действие» (свойства amnBusy, axataBusy).
+    // Смена профиля сети (net-profile, требование «Профиль сети в панели»)
+    // занимает оба туннеля: пока она идёт, действий над ними нет, а её ошибка
+    // становится ошибкой обоих. ---
+    readonly property bool amnBusy: amnAction.running || profileAction.running
+    readonly property bool axataBusy: axataAction.running || profileAction.running
     function act(tunnel, args) {
         const proc = tunnel === "amn0" ? amnAction : axataAction;
-        if (proc.running) return false;
+        if (proc.running || profileAction.running) return false;
         proc.command = args;
         proc.running = true;
         return true;
     }
+    // target — "backup" или "main"; сценарий root без пароля по правилу
+    // /etc/sudoers.d/amn-switch.
+    function setProfile(target) {
+        if (amnAction.running || axataAction.running || profileAction.running) return false;
+        profileAction.command = ["sudo", "-n", "/usr/local/sbin/net-profile", target];
+        profileAction.running = true;
+        return true;
+    }
     function setError(tunnel, text) {
+        if (tunnel === "both") {
+            root.setError("amn0", text);
+            root.setError("axata", text);
+            return;
+        }
         const s = Object.assign({}, tunnel === "amn0" ? root.amn : root.axata);
         s.error = text;
         if (tunnel === "amn0") root.amn = s;
@@ -241,6 +266,7 @@ Singleton {
     component ActionProc: Process {
         id: action
         required property string tunnel
+        // tunnel — "amn0", "axata" или "both" (смена профиля сети).
         // Итог подводится, когда пришли и код выхода, и весь вывод ошибок:
         // порядок этих двух событий не гарантирован.
         property int code: 0
@@ -249,12 +275,13 @@ Singleton {
         function finish() {
             if (--action.pending > 0) return;
             root.setError(action.tunnel, action.code === 0 ? "" : (err.text.trim().split("\n").pop() || ("код выхода " + action.code)));
-            if (action.tunnel === "amn0") root.readAmn();
-            else root.readAxata();
+            if (action.tunnel !== "axata") root.readAmn();
+            if (action.tunnel !== "amn0") root.readAxata();
         }
         stderr: StdioCollector { id: err; onStreamFinished: action.finish() }
         onExited: (exitCode) => { action.code = exitCode; action.finish(); }
     }
     ActionProc { id: amnAction; tunnel: "amn0" }
     ActionProc { id: axataAction; tunnel: "axata" }
+    ActionProc { id: profileAction; tunnel: "both" }
 }

@@ -6,12 +6,12 @@
 | Файл | Куда ставится | Что это |
 |---|---|---|
 | `amn-export-config` | `/usr/local/sbin` | сборка `amn0.conf` из хранилища AmneziaVPN и шаблона; при выгрузке удаляет `country.json`; если страна выбрана в панели, `install.sh` и `amn-switch` вызывают его с `--rerender` — нынешний конфиг заново подставляется в шаблон |
-| `amn-apply-config` | `/usr/local/sbin` | установка конфига страны из стандартного ввода (JSON от `amn-country set`): проверка по шаблону, перезапуск, откат |
+| `amn-apply-config` | `/usr/local/sbin` | установка конфига страны из стандартного ввода (JSON от `amn-country set`): проверка по шаблону, перезапуск, откат; при запасном профиле сети — отказ |
 | `awg-quick@amn0.service.d/50-log-verbose.conf` | `/etc/systemd/system/awg-quick@amn0.service.d` | подробный журнал amneziawg-go для состояния «связи нет» в трее |
 | `amn-zones-update` | `/usr/local/sbin` | загрузка таблицы nftables `inet amn` с наборами `zones` (адреса напрямую) и `bypass` |
 | `amn-route` | `/usr/local/sbin` | правило метки, таблица 100 и DNS канала (все имена, кроме зон маршрутизатора) (ловушки `awg-quick`) |
-| `amn-switch` | `/usr/local/sbin` | переход с приложения на `awg-quick@amn0` с проверкой и откатом |
-| `../sudo/sudoers.d/amn-switch` | `/etc/sudoers.d` (0440) | без пароля: `amn-switch`, `systemctl start/stop/restart awg-quick@amn0`, `awg show amn0 endpoints`, `awg show amn0 latest-handshakes`, `amn-zones-update --count` и `--force`, `amn-apply-config` без аргументов (значок `amn0` в трее панели) |
+| `amn-switch` | `/usr/local/sbin` | переход с приложения на `awg-quick@amn0` с проверкой и откатом; ставит основной профиль сети |
+| `../sudo/sudoers.d/amn-switch` | `/etc/sudoers.d` (0440) | без пароля команды с точными аргументами (состав — [`../sudo/README.md`](../sudo/README.md)): `amn-switch`, управление `awg-quick@amn0`, сведения и действия значков туннелей в трее панели, переход между профилями сети `net-profile backup` и `net-profile main` |
 | `install.sh` | не ставится | установка файлов, переход, возврат, состояние |
 | `amn0.conf.template` | `/etc/amnezia` | шаблон конфига без ключей |
 | `amn.nft` | `/etc/amnezia` | таблица `inet amn` без элементов наборов |
@@ -52,5 +52,7 @@ system/amnezia/install.sh status
 
 Возврат приложения — `system/amnezia/install.sh revert`.
 
-Автозапуск `axata` при загрузке и ожидание туннелей перед экраном входа —
-`../tunnels/` ([`README.md`](../tunnels/README.md)).
+Автозапуск `axata` при загрузке, ожидание туннелей перед экраном входа,
+запасной профиль сети «всё через axata» и сценарий перехода `net-profile` —
+`../tunnels/` ([`README.md`](../tunnels/README.md)). Правило sudoers
+ставит `install.sh files` этого каталога, поэтому он запускается первым.

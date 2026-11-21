@@ -1,11 +1,19 @@
 #!/bin/sh
 # Краткое состояние туннеля для значка трея (спецификация qs-tray-lang,
-# требование «Значки туннелей»): один объект JSON
-# {"state":"up|starting|down|failed","ip":…,"service":…,"uuid":…}
-# (uuid — только у axata, для редактора соединений; страну amn0 панель
-# читает отдельно, по inotify). Запускается панелью только в ответ
-# на события: для amn0 — строки ip monitor и журнала awg-quick@amn0,
-# для axata — строки nmcli monitor и журнала axata-vpn.
+# требования «Значки туннелей» и «Профиль в сведениях и проверке панели»):
+# один объект JSON
+# {"state":"up|starting|down|failed","ip":…,"service":…,"uuid":…,
+#  "profile":"main|backup","connection":…}
+# profile — профиль сети из /etc/amnezia/profile (backup только при строке,
+# в точности равной backup; спецификация network-profiles); connection —
+# имя соединения NetworkManager туннеля axata: активное из axata и axata-full,
+# а если активного нет — по профилю (у amn0 пусто); uuid — этого соединения,
+# для редактора соединений. Страну amn0 панель читает отдельно, по inotify.
+# Запускается панелью только в ответ на события: для amn0 — строки
+# ip monitor и журнала awg-quick@amn0, для axata — строки nmcli monitor
+# и журнала axata-vpn, для обоих — замена файла профиля.
+if grep -sqx backup /etc/amnezia/profile; then profile=backup; else profile=main; fi
+connection=""
 case "$1" in
 amn0)
 	service=$(systemctl is-active awg-quick@amn0.service 2>/dev/null)
@@ -19,9 +27,13 @@ amn0)
 	;;
 axata)
 	service=$(systemctl is-active axata-vpn.service 2>/dev/null)
-	nm=$(nmcli -g GENERAL.STATE con show id axata 2>/dev/null)
-	uuid=$(nmcli -g connection.uuid con show id axata 2>/dev/null)
-	ip=$(nmcli -g IP4.ADDRESS con show id axata 2>/dev/null | head -n1 | cut -d/ -f1)
+	connection=$(nmcli -t -f NAME connection show --active 2>/dev/null | grep -xE 'axata|axata-full' | head -n1)
+	if [ -z "$connection" ]; then
+		if [ "$profile" = backup ]; then connection=axata-full; else connection=axata; fi
+	fi
+	nm=$(nmcli -g GENERAL.STATE con show id "$connection" 2>/dev/null)
+	uuid=$(nmcli -g connection.uuid con show id "$connection" 2>/dev/null)
+	ip=$(nmcli -g IP4.ADDRESS con show id "$connection" 2>/dev/null | head -n1 | cut -d/ -f1)
 	case "$nm" in
 	activated) state=up ;;
 	activating) state=starting ;;
@@ -34,4 +46,5 @@ axata)
 	;;
 esac
 jq -cn --arg state "$state" --arg ip "$ip" --arg service "$service" --arg uuid "${uuid:-}" \
-	'{state:$state,ip:$ip,service:$service,uuid:$uuid}'
+	--arg profile "$profile" --arg connection "$connection" \
+	'{state:$state,ip:$ip,service:$service,uuid:$uuid,profile:$profile,connection:$connection}'

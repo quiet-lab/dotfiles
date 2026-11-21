@@ -76,10 +76,18 @@ Tile {
     // --- Значки туннелей ---
     // Глиф по туннелю, цвет по состоянию: поднят — зелёный, поднимается —
     // жёлтый, не поднят — серый, ошибка службы или действия — красный.
+    // При запасном профиле сети amn0 остановлен намеренно: он серый, красным
+    // его делает только ошибка действия (требование «Значки туннелей»).
     readonly property var tunnelNames: ({ amn0: "Amnezia amn0", axata: "OpenVPN axata" })
     readonly property var stateNames: ({ up: "поднят", starting: "поднимается", down: "не поднят", failed: "ошибка" })
+    readonly property var profileNames: ({ main: "основной", backup: "запасной" })
     function tunnelState(name) { return name === "amn0" ? Tunnels.amn : Tunnels.axata; }
-    function tunnelColor(s) {
+    // amn0 выключен ради запасного профиля: служба не поднята и не поднимается.
+    function amnBackupOff(name, s) {
+        return name === "amn0" && s.profile === "backup" && s.state !== "up" && s.state !== "starting";
+    }
+    function tunnelColor(name, s) {
+        if (tile.amnBackupOff(name, s)) return s.error !== "" ? Theme.red : Theme.gray;
         if (s.error !== "" || s.state === "failed") return Theme.red;
         if (s.state === "up" && s.noLink) return Theme.orange;
         if (s.state === "up") return Theme.brightGreen;
@@ -88,15 +96,22 @@ Tile {
     }
     function tunnelTip(name) {
         const s = tunnelState(name);
-        let t = tunnelNames[name] + ": " + (s.state === "up" && s.noLink ? "поднят, связи нет" : stateNames[s.state]);
-        if (s.countryName) t += ", " + s.countryName;
+        let t = tunnelNames[name] + ": ";
+        if (tile.amnBackupOff(name, s)) t += "выключен: запасной профиль";
+        else t += s.state === "up" && s.noLink ? "поднят, связи нет" : stateNames[s.state];
+        if (s.countryName && !tile.amnBackupOff(name, s)) t += ", " + s.countryName;
         if (s.ip !== "") t += ", " + s.ip;
+        t += "\nпрофиль: " + (profileNames[s.profile] || profileNames.main);
+        if (name === "axata" && s.connection) t += " (" + s.connection + ")";
         if (name === "amn0" ? Tunnels.amnBusy : Tunnels.axataBusy) t += "\nвыполняется действие";
         if (s.state === "up" && s.noLink) t += "\nпричина: " + s.noLink;
         if (s.error !== "") t += "\nошибка: " + s.error;
         return t;
     }
     // Действия туннеля: одни и те же для меню правого клика и кнопок окна.
+    // Пункт смены профиля сети — в меню обоих значков (требование «Профиль
+    // сети в панели»); при запасном профиле меню amn0 состоит только из него:
+    // таблицы inet amn в запасном профиле быть не должно.
     function tunnelActions(name) {
         const s = tunnelState(name);
         const up = s.state === "up" || s.state === "starting";
@@ -104,6 +119,10 @@ Tile {
         // поэтому меню предлагает перезапуск и остановку, как у поднятого.
         const amnRunning = up || s.service === "active" || s.service === "activating";
         const items = [];
+        const profileItem = s.profile === "backup"
+            ? { label: "Основной профиль", action: () => Tunnels.setProfile("main") }
+            : { label: "Запасной профиль: всё через axata", action: () => Tunnels.setProfile("backup") };
+        if (name === "amn0" && s.profile === "backup") return [profileItem];
         if (name === "amn0") {
             const ctl = (verb) => ["sudo", "-n", "/usr/bin/systemctl", verb, "awg-quick@amn0"];
             if (amnRunning) {
@@ -115,16 +134,20 @@ Tile {
             items.push({ label: "Страна туннеля…", action: () => tile.openCountries() });
             items.push({ label: "Обновить списки стран", action: () => Tunnels.act("amn0", ["sudo", "-n", "/usr/local/sbin/amn-zones-update", "--force"]) });
         } else {
-            if (up) items.push({ label: "Отключить", action: () => Tunnels.act("axata", ["nmcli", "con", "down", "id", "axata"]) });
-            else items.push({ label: "Подключить", action: () => Tunnels.act("axata", ["nmcli", "--wait", "60", "con", "up", "id", "axata"]) });
+            // Соединение профиля: активное или выбранное файлом профиля.
+            const con = s.connection || "axata";
+            if (up) items.push({ label: "Отключить", action: () => Tunnels.act("axata", ["nmcli", "con", "down", "id", con]) });
+            else items.push({ label: "Подключить", action: () => Tunnels.act("axata", ["nmcli", "--wait", "60", "con", "up", "id", con]) });
             items.push({ label: "Настройки", action: () => Run.detached(s.uuid ? ["nm-connection-editor", "--edit=" + s.uuid] : ["nm-connection-editor"]) });
         }
+        items.push(profileItem);
         return items;
     }
 
     // Проверка без мыши: `qs -c panel ipc call tunnels state` — состояние обоих
-    // туннелей; info — окно сведений, как левый клик (без захвата ввода), run —
-    // действие меню по подписи пункта, shown — содержимое открытого окна, close.
+    // туннелей с полями profile и connection; info — окно сведений, как левый
+    // клик (без захвата ввода), run — действие меню по подписи пункта (в том
+    // числе смена профиля сети), shown — содержимое открытого окна, close.
     // Меню по IPC не открывается: оно захватывает ввод, а Wayland разрешает
     // захват только сразу после клика по панели. Панель одна (только монитор DP-2), имя цели не повторяется.
     IpcHandler {
@@ -201,8 +224,8 @@ Tile {
                     x: -AmneziaIcon.VIEW.x; y: -AmneziaIcon.VIEW.y
                     preferredRendererType: Shape.CurveRenderer
                     ShapePath {
-                        fillColor: tile.tunnelColor(icon.st)
-                        strokeColor: tile.tunnelColor(icon.st)
+                        fillColor: tile.tunnelColor(icon.tunnel, icon.st)
+                        strokeColor: tile.tunnelColor(icon.tunnel, icon.st)
                         strokeWidth: 2
                         joinStyle: ShapePath.RoundJoin
                         fillRule: ShapePath.WindingFill
@@ -215,7 +238,7 @@ Tile {
             visible: icon.tunnel !== "amn0"
             anchors.centerIn: parent
             text: "󰦝"
-            color: tile.tunnelColor(icon.st)
+            color: tile.tunnelColor(icon.tunnel, icon.st)
             font.family: Theme.fontFamily
             font.pixelSize: 20
         }

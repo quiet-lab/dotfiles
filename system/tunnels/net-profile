@@ -1,0 +1,399 @@
+#!/usr/bin/bash
+# Переход между профилями сети станции (спецификация network-profiles,
+# устройство — docs/amnezia-split-tunnel.md, раздел «Профили сети»;
+# решение — docs/decisions/0011):
+#
+#   net-profile backup   запасной профиль «всё через axata»: awg-quick@amn0
+#                        остановлен, поднято соединение axata-full (копия
+#                        axata без ipv4.never-default), весь трафик идёт
+#                        через tun0
+#   net-profile main     основной профиль: соединение axata
+#                        (ipv4.never-default yes) и awg-quick@amn0
+#
+# Запускает пользователь из меню значков туннелей панели или из терминала:
+#   sudo -n /usr/local/sbin/net-profile backup
+# Пароль не спрашивается: правило /etc/sudoers.d/amn-switch разрешает ровно
+# эти два вызова. Поэтому сценарий лежит в /usr/local/sbin (root, 0755),
+# PATH задаёт сам и исполняет только файлы root; ставит его
+# system/tunnels/install.sh files.
+#
+# Выбранный профиль хранится в /etc/amnezia/profile (main или backup);
+# по нему юниты загрузки выбирают туннели. Запасным профиль считается только
+# при строке, в точности равной backup; нет файла — основной.
+#
+# Во время перехода связи с внешним миром нет: до подъёма соединения
+# сценарий к удалённым ресурсам не обращается, от процессов сессии
+# не зависит и доводит переход или откат до конца сам. Итог — построчно
+# в стандартный вывод и в /var/log/net-profile.log; при отказе последняя
+# строка вывода ошибок называет причину (её показывает панель).
+#
+# Коды выхода: 0 — профиль поднят и проверен; 1 — шаг или проверка
+# не прошли (выполнен откат), либо переход уже выполняется; 2 — неверный
+# вызов; 3 — tun0 занят посторонним процессом, ничего не изменено.
+set -uo pipefail
+
+PATH=/usr/local/sbin:/usr/local/bin:/usr/bin
+export PATH
+umask 022
+
+# Пути. Проверка на подставных командах (tests/net-profile.sh рядом
+# в репозитории) заменяет эти строки в своей копии сценария; из окружения
+# сценарий их не берёт.
+profile_file=/etc/amnezia/profile
+amn_conf=/etc/amnezia/amneziawg/amn0.conf
+log=/var/log/net-profile.log
+lock=/run/net-profile.lock
+sysnet=/sys/class/net
+# Конец путей.
+
+unit=awg-quick@amn0.service
+main_con=axata
+backup_con=axata-full
+tun=tun0
+wan=enp43s0
+amn=amn0
+# Маршрутные домены канала enp43s0 (профиль «Проводное подключение 2»):
+# зоны, которые разрешает маршрутизатор при обоих профилях.
+wan_domains=('~ru' '~by' '~su' '~xn--p1ai')
+
+action=${1:-}
+if [ $# -ne 1 ] || { [ "$action" != backup ] && [ "$action" != main ]; }; then
+    echo "net-profile: вызов — net-profile backup или net-profile main" >&2
+    exit 2
+fi
+if [ "$(id -u)" -ne 0 ]; then
+    echo "net-profile: нужны права root: sudo -n $0 $action" >&2
+    exit 1
+fi
+
+# Замок на сетевое состояние станции: оно одно, размножить его нельзя,
+# а два перехода одновременно оставили бы туннели и файл профиля в смеси
+# двух профилей. Ожидания нет (flock -n): второй вызов отказывает сразу.
+# Замок снимается завершением процесса (дескриптор закрывается ядром).
+exec 9>"$lock" || exit 1
+if ! flock -n 9; then
+    echo "net-profile: переход уже выполняется (замок $lock), вызов $action отклонён" >&2
+    exit 1
+fi
+
+# Панель может завершиться во время перехода (перезапуск конфигурации),
+# а sudo при этом передаёт команде SIGHUP или SIGTERM; прерванный на полпути
+# переход оставил бы станцию без связи. Поэтому сигналы завершения
+# игнорируются (это наследуют и дочерние nmcli, systemctl), а tee пишет
+# журнал и тогда, когда стандартный вывод уже некому читать.
+trap '' HUP INT TERM PIPE
+exec 3>&2
+# tee не наследует дескриптор замка: замок снимается вместе со сценарием.
+exec > >(tee -a --output-error=warn "$log" 9>&-) 2>&1
+echo "=== net-profile $action $(date --iso-8601=seconds)"
+
+declare -a summary=()
+result() {
+    summary+=("$1")
+    echo ">>> $1"
+}
+
+# Итог: шаги построчно; $2 — строка для вывода ошибок (причина отказа).
+finish() {
+    echo "=== итог"
+    printf '%s\n' "${summary[@]}"
+    echo "журнал: $log"
+    [ -n "${2:-}" ] && echo "net-profile: $2" >&3
+    exit "$1"
+}
+
+dump_state() {
+    echo "=== ip -4 route"
+    ip -4 route
+    echo "=== nmcli -t -f NAME,DEVICE connection show --active"
+    nmcli -t -f NAME,DEVICE connection show --active
+}
+
+con_active() { nmcli -t -f NAME connection show --active | grep -qxF "$1"; }
+con_exists() { nmcli -t -f NAME connection show | grep -qxF "$1"; }
+amn_active() { systemctl is-active --quiet "$unit"; }
+read_profile() {
+    if grep -sqx backup "$profile_file"; then echo backup; else echo main; fi
+}
+
+# Атомарная запись файла профиля: временный файл в том же каталоге и mv.
+write_profile() {
+    local tmp
+    tmp=$(mktemp "${profile_file%/*}/.profile.XXXXXX") || return 1
+    if printf '%s\n' "$1" >"$tmp" && chmod 0644 "$tmp" && mv -f "$tmp" "$profile_file"; then
+        return 0
+    fi
+    rm -f "$tmp"
+    return 1
+}
+
+# Устройство маршрута к адресу (остальные аргументы — как у ip route get).
+route_dev() {
+    ip -4 route get "$@" 2>/dev/null |
+        awk '{ for (i = 1; i < NF; i++) if ($i == "dev") { print $(i + 1); exit } }'
+}
+
+rx_bytes() { cat "$sysnet/$1/statistics/rx_bytes" 2>/dev/null || echo 0; }
+
+# Адрес сервера OpenVPN из vpn.data соединения («remote = адрес\:порт»).
+vpn_server() {
+    local remote host
+    remote=$(nmcli -g vpn.data connection show id "$1" 2>/dev/null | tr ',' '\n' |
+        sed -n 's/^ *remote = //p' | head -n1 | sed 's/\\//g')
+    host=${remote%%:*}
+    host=${host%% *}
+    if [[ $host =~ ^[0-9]+(\.[0-9]+){3}$ ]]; then
+        echo "$host"
+    elif [ -n "$host" ]; then
+        getent ahostsv4 "$host" | awk '{ print $1; exit }'
+    fi
+}
+
+check_error=""
+check_fail() {
+    check_error=$1
+    echo "проверка: $1"
+    return 1
+}
+
+# Запрос к api.anthropic.com: печатает «адрес код» и прирост счётчика
+# приёма устройства $1. Предел --max-time — защита от зависания одного
+# запроса, а не ожидание по расписанию (как в amn-switch).
+probe_anthropic() {
+    local before after out
+    before=$(rx_bytes "$1")
+    out=$(curl -sS --max-time 20 -o /dev/null -w '%{remote_ip} %{http_code}' https://api.anthropic.com/ 2>&1)
+    after=$(rx_bytes "$1")
+    echo "$out $((after - before))"
+}
+
+# Требование «Проверка запасного профиля».
+check_backup() {
+    local server dev probe got w domains
+    server=$(vpn_server "$backup_con")
+    [ -n "$server" ] || check_fail "адрес сервера OpenVPN не найден в vpn.data $backup_con" || return 1
+    dev=$(route_dev "$server")
+    [ "$dev" = "$wan" ] || check_fail "маршрут к серверу OpenVPN $server идёт через '$dev', а не через $wan" || return 1
+    dev=$(route_dev 1.1.1.1)
+    [ "$dev" = "$tun" ] || check_fail "маршрут к 1.1.1.1 идёт через '$dev', а не через $tun" || return 1
+    ! nft list table inet amn >/dev/null 2>&1 || check_fail "таблица nftables inet amn осталась" || return 1
+    [ -z "$(ip -4 rule show pref 5100)" ] || check_fail "правило с приоритетом 5100 осталось" || return 1
+    probe=$(probe_anthropic "$tun")
+    [[ $probe =~ ^[0-9.]+\ [1-5][0-9][0-9]\ [0-9]+$ ]] ||
+        check_fail "запрос к api.anthropic.com не прошёл: '${probe% *}'" || return 1
+    [ "${probe##* }" -gt 0 ] || check_fail "запрос к api.anthropic.com не увеличил счётчик приёма $tun" || return 1
+    result "api.anthropic.com через $tun: ${probe% *}, принято ${probe##* } байт"
+    got=$(resolvectl dns "$tun" 2>/dev/null | sed 's/^[^:]*: *//')
+    [ -n "$got" ] || check_fail "у канала $tun нет серверов DNS" || return 1
+    [ "$(resolvectl default-route "$tun" 2>/dev/null | sed 's/^[^:]*: *//')" = yes ] ||
+        check_fail "у канала $tun нет Default Route: yes" || return 1
+    domains=" $(resolvectl domain "$wan" 2>/dev/null | sed 's/^[^:]*: *//') "
+    for w in "${wan_domains[@]}"; do
+        [[ $domains == *" $w "* ]] || check_fail "у канала $wan нет маршрутного домена $w" || return 1
+    done
+    result "DNS: $tun — $got, Default Route: yes; $wan —${domains% }"
+    result "маршруты: $server через $wan, 1.1.1.1 через $tun; inet amn и правила 5100 нет"
+}
+
+# Требование «Проверка основного профиля»: проверки туннеля из amn-switch
+# и маршруты axata.
+check_main() {
+    local probe ip set dev
+    probe=$(probe_anthropic "$amn")
+    [[ $probe =~ ^[0-9.]+\ [1-5][0-9][0-9]\ [0-9]+$ ]] ||
+        check_fail "запрос к api.anthropic.com не прошёл: '${probe% *}'" || return 1
+    ip=${probe%% *}
+    for set in zones bypass; do
+        ! nft get element inet amn "$set" "{ $ip }" >/dev/null 2>&1 ||
+            check_fail "адрес $ip (api.anthropic.com) есть в наборе $set и пошёл бы напрямую" || return 1
+    done
+    dev=$(route_dev "$ip" mark 0x1)
+    [ "$dev" = "$amn" ] || check_fail "маршрут к $ip с меткой 0x1 идёт через '$dev', а не через $amn" || return 1
+    [ "${probe##* }" -gt 0 ] || check_fail "запрос к api.anthropic.com не увеличил счётчик приёма $amn" || return 1
+    result "api.anthropic.com через $amn: ${probe% *}, принято ${probe##* } байт"
+    curl -fsS --max-time 15 -o /dev/null https://ya.ru ||
+        check_fail "прямого выхода к ya.ru нет" || return 1
+    ip -4 route show exact 10.0.0.0/8 | grep -q "dev $tun" ||
+        check_fail "маршрута 10.0.0.0/8 через $tun нет" || return 1
+    ! ip -4 route show default | grep -q "dev $tun" ||
+        check_fail "маршрут по умолчанию идёт через $tun" || return 1
+    dev=$(route_dev 1.1.1.1)
+    [ "$dev" != "$tun" ] || check_fail "маршрут к 1.1.1.1 идёт через $tun" || return 1
+    result "прямой выход к ya.ru есть, 10.0.0.0/8 через $tun, маршрута по умолчанию через $tun нет"
+}
+
+# Проверка до изменений, общая для обоих вызовов (требование «Посторонний
+# процесс на tun0»): чужие процессы не завершаются, PID — только для сведения.
+check_tun_owner() {
+    local pids msg
+    if [ -e "$sysnet/$tun" ] && ! con_active "$main_con" && ! con_active "$backup_con"; then
+        pids=$(pgrep -x openvpn | tr '\n' ' ')
+        msg="$tun занят посторонним процессом (PID openvpn: ${pids:-не найдены}); завершите его сами — ничего не изменено"
+        result "ОТКАЗ: $msg"
+        finish 3 "$msg"
+    fi
+}
+
+fail_early() {
+    result "ОШИБКА: $1 — ничего не изменено"
+    finish 1 "ОШИБКА: $1 — ничего не изменено"
+}
+
+# Состояние до вызова — для отката.
+prev_profile=""
+prev_exists=0
+prev_content=""
+amn_was_active=0
+snapshot() {
+    prev_profile=$(read_profile)
+    if [ -e "$profile_file" ]; then
+        prev_exists=1
+        prev_content=$(cat "$profile_file")
+    fi
+    amn_active && amn_was_active=1
+    echo "до вызова: профиль $prev_profile, $unit $(systemctl is-active "$unit"), соединения: $(nmcli -t -f NAME connection show --active | tr '\n' ' ')"
+}
+
+restore_profile_file() {
+    if [ "$prev_exists" -eq 1 ]; then
+        write_profile "$prev_content"
+    else
+        rm -f "$profile_file"
+    fi
+}
+
+# Требование «Откат перехода на запасной профиль»: состояние до вызова.
+rollback_backup() {
+    local reason=$1 ok=1
+    echo "=== откат перехода на запасной профиль: $reason"
+    restore_profile_file || ok=0
+    if [ "$prev_profile" = backup ]; then
+        # Повторный вызов в запасном профиле: он и остаётся.
+        con_active "$backup_con" || nmcli --wait 60 connection up id "$backup_con" || ok=0
+    else
+        if con_active "$backup_con"; then
+            nmcli connection down id "$backup_con" || ok=0
+        fi
+        con_active "$main_con" || nmcli --wait 60 connection up id "$main_con" || ok=0
+        if [ "$amn_was_active" -eq 1 ]; then
+            systemctl start "$unit" || ok=0
+            amn_active || ok=0
+        fi
+    fi
+    if [ "$ok" -eq 1 ]; then
+        result "откат: профиль $(read_profile), $unit $(systemctl is-active "$unit"), соединения: $(nmcli -t -f NAME connection show --active | tr '\n' ' ')"
+        result "ОШИБКА: $reason"
+        finish 1 "ОШИБКА: $reason; прежний профиль возвращён"
+    fi
+    dump_state
+    result "ОШИБКА: откат не выполнен — состояние в журнале"
+    result "ОШИБКА: $reason"
+    finish 1 "ОШИБКА: $reason; откат не выполнен (журнал $log)"
+}
+
+# Требование «Откат возврата на основной профиль»: станция остаётся
+# в запасном профиле — шаги backup без проверок. Повторный вызов
+# в основном профиле (проверка не прошла) откатывается к состоянию
+# до вызова: основной профиль остаётся, запасной без просьбы
+# не поднимается (design D5).
+rollback_main() {
+    local reason=$1 ok=1
+    if [ "$prev_profile" = main ]; then
+        echo "=== откат повторного вызова в основном профиле: $reason"
+        restore_profile_file || ok=0
+        con_active "$main_con" || nmcli --wait 60 connection up id "$main_con" || ok=0
+        if [ "$amn_was_active" -eq 1 ] && ! amn_active; then
+            systemctl start "$unit" || ok=0
+        fi
+        if [ "$ok" -eq 1 ]; then
+            result "откат: профиль остался основным, $unit $(systemctl is-active "$unit")"
+            result "ОШИБКА: $reason"
+            finish 1 "ОШИБКА: $reason; профиль остался основным"
+        fi
+        dump_state
+        result "ОШИБКА: откат не выполнен — состояние в журнале"
+        result "ОШИБКА: $reason"
+        finish 1 "ОШИБКА: $reason; откат не выполнен (журнал $log)"
+    fi
+    echo "=== откат возврата на основной профиль: $reason"
+    write_profile backup || ok=0
+    systemctl stop "$unit" || ok=0
+    if con_active "$main_con"; then
+        nmcli connection down id "$main_con" || ok=0
+    fi
+    con_active "$backup_con" || nmcli --wait 60 connection up id "$backup_con" || ok=0
+    if [ "$ok" -eq 1 ] && ! amn_active && con_active "$backup_con"; then
+        result "откат: профиль остался запасным ($backup_con поднят, $unit остановлен)"
+        result "ОШИБКА: $reason"
+        finish 1 "ОШИБКА: $reason; профиль остался запасным"
+    fi
+    dump_state
+    result "ОШИБКА: откат не выполнен — запасной профиль не поднят, состояние в журнале"
+    result "ОШИБКА: $reason"
+    finish 1 "ОШИБКА: $reason; откат не выполнен (журнал $log)"
+}
+
+do_backup() {
+    check_tun_owner
+    con_exists "$backup_con" || fail_early "нет соединения $backup_con (system/tunnels/install.sh profile)"
+    snapshot
+    if [ "$prev_profile" = backup ] && con_active "$backup_con" && ! con_active "$main_con" && ! amn_active; then
+        if check_backup; then
+            result "профиль уже запасной, проверка пройдена; $backup_con не переподключалось"
+            finish 0
+        fi
+        result "профиль запасной, но проверка не прошла ($check_error) — переход выполняется заново"
+    fi
+    write_profile backup || rollback_backup "файл профиля не записан"
+    result "файл профиля: backup"
+    systemctl stop "$unit" || rollback_backup "$unit не остановился"
+    result "$unit остановлен"
+    if con_active "$main_con"; then
+        nmcli connection down id "$main_con" || rollback_backup "$main_con не отключился"
+    fi
+    result "$main_con отключено"
+    nmcli --wait 60 connection up id "$backup_con" || rollback_backup "$backup_con не поднялось"
+    result "$backup_con поднято, адрес $tun $(ip -4 -o addr show dev "$tun" 2>/dev/null | awk '{ print $4 }')"
+    check_backup || rollback_backup "$check_error"
+    result "проверка запасного профиля пройдена"
+    finish 0
+}
+
+do_main() {
+    check_tun_owner
+    [ -e "$amn_conf" ] || fail_early "нет конфига $amn_conf (system/amnezia/install.sh files)"
+    snapshot
+    if [ "$prev_profile" = main ] && con_active "$main_con" && ! con_active "$backup_con" && amn_active; then
+        if check_main; then
+            if [ "$prev_content" != main ]; then
+                write_profile main || fail_early "файл профиля не записан"
+            fi
+            result "профиль уже основной, проверка пройдена; соединения не переподключались"
+            finish 0
+        fi
+        result "профиль основной, но проверка не прошла ($check_error) — переход выполняется заново"
+    fi
+    # Файл — до запуска awg-quick@amn0: при backup условие запуска юнита
+    # (10-profile.conf) пропустило бы запуск.
+    write_profile main || rollback_main "файл профиля не записан"
+    result "файл профиля: main"
+    if con_active "$backup_con"; then
+        nmcli connection down id "$backup_con" || rollback_main "$backup_con не отключилось"
+    fi
+    result "$backup_con отключено"
+    nmcli --wait 60 connection up id "$main_con" || rollback_main "$main_con не поднялось"
+    result "$main_con поднято, адрес $tun $(ip -4 -o addr show dev "$tun" 2>/dev/null | awk '{ print $4 }')"
+    # restart: при повторном вызове с неработающим туннелем служба уже активна.
+    if ! systemctl restart "$unit" || ! amn_active; then
+        rollback_main "$unit не запустился"
+    fi
+    result "$unit запущен"
+    check_main || rollback_main "$check_error"
+    result "проверка основного профиля пройдена"
+    finish 0
+}
+
+case "$action" in
+backup) do_backup ;;
+main) do_main ;;
+esac

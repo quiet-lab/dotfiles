@@ -8,8 +8,14 @@
 | 10.0.0.0/8 | OpenVPN `axata` (соединение NetworkManager, `tun0`, маршруты из профиля через 10.200.5.254) |
 | всё остальное | туннель AmneziaWG `amn0` на сервер Amnezia Premium |
 
+Так устроен основной профиль сети; при отказе Amnezia станция переходит
+на запасной профиль, где весь трафик идёт через `axata` (раздел
+«Профили сети»).
+
 Почему так и что отвергнуто — запись
-[`decisions/0009`](decisions/0009-amneziawg-split-by-destination.md).
+[`decisions/0009`](decisions/0009-amneziawg-split-by-destination.md),
+о запасном профиле — запись
+[`decisions/0011`](decisions/0011-network-backup-profile.md).
 Файлы лежат в `system/amnezia/` и `system/NetworkManager/conf.d/`, порядок
 установки — [`../system/amnezia/README.md`](../system/amnezia/README.md).
 
@@ -87,11 +93,80 @@
 `~ru ~by ~su ~xn--p1ai` (профиль NetworkManager «Проводное подключение 2»,
 `ipv4.dns-search`, состояние — [`host-state.md`](host-state.md)) оставляют
 эти зоны и местный домен `bbrouter` за маршрутизатором. Остановка туннеля
-убирает канал `amn0`, и все имена снова разрешает маршрутизатор.
+в основном профиле убирает канал `amn0`, и все имена снова разрешает
+маршрутизатор; о запасном профиле — раздел «DNS запасного профиля».
+
+## Профили сети
+
+Профилей два (спецификация network-profiles, решение —
+[`decisions/0011`](decisions/0011-network-backup-profile.md)):
+
+| Профиль | Туннели | Внешний трафик |
+|---|---|---|
+| основной (`main`) | `awg-quick@amn0` и соединение `axata` (`ipv4.never-default yes`) | по адресу назначения: `amn0` или напрямую (разделы выше) |
+| запасной (`backup`, «всё через axata») | `awg-quick@amn0` остановлен, таблицы `inet amn` и правила 5100 нет; соединение `axata-full` | весь через `tun0`: OpenVPN принимает от сервера `redirect-gateway` (маршруты 0.0.0.0/1 и 128.0.0.0/1) |
+
+- `axata-full` — копия `axata` (`nmcli connection clone`) с
+  `ipv4.never-default no`, `connection.autoconnect no` и пустым
+  `connection.secondaries`; маршрут 10.0.0.0/8 из профиля остаётся.
+  Создаёт и после правки `axata` пересоздаёт его
+  `system/tunnels/install.sh profile` (пока `axata-full` не активно);
+  `install.sh status` сообщает, если `vpn.data` копий разошлись.
+  Активно не больше одного из двух соединений.
+- Выбор хранится в `/etc/amnezia/profile` (root, 0644): строка `main` или
+  `backup`; запасным профиль считается только при строке, в точности
+  равной `backup`, нет файла — основной. По файлу выбирают туннели юниты
+  загрузки (раздел «Автозапуск туннелей»), а панель показывает профиль.
+- Переход — сценарий root `/usr/local/sbin/net-profile` (источник
+  `system/tunnels/net-profile`) с вызовами `backup` и `main`, без пароля
+  по правилу `/etc/sudoers.d/amn-switch`; журнал —
+  `/var/log/net-profile.log`. Порядок шагов, проверки, откат, отказ
+  кодом 3 при постороннем процессе на `tun0` (OpenVPN, запущенный
+  вручную, сценарий не завершает) и отказ второго одновременного вызова —
+  требования спецификации network-profiles; там же — поведение
+  `amn-switch` и `amn-apply-config` при запасном профиле. Логику сценария
+  без root и без изменения системы проверяет
+  `system/tunnels/tests/net-profile.sh` на подставных командах.
+
+### DNS запасного профиля
+
+Имена разрешают NetworkManager и systemd-resolved по профилю `axata-full`,
+сценарий их только проверяет: канал `tun0` получает серверы, присланные
+OpenVPN (10.200.115.1 и 10.200.115.2), и маршрут по умолчанию
+(`Default Route: yes`), а зоны `~ru ~by ~su ~xn--p1ai` остаются на
+`enp43s0` за маршрутизатором — маршрутный домен точнее. Канала `amn0`
+при запасном профиле нет.
+
+### Переход и проверка
+
+Из панели — пункт «Запасной профиль: всё через axata» в меню значка
+`amn0` или `axata`, обратно — «Основной профиль». Из терминала:
+
+```bash
+sudo -n /usr/local/sbin/net-profile backup
+sudo -n /usr/local/sbin/net-profile main
+tail -n 20 /var/log/net-profile.log
+```
+
+Проверка запасного профиля:
+
+```bash
+cat /etc/amnezia/profile                 # backup
+systemctl is-active awg-quick@amn0       # inactive
+nmcli -t -f NAME connection show --active  # axata-full, без axata
+ip -4 route get 1.1.1.1                  # dev tun0
+ip -4 route get 213.184.245.91           # dev enp43s0 (сервер OpenVPN)
+resolvectl status tun0                   # серверы и Default Route: yes
+resolvectl domain enp43s0                # ~ru ~by ~su ~xn--p1ai
+```
+
+Ручной запуск `systemctl start awg-quick@amn0` при запасном профиле
+ничего не делает (условие запуска); в панели такого пункта при запасном
+профиле нет.
 
 ## Автозапуск туннелей
 
-Оба туннеля поднимает система при загрузке, до экрана входа; сессия
+Туннели выбранного профиля поднимает система при загрузке, до экрана входа; сессия
 Hyprland VPN не поднимает (спецификация hyprland-autostart, требования
 «Туннели при загрузке системы» и «Вход после туннелей»; устройство
 и отвергнутые варианты — [`design.md`](../openspec/changes/archive/2026-11-02-tunnel-tray-autostart/design.md)
@@ -101,25 +176,31 @@ Hyprland VPN не поднимает (спецификация hyprland-autostar
 
 - `amn0` — служба `awg-quick@amn0.service` (`WantedBy=multi-user.target`,
   `After=network-online.target`). Подъём занимает несколько секунд;
-  списки стран скачиваются, если кэш старше 7 суток.
+  списки стран скачиваются, если кэш старше 7 суток. При запасном
+  профиле служба пропускается условием запуска (drop-in
+  `awg-quick@amn0.service.d/10-profile.conf` из `system/tunnels/`):
+  состояние `inactive`, а не `failed`, вход не задерживается.
 - `axata` — юнит `axata-vpn.service` (`system/tunnels/`): после
   `network-online.target` и сигнала NetworkManager о завершении запуска
-  (`nm-online -s`) выполняет `nmcli --wait 60 connection up id axata` от
-  root; пароль хранится в профиле, агент секретов не нужен. Уже активное
-  соединение не переподключается (`ExecCondition`), после перезапуска
-  NetworkManager юнит перезапускается вместе с ним (`PartOf`).
+  (`nm-online -s`) выполняет `nmcli --wait 60 connection up` от root
+  для соединения профиля — `axata` или, при запасном профиле, `axata-full`;
+  пароль хранится в профиле, агент секретов не нужен. Если уже активно
+  любое из двух соединений, оно не переподключается (`ExecCondition`),
+  после перезапуска NetworkManager юнит перезапускается вместе с ним
+  (`PartOf`).
   Автоподключение самого NetworkManager для VPN не реализовано,
   а `connection.secondaries` при отказе VPN роняет проводное соединение,
   поэтому `connection.autoconnect` у `axata` остаётся `no`, а
   `connection.secondaries` пуст.
-- `tunnels-before-login.service` стоит после обоих туннелей и перед
+- `tunnels-before-login.service` стоит после обоих юнитов туннелей и перед
   `greetd.service`: экран входа и автовход ждут туннелей, поэтому herdr
   и браузеры, которые открывает демон workspaced, стартуют уже с ними.
   Предел ожидания — 105 с от начала загрузки (`JobTimeoutSec`, в него входит и ожидание сети): по нему systemd снимает
   только задание этого юнита, туннель продолжает подниматься, вход
   не задерживается.
 
-Установка — `system/tunnels/install.sh files`, состояние —
+Установка — `system/tunnels/install.sh files` (юниты, drop-in
+и `net-profile`), соединение `axata-full` — `install.sh profile`, состояние —
 `system/tunnels/install.sh status`. Порядок при загрузке:
 
 ```bash
@@ -138,7 +219,11 @@ journalctl -b -o short-monotonic -u awg-quick@amn0 -u axata-vpn \
 `ip monitor link address`, журнал `awg-quick@amn0` и `inotifywait`
 (хранилище приложения, `/etc/amnezia/country.json`) для `amn0`, общий
 поток `nmcli monitor` панели и журналы `axata-vpn.service` и
-`nm-openvpn` для `axata`.
+`nm-openvpn` для `axata`; замена `/etc/amnezia/profile` (тот же
+`inotifywait`) перечитывает оба. Значок `axata` показывает соединение
+профиля — активное из `axata` и `axata-full`, а если активного нет,
+выбранное файлом. При запасном профиле значок `amn0` серый, подсказка —
+«выключен: запасной профиль»; подсказки обоих значков называют профиль.
 
 Связь определяется по журналам, без пробных запросов:
 
@@ -161,20 +246,27 @@ journalctl -b -o short-monotonic -u awg-quick@amn0 -u axata-vpn \
   и город выхода по ipinfo.io через `amn0` (с пометкой, если не совпадают),
   служба, адрес, endpoint,
   время последнего handshake, число элементов `zones`, возраст
-  `zones.nft`, журнал службы; для `axata` — состояние, адрес `tun0`,
-  маршрут 10.0.0.0/8, сервер, `axata-vpn.service`, журнал `nm-openvpn`.
+  `zones.nft`, журнал службы и профиль; для `axata` — профиль, соединение
+  и его состояние, адрес `tun0`, маршрут внешнего трафика, маршрут
+  10.0.0.0/8, DNS канала `tun0`, сервер, `axata-vpn.service`, журнал
+  `nm-openvpn`.
 - Правый клик — меню: `amn0` — запустить, остановить, перезапустить,
   «Страна туннеля…», обновить списки стран; `axata` — подключить, отключить, «Настройки»
-  (`nm-connection-editor`).
+  (`nm-connection-editor`) для соединения профиля; у обоих — пункт смены
+  профиля сети. При запасном профиле меню `amn0` состоит только из пункта
+  «Основной профиль».
 - Пароль не спрашивается: команды root идут через `sudo -n` по правилу
-  `/etc/sudoers.d/amn-switch` (состав — `system/amnezia/README.md`).
+  `/etc/sudoers.d/amn-switch` (состав — `system/sudo/README.md`).
 
 Проверка без мыши:
 
 ```bash
-qs -c panel ipc call tunnels state        # состояние обоих туннелей, JSON
+qs -c panel ipc call tunnels state        # состояние обоих туннелей, JSON (поля profile, connection)
 qs -c panel ipc call tunnels info amn0    # окно сведений (без захвата ввода)
 qs -c panel ipc call tunnels run amn0 'Обновить списки стран'  # действие меню
+qs -c panel ipc call tunnels run axata 'Запасной профиль: всё через axata'  # смена профиля сети
+qs -c panel ipc call tunnels run amn0 'Основной профиль'
+qs -c panel ipc call tunnels info axata   # окно сведений axata: профиль, соединение, DNS
 qs -c panel ipc call tunnels shown        # содержимое открытого окна
 qs -c panel ipc call tunnels close
 qs -c panel ipc call tunnels countries    # окно выбора страны
@@ -212,7 +304,10 @@ amn-country set de      # получить конфиг страны и пост
 
 ## Ограничения
 
-- DNS: при остановленном туннеле все имена разрешает домашний маршрутизатор
+- Запасной профиль: весь трафик, включая адреса России и Белоруссии,
+  идёт через корпоративную сеть; остальные имена видит её администратор,
+  внешний адрес — адрес выхода в Белоруссии.
+- DNS: при остановленном туннеле в основном профиле все имена разрешает домашний маршрутизатор
   192.168.1.1. Имена зон `ru`, `by`, `su` и `рф` разрешает он же и при
   поднятом туннеле: провайдер видит эти имена и может подменять их адреса.
   DNS туннеля (100.64.0.1) не используется.

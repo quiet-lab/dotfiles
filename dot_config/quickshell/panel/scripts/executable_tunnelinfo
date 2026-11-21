@@ -10,10 +10,14 @@ now=$(date +%s)
 # Сколько прошло с момента $1 (секунды Unix): «N с», «N мин», «N ч», «N сут».
 ago() {
 	d=$((now - $1))
-	if [ "$d" -lt 120 ]; then echo "$d с назад"
-	elif [ "$d" -lt 7200 ]; then echo "$((d / 60)) мин назад"
-	elif [ "$d" -lt 172800 ]; then echo "$((d / 3600)) ч назад"
-	else echo "$((d / 86400)) сут назад"
+	if [ "$d" -lt 120 ]; then
+		echo "$d с назад"
+	elif [ "$d" -lt 7200 ]; then
+		echo "$((d / 60)) мин назад"
+	elif [ "$d" -lt 172800 ]; then
+		echo "$((d / 3600)) ч назад"
+	else
+		echo "$((d / 86400)) сут назад"
 	fi
 }
 # Строки журнала: короткое время и текст, не длиннее 90 знаков (gawk считает
@@ -23,6 +27,10 @@ log_lines() {
 		sed -E 's/^[A-Za-zА-Яа-я]+ [0-9]+ ([0-9:]+) [^ ]+ [^:]+: /\1 /' |
 		LC_ALL=C.UTF-8 awk '{ print substr($0, 1, 90) }'
 }
+# Профиль сети (спецификация network-profiles): запасной — только при строке,
+# в точности равной backup в /etc/amnezia/profile.
+if grep -sqx backup /etc/amnezia/profile; then profile=backup; else profile=main; fi
+profile_name() { if [ "$profile" = backup ]; then echo "запасной"; else echo "основной"; fi; }
 rows=""
 row() { rows="$rows$(jq -cn --arg k "$1" --arg v "$2" '[$k,$v]')
 "; }
@@ -56,6 +64,7 @@ amn0)
 	code=$(printf '%s' "$country" | jq -r '.code // ""')
 	name=$(printf '%s' "$country" | jq -r '.name // ""')
 	source=$(printf '%s' "$country" | jq -r 'if .source == "state" then "выбрана в панели" else "из приложения" end')
+	row "Профиль" "$(profile_name)"
 	row "Страна" "${name:-неизвестна} (${code:-?}, $source)"
 	row "Выход" "проверяется…"
 	row "Служба" "$(systemctl show -P ActiveState "$unit") ($(systemctl show -P SubState "$unit"))"
@@ -82,13 +91,32 @@ amn0)
 	log=$(log_lines -u "$unit")
 	;;
 axata)
-	nm=$(nmcli -g GENERAL.STATE con show id axata 2>/dev/null)
-	row "Соединение" "${nm:-не активно}"
+	# Соединение профиля: активное из axata и axata-full, иначе по профилю.
+	con=$(nmcli -t -f NAME connection show --active 2>/dev/null | grep -xE 'axata|axata-full' | head -n1)
+	if [ -z "$con" ]; then
+		if [ "$profile" = backup ]; then con=axata-full; else con=axata; fi
+	fi
+	nm=$(nmcli -g GENERAL.STATE con show id "$con" 2>/dev/null)
+	row "Профиль" "$(profile_name)"
+	row "Соединение" "$con"
+	row "Состояние" "${nm:-не активно}"
 	row "Адрес tun0" "$(ip -4 -br addr show dev tun0 2>/dev/null | awk '{ print $3 }' || true)"
+	# Маршрут внешнего трафика: при запасном профиле OpenVPN ставит 0.0.0.0/1
+	# и 128.0.0.0/1 через tun0, а не default, поэтому показывается маршрут
+	# к внешнему адресу.
+	route=$(ip -4 route get 1.1.1.1 2>/dev/null | head -n1 | sed -E 's/^[^ ]+ //; s/ (src|uid) .*//')
+	row "Маршрут по умолчанию" "${route:-нет}"
 	route=$(ip -4 route show 10.0.0.0/8 2>/dev/null | head -n1 | sed -E 's/^[^ ]+ //; s/ proto .*//')
 	row "10.0.0.0/8" "${route:-маршрута нет}"
+	dns=$(resolvectl dns tun0 2>/dev/null | sed 's/^[^:]*: *//')
+	droute=$(resolvectl default-route tun0 2>/dev/null | sed 's/^[^:]*: *//')
+	if [ -n "$dns" ]; then
+		row "DNS" "$dns (tun0, Default Route: ${droute:-?})"
+	else
+		row "DNS" "у tun0 нет серверов"
+	fi
 	# remote из vpn.data: «remote = адрес\:порт»; секреты в vpn.data не входят.
-	server=$(nmcli -g vpn.data con show id axata 2>/dev/null | tr ',' '\n' |
+	server=$(nmcli -g vpn.data con show id "$con" 2>/dev/null | tr ',' '\n' |
 		sed -n 's/^ *remote = //p' | sed 's/\\//g')
 	row "Сервер" "${server:-не задан}"
 	enabled=$(systemctl is-enabled axata-vpn.service 2>/dev/null)

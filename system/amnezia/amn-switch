@@ -17,7 +17,8 @@
 #
 # Шаги: сборка конфига amn0 (amn-export-config) →
 # остановка и выключение AmneziaVPN.service, удаление оставшегося amn0
-# приложения и его правил межсетевого экрана → проверка прямого выхода →
+# приложения и его правил межсетевого экрана → основной профиль сети
+# (main в /etc/amnezia/profile, отключение axata-full) → проверка прямого выхода →
 # перезапуск awg-quick@amn0 (amn-route up обновляет списки, если кэш
 # старше 7 суток) и включение в автозапуск после проверки → проверка туннеля → never-default и подъём axata →
 # самопроверка с итогом построчно. --signal после удачного подъёма axata
@@ -48,7 +49,10 @@ echo "=== amn-switch $(date --iso-8601=seconds)"
 
 declare -a summary=()
 failed=0
-result() { summary+=("$1"); echo ">>> $1"; }
+result() {
+    summary+=("$1")
+    echo ">>> $1"
+}
 
 print_summary() {
     echo "=== итог"
@@ -145,8 +149,8 @@ for tool in iptables ip6tables; do
                 "$tool" -t "$tbl" -S "$parent" |
                     awk -v c="$chain" '$1 == "-A" { n++; for (i = 2; i < NF; i++) if (($i == "-j" || $i == "-g") && $(i + 1) == c) { print n; break } }' |
                     sort -rn | while read -r num; do
-                        "$tool" -t "$tbl" -D "$parent" "$num"
-                    done
+                    "$tool" -t "$tbl" -D "$parent" "$num"
+                done
             done
             "$tool" -t "$tbl" -F "$chain"
             if ! "$tool" -t "$tbl" -X "$chain"; then
@@ -156,6 +160,29 @@ for tool in iptables ip6tables; do
         done
     done
 done
+
+# Основной профиль сети (спецификация network-profiles): файл профиля — до
+# запуска awg-quick@amn0, иначе при запасном профиле условие запуска юнита
+# (10-profile.conf) его пропустит; полный туннель axata-full отключается
+# до проверки прямого выхода. Запись атомарная: временный файл и mv.
+profile_tmp=$(mktemp /etc/amnezia/.profile.XXXXXX)
+if printf 'main\n' >"$profile_tmp" && chmod 0644 "$profile_tmp" && mv -f "$profile_tmp" /etc/amnezia/profile; then
+    result "профиль сети: main"
+else
+    rm -f "$profile_tmp"
+    result "ОШИБКА: файл профиля /etc/amnezia/profile не записан"
+    print_summary
+    exit 1
+fi
+if nmcli -t -f NAME connection show --active | grep -qxF axata-full; then
+    if nmcli connection down id axata-full; then
+        result "axata-full отключено"
+    else
+        result "ОШИБКА: axata-full не отключилось"
+        print_summary
+        exit 1
+    fi
+fi
 
 # 3. Прямой выход без туннеля.
 if direct_ok; then
@@ -224,9 +251,12 @@ for host in 10.200.115.180 10.200.115.164; do
 done
 
 # 7. Самопроверка.
-echo "=== ip -4 route"; ip -4 route
-echo "=== ip -4 rule"; ip -4 rule
-echo "=== ip -4 route show table 100"; ip -4 route show table 100
+echo "=== ip -4 route"
+ip -4 route
+echo "=== ip -4 rule"
+ip -4 rule
+echo "=== ip -4 route show table 100"
+ip -4 route show table 100
 result "элементов в наборе zones (адреса напрямую): $(/usr/local/sbin/amn-zones-update --count)"
 result "маршрут 10.200.115.180: $(ip -4 route get 10.200.115.180 | head -1)"
 # ip.ru.net отвечает адресом простым текстом; его адрес в наборе zones

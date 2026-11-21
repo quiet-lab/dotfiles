@@ -74,7 +74,8 @@ enable --now avahi-daemon.socket`. Запуск по D-Bus (`org.freedesktop.Ava
 - `sshd-unix-local.socket` оставлен по решению пользователя;
   `AmneziaVPN.service` выключен, туннель AmneziaWG поднимает
   `awg-quick@amn0.service` ([`amnezia-split-tunnel.md`](amnezia-split-tunnel.md));
-  VPN `axata` поднимает при загрузке `axata-vpn.service`, экран входа ждёт
+  VPN `axata` (при запасном профиле сети — `axata-full`, раздел «Профили
+  сети» того же документа) поднимает при загрузке `axata-vpn.service`, экран входа ждёт
   туннелей по `tunnels-before-login.service` (копии и установка —
   `system/tunnels/`).
 - herdr — форк duty-herdr: бинарник из GitHub Releases `quiet-lab/duty-herdr`

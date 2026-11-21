@@ -1,13 +1,16 @@
-# Подъём OpenVPN-соединения NetworkManager axata при загрузке системы,
-# до экрана входа (docs/amnezia-split-tunnel.md, раздел «Автозапуск
-# туннелей»; изменение OpenSpec tunnel-tray-autostart, design D5).
+# Подъём OpenVPN-соединения NetworkManager профиля сети при загрузке системы,
+# до экрана входа (docs/amnezia-split-tunnel.md, разделы «Автозапуск
+# туннелей» и «Профили сети»; изменения OpenSpec tunnel-tray-autostart,
+# design D5, и tunnel-backup-profile, design D3): axata при основном профиле,
+# axata-full (полный туннель) при запасном — строке backup
+# в /etc/amnezia/profile.
 # Автоподключение VPN в NetworkManager не реализовано (connection.autoconnect
 # для VPN не действует), а привязка через connection.secondaries роняет
 # проводное соединение, если VPN не поднялся, — поэтому соединение поднимает
 # этот юнит. Пароль хранится в NetworkManager (password-flags = 0), агент
 # секретов не нужен.
 [Unit]
-Description=VPN axata (NetworkManager)
+Description=VPN axata или axata-full по профилю сети (NetworkManager)
 Wants=network-online.target
 After=network-online.target NetworkManager.service
 # Перезапуск NetworkManager разрывает VPN: юнит перезапускается вместе с ним
@@ -17,16 +20,19 @@ PartOf=NetworkManager.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-# Уже активное соединение не переподключается: повторный nmcli con up
-# разорвал бы его.
-ExecCondition=/bin/sh -c '! nmcli -t -f NAME connection show --active | grep -qxF axata'
+# Уже активное соединение любого из двух профилей не переподключается:
+# повторный nmcli con up разорвал бы его, а подъём второго соединения рядом
+# с первым — недопустимое состояние (активно не больше одного).
+ExecCondition=/bin/sh -c '! nmcli -t -f NAME connection show --active | grep -qxE "axata|axata-full"'
 # После перезапуска NetworkManager network-online.target уже достигнута,
 # поэтому готовность NetworkManager ожидается здесь, по его сигналу
 # StartupComplete на D-Bus; -t 30 — предел на случай, если сигнала нет.
 ExecStartPre=/usr/bin/nm-online -s -q -t 30
 # nmcli ждёт активации по событиям NetworkManager; --wait 60 — предел
 # на случай, если сервер не отвечает (OpenVPN по умолчанию ждёт до 60 с).
-ExecStart=/usr/bin/nmcli --wait 60 connection up id axata
+# Имя соединения — по файлу профиля; $$ — знак доллара для оболочки, а не
+# подстановка systemd.
+ExecStart=/bin/sh -c 'c=axata; grep -sqx backup /etc/amnezia/profile && c=axata-full; exec /usr/bin/nmcli --wait 60 connection up id "$$c"'
 
 [Install]
 WantedBy=multi-user.target

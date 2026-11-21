@@ -80,11 +80,24 @@ sudo -A -p 'Установка правила sudoers для prlimit' \
 # /etc/sudoers.d/amn-switch
 
 `sudoers.d/amn-switch` — правило, по которому пользователь `mne` без пароля
-запускает `/usr/local/sbin/amn-switch` (только без аргументов и с `--signal`)
-и `systemctl start`, `stop`, `restart` для `awg-quick@amn0`. Переход
-с приложения AmneziaVPN пользователь выполняет сам в терминале
-([`docs/amnezia-split-tunnel.md`](../../docs/amnezia-split-tunnel.md)).
-Сценарий принадлежит root и пользователю на запись не доступен. Ставит
+выполняет с правами root команды туннелей станции, каждую только с точными
+аргументами ([`docs/amnezia-split-tunnel.md`](../../docs/amnezia-split-tunnel.md)):
+
+- `/usr/local/sbin/amn-switch` без аргументов и с `--signal` — переход
+  с приложения AmneziaVPN, его пользователь выполняет сам в терминале;
+- `systemctl start`, `stop`, `restart` для `awg-quick@amn0` — меню значка
+  `amn0` в трее панели;
+- `awg show amn0 endpoints` и `awg show amn0 latest-handshakes` — окно
+  сведений `amn0` (без ключей);
+- `/usr/local/sbin/amn-zones-update --count` и `--force` — число элементов
+  набора `zones` и обновление списков стран;
+- `/usr/local/sbin/amn-apply-config` без аргументов — смена страны туннеля,
+  конфиг на стандартном вводе;
+- `/usr/local/sbin/net-profile backup` и `/usr/local/sbin/net-profile main` —
+  переход между профилями сети из меню значков туннелей.
+
+Сценарии принадлежат root и пользователю на запись не доступны. Ставит
 правило `system/amnezia/install.sh files` после проверки `visudo -c -f`.
 
-Проверка: `sudo -n -l /usr/local/sbin/amn-switch` печатает путь без окна пароля.
+Проверка: `sudo -n -l` перечисляет эти команды без окна пароля, а
+`sudo -n /usr/local/sbin/net-profile foo` отказывает, не запуская сценарий.

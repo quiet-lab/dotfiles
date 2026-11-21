@@ -19,7 +19,12 @@ systemctl restart awg-quick@amn0, затем проверка — служба �
 к ipinfo.io через amn0 отвечает. При отказе прежние файлы возвращаются
 и служба перезапускается снова. Ключи на экран не выводятся.
 
-Код выхода: 0 — страна сменена, 1 — отказ (прежний конфиг возвращён).
+При запасном профиле сети (строка backup в /etc/amnezia/profile,
+спецификация network-profiles) awg-quick@amn0 не запускается, и проверить
+новый конфиг нельзя: сценарий отказывает до любых изменений.
+
+Код выхода: 0 — страна сменена, 1 — отказ (прежний конфиг возвращён или
+ничего не изменено).
 """
 
 from __future__ import annotations
@@ -40,6 +45,7 @@ CONF = Path("/etc/amnezia/amneziawg/amn0.conf")
 STATE = Path("/etc/amnezia/country.json")
 TEMPLATE = Path("/etc/amnezia/amn0.conf.template")
 LOCK = Path("/run/amn-apply-config.lock")
+PROFILE = Path("/etc/amnezia/profile")
 UNIT = "awg-quick@amn0.service"
 CODE_RE = re.compile(r"^[a-z]{2}(-[a-z]+)?$")
 MAX_INPUT = 64 * 1024
@@ -98,9 +104,23 @@ def tunnel_works() -> str | None:
     return done.stdout.strip() if done.returncode == 0 and done.stdout.strip() else None
 
 
+def backup_profile() -> bool:
+    """Запасной профиль сети: строка, в точности равная backup (как grep -sx).
+
+    Файл, который не читается, означает основной профиль, как в юнитах
+    и net-profile.
+    """
+    try:
+        return "backup" in PROFILE.read_bytes().decode("utf-8", "replace").splitlines()
+    except OSError:
+        return False
+
+
 def main() -> int:
     if os.geteuid() != 0:
         raise SystemExit("amn-apply-config: нужны права root (sudo -n)")
+    if backup_profile():
+        raise SystemExit("amn-apply-config: выбран запасной профиль сети, страна меняется при основном профиле (net-profile main)")
     code, name, config = read_input()
     ex = exporter()
     interface, peer = ex.split_sections(config)
