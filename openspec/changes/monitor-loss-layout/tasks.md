@@ -1,19 +1,19 @@
 ## 1. Демон workspaced (`~/work/pets/workspaced`)
 
-- [ ] 1.1 `src/hypr.rs`: события `MonitorAdded`, `MonitorRemoved` из `monitoraddedv2`, `monitorremovedv2`; список мониторов (D1).
-- [ ] 1.2 `src/state.rs`: признак потерянного экрана с размером запасного выхода (D1); `absorb_into` при признаке ничего не делает (D2).
-- [ ] 1.3 `src/daemon.rs`: обработка событий монитора, расчёт возврата окон `restore_plan` и его применение (D3).
-- [ ] 1.4 Тесты: разбор событий; сдвиг по модулю при пропаже и возвращении монитора не становится изменённым местом и возвращает окно; ручной сдвиг по-прежнему становится изменённым местом и после возвращения монитора остаётся; снятие раскладки при признаке ничего не меняет.
-- [ ] 1.5 `cargo test`, `cargo clippy --all-targets -- -D warnings`, `cargo build --release`, перезапуск `workspaced.service`, `workspaced status --json`, `workspaced check`.
-- [ ] 1.6 Ревью, коммит и push демона.
+- [x] 1.1 `src/hypr.rs`: события `MonitorAdded`, `MonitorRemoved` из `monitoraddedv2`, `monitorremovedv2`; список мониторов (D1).
+- [x] 1.2 `src/state.rs`: признак потерянного экрана с размером запасного выхода (D1); `absorb_into` при признаке ничего не делает (D2).
+- [x] 1.3 `src/daemon.rs`: обработка событий монитора, расчёт возврата окон `restore_plan` и его применение (D3).
+- [x] 1.4 Тесты: разбор событий; сдвиг по модулю при пропаже и возвращении монитора не становится изменённым местом и возвращает окно; ручной сдвиг по-прежнему становится изменённым местом и после возвращения монитора остаётся; снятие раскладки при признаке ничего не меняет.
+- [x] 1.5 `cargo test` — 221 тест, `cargo clippy --all-targets -- -D warnings` без замечаний, `cargo build --release`, перезапуск `workspaced.service`, `workspaced status --json` отвечает (`moved` пуст), `workspaced check`.
+- [x] 1.6 Ревью (code-review medium: четыре находки исправлены коммитом 81d828c, ручной сдвиг, не снятый до пропажи, — ограничение D3), коммиты b5aebf6 и 81d828c, push master демона.
 
 ## 2. Проверка вживую
 
-- [ ] 2.1 Агент: журнал демона после перезапуска, ответ `workspaced status --json`.
+- [x] 2.1 Агент: журнал демона после перезапуска, ответ `workspaced status --json`.
 - [ ] 2.2 Пользователь: выключить и включить монитор; окна `work` и `surf` на местах, в журнале — строки возврата окон, в `workspaced status --json` нет изменённых мест со сдвигом на 1920 px.
 
 ## 3. Спецификации и документация
 
-- [ ] 3.1 Дельта ws-daemon, `openspec validate monitor-loss-layout --strict`.
-- [ ] 3.2 `docs/window-model.md`, раздел 2.4.
+- [x] 3.1 Дельта ws-daemon, `openspec validate monitor-loss-layout --strict`.
+- [x] 3.2 `docs/window-model.md`, раздел 2.4.
 - [ ] 3.3 Архивация после проверки пользователем.
